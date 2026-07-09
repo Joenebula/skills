@@ -1,6 +1,6 @@
 ---
 name: engineering-standards
-description: Invoke BEFORE building or changing any feature, action, module, API endpoint, or shared mechanism — the process laws, the 12-stage build pipeline, the shared-mechanism reuse catalogue, the living data-gotchas list, server-side security gating, and the data-reconciliation rule.
+description: Invoke BEFORE building or changing any feature, action, module, API endpoint, or shared mechanism — AND whenever a count, metric, or displayed number disagrees with its source. The process laws, the 12-stage build pipeline, the shared-mechanism reuse catalogue, the living data-gotchas list, server-side security gating, and the data-reconciliation rule.
 ---
 
 # Engineering standards — read this first, every time

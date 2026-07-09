@@ -28,6 +28,8 @@ If any of these fires, **stop and ask before touching anything.** Then open [ask
 | **Unclear scope** | "Fix the button" — this one button, or every instance everywhere? |
 | **Shared-library edit** | About to add or change a skill, agent, design system, or shared config that other work depends on. **Propose it — which file, what edit, why — and get an explicit yes.** Never self-edit a durable shared artifact. "Continue", a bug report, or finishing a task is **not** approval. |
 
+**The row-cap gotcha.** A single query often **caps at a fixed row limit**, and asking for a bigger limit does *not* lift it. Page through and verify the total — an empty or short result is frequently a silent cap, not a true "none". Any number that disagrees with its source is this until proven otherwise.
+
 **Don't ask permission for the obvious.** Reading a file, running a read-only check, fixing a clear typo — just do it. Asking about trivia trains the user to stop reading your questions. The bar: ask when a senior engineer would genuinely be unsure, or when the cost of being wrong is high.
 
 The two failures every law here governs: **guessing** (acting on an unverified assumption) and **faking** (shipping something that looks complete but isn't wired). A wrong guess on destructive work costs a rebuild, a data loss, or a lie shipped to a user. A question costs thirty seconds.
