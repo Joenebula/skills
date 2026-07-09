@@ -1,9 +1,9 @@
 ---
-name: code-review
+name: reviewing-code
 description: Invoke when reviewing a diff, a pull request, or your own change before calling it done — what to look for in priority order, how to refute before you trust, and how to give feedback that lands. "Looks fine" is not a review.
 ---
 
-# code-review — refute it before you trust it
+# reviewing-code — refute it before you trust it
 
 The one core truth: **a review's job is to find what's wrong, not to bless what's there.** Approving on a skim is worse than no review — it stamps "checked" on something nobody checked. Read to break it; if you can't break it after honestly trying, *then* approve.
 

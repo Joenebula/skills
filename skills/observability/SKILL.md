@@ -45,7 +45,7 @@ Graceful degradation is the difference between "one widget is unavailable" and "
 - A **logging helper** and an **error boundary/handler** wired once, used everywhere — structured + context by construction.
 - **Error tracking + health checks + alerting** from early, not after the first incident.
 - A **correlation id** threaded through requests and jobs so you can follow one flow end-to-end.
-- Make "what happens when this fails?" a required question in [[code-review]] and the build pipeline ([[engineering-standards]]).
+- Make "what happens when this fails?" a required question in [[reviewing-code]] and the build pipeline ([[engineering-standards]]).
 
 ## Cross-links
 - [[security]] — no secrets/PII/stack traces in logs or responses.

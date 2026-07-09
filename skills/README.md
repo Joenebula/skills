@@ -30,7 +30,7 @@ The spine and cross-cutting craft apply to **every** build. The domain guides ar
 | **[preflight](preflight/SKILL.md)** | immediately before any deploy, merge, or "done" claim — the orchestrated pass that scopes the diff, fans out the auditors, climbs the layers, and emits ONE explicit GO / NO-GO. The gate, actually run. |
 | **[ask-dont-guess](ask-dont-guess/SKILL.md)** | the six laws behind the stop-triggers in [`../CLAUDE.md`](../CLAUDE.md) — how to ask, recommend before acting, verify don't assume, and never ship anything that looks done but isn't. |
 | **[shipping](shipping/SKILL.md)** | before and during any deploy — verify → regression-gate → ship → confirm; authorized deploys only, never mask an exit code, confirm the release is actually live. |
-| **[code-review](code-review/SKILL.md)** | reviewing a diff/PR or your own change before "done" — what to look for in priority order, refute before you trust, and feedback that lands. |
+| **[reviewing-code](reviewing-code/SKILL.md)** | reviewing a diff/PR or your own change before "done" — what to look for in priority order, refute before you trust, and feedback that lands. |
 | **[debugging](debugging/SKILL.md)** | investigating any bug or failure — reproduce first, read the real evidence, isolate one variable at a time, fix the cause not the symptom, and ship the regression test that would have caught it. |
 | **[refactoring](refactoring/SKILL.md)** | restructuring code or delivering a large change — keep behaviour identical, move in small reversible steps, ship incrementally behind flags. |
 

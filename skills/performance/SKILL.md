@@ -46,7 +46,7 @@ The one core truth: **you cannot optimise what you haven't measured, and the bot
 
 - A **performance budget** in the definition of done; a check that flags regressions ([[regression-testing]]).
 - **Pagination + virtualization** as defaults for any list, from the first one.
-- Index review as part of [[data-modelling]] and [[code-review]].
+- Index review as part of [[data-modelling]] and [[reviewing-code]].
 - Real-user + synthetic monitoring so you see slowness before users complain ([[observability]]).
 
 ## Cross-links

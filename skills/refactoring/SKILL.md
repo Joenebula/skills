@@ -11,7 +11,7 @@ Proof that behaviour didn't change lives in [[regression-testing]]; large rollou
 
 ## Law 1 — Separate refactor from behaviour change
 
-- **One commit does one thing**: either it restructures with no behaviour change, *or* it changes behaviour. Never both — a reviewer can't tell which diff lines are which ([[code-review]]).
+- **One commit does one thing**: either it restructures with no behaviour change, *or* it changes behaviour. Never both — a reviewer can't tell which diff lines are which ([[reviewing-code]]).
 - Announce which it is. A pure refactor should pass the **same tests unchanged**; if a test had to change, you changed behaviour.
 
 ## Law 2 — Pin behaviour before you move it
@@ -43,11 +43,11 @@ Proof that behaviour didn't change lives in [[regression-testing]]; large rollou
 
 - A **test safety net** good enough to refactor against ([[regression-testing]]).
 - A **feature-flag mechanism** for progressive rollout/rollback ([[infrastructure]]).
-- A convention that **refactor commits are labelled and behaviour-neutral**, enforced in review ([[code-review]]).
+- A convention that **refactor commits are labelled and behaviour-neutral**, enforced in review ([[reviewing-code]]).
 
 ## Cross-links
 - [[regression-testing]] — characterization tests pin behaviour; green proves the refactor held.
 - [[infrastructure]] — feature flags to roll out/disable without redeploying.
 - [[data-modelling]] — expand/contract mirrors additive, reversible migrations.
 - [[engineering-standards]] — sweep every site of a shared mechanism; the silent-shadow gotcha.
-- [[code-review]] — refactor and behaviour change never share a commit.
+- [[reviewing-code]] — refactor and behaviour change never share a commit.

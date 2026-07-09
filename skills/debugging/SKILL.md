@@ -45,7 +45,7 @@ A bug report is a request to *investigate* — releasing the fix still needs its
 ## Stand this up in a new project
 
 - **Error tracking + structured logs with correlation ids** from the start, so every future bug arrives with evidence ([[observability]]).
-- A norm that **no bug fix merges without its regression test**, enforced in review ([[code-review]]).
+- A norm that **no bug fix merges without its regression test**, enforced in review ([[reviewing-code]]).
 - A **gotchas list** that grows with every root cause found ([[engineering-standards]]).
 
 ## Cross-links

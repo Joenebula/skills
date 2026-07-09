@@ -50,7 +50,7 @@ This pairs with [[design-system]] (accessible components built once) and [[forms
 - Run the **accessibility-auditor** agent on every UI diff — the read-only static pass that names each barrier with its fix, and declares what only a manual pass can prove.
 - Add an **automated a11y check** to CI/preflight (catches contrast, missing labels, bad roles) — necessary but not sufficient.
 - A **manual pass** per release: tab through it, run a screen reader on the key flows, zoom to 200%. What the auditor marks UNVERIFIED, this pass proves.
-- Make "zero critical a11y issues" part of the definition of done ([[regression-testing]], [[code-review]]) — it's a named row in the domain must-pass catalogue.
+- Make "zero critical a11y issues" part of the definition of done ([[regression-testing]], [[reviewing-code]]) — it's a named row in the domain must-pass catalogue.
 
 ## Cross-links
 - [[design-system]] — accessible components and contrast-checked tokens, built once.

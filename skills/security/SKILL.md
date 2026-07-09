@@ -51,7 +51,7 @@ Validate **server-side** against an explicit schema; reject by default, allow by
 
 - Decide the **trust model** on day one: actors, capabilities, what each may touch.
 - Put **auth + validation at the boundary** (a single gateway/middleware), not sprinkled per-handler.
-- Add the **security-route-auditor** to the review flow; make a server-side authz check part of the definition of done ([[code-review]]).
+- Add the **security-route-auditor** to the review flow; make a server-side authz check part of the definition of done ([[reviewing-code]]).
 - A **pre-launch hardening pass**: secrets out of code, debug/open-access flags off, rate limits on, dependencies patched.
 
 ## Cross-links
@@ -60,4 +60,4 @@ Validate **server-side** against an explicit schema; reject by default, allow by
 - [[ask-dont-guess]] — anything destructive/outward-facing → recommend, then get a yes.
 - [[privacy-and-compliance]] — lawful basis, consent, retention, and subject-access on top of these controls.
 - [[project-setup]] — secret hygiene and where every key belongs.
-- [[code-review]] — the security pass of every review.
+- [[reviewing-code]] — the security pass of every review.
