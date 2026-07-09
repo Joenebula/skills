@@ -4,7 +4,7 @@ Claude Code skills and read-only auditor agents distilled from real web builds, 
 
 > **Evolving this library — HARD RULE.** Everything under `…/Web/.claude` — **skills _and_ agents** — is approval-gated. The library is meant to grow as we learn, but **never add or edit a skill or agent here without explicit approval first.** When something **major** changes (a new durable lesson, a repeated mistake worth a rule, a new pattern/gotcha, a shifted convention), *propose* the update — which file, what edit, why — and **wait for an explicit "yes."** No edits until then; "continue", a bug report, or finishing a task is **not** approval. Don't propose trivial/one-off churn. Capturing learnings is continuous; _writing_ them is gated. See [engineering-standards](engineering-standards/SKILL.md) Stage 12 and [ask-dont-guess](ask-dont-guess/SKILL.md).
 
-The library is three layers: the **spine** (the always-on process and craft below), a **cross-cutting craft** set (the quality concerns every feature touches), and **domain build guides** ("how to build X"). Together they cover clarify → design → build → review → verify → secure → ship → operate.
+The library is four layers. Above everything sits [`../CLAUDE.md`](../CLAUDE.md) — the **working agreement**, loaded unconditionally into every session: the disposition (rigorous partner, not agreeable assistant) and the stop-triggers, which must be in view before they can fire. Below it: the **spine** (the process and craft below), a **cross-cutting craft** set (the quality concerns every feature touches), and **domain build guides** ("how to build X"). Together they cover clarify → design → build → review → verify → secure → ship → operate.
 
 ## Two tracks, one spine — the no-crossover rule
 
@@ -28,7 +28,7 @@ The spine and cross-cutting craft apply to **every** build. The domain guides ar
 | **[engineering-standards](engineering-standards/SKILL.md)** | before building/changing any feature, action, module, API, or shared mechanism — the process laws, the 12-stage build pipeline, the reuse catalogue, the data-gotchas list, server-side gating, and the data-reconciliation rule. |
 | **[regression-testing](regression-testing/SKILL.md)** | before calling a change "done" and before any deploy — the layered static → smoke+reconcile → behavioural model, the domain must-pass catalogue, the GO/NO-GO gate, and the guardian-auditor pattern. "It builds" is not "it works." |
 | **[preflight](preflight/SKILL.md)** | immediately before any deploy, merge, or "done" claim — the orchestrated pass that scopes the diff, fans out the auditors, climbs the layers, and emits ONE explicit GO / NO-GO. The gate, actually run. |
-| **[ask-dont-guess](ask-dont-guess/SKILL.md)** | always-on — flag ambiguity and STOP, recommend before acting, verify don't assume, and never ship anything that looks done but isn't. |
+| **[ask-dont-guess](ask-dont-guess/SKILL.md)** | the six laws behind the stop-triggers in [`../CLAUDE.md`](../CLAUDE.md) — how to ask, recommend before acting, verify don't assume, and never ship anything that looks done but isn't. |
 | **[shipping](shipping/SKILL.md)** | before and during any deploy — verify → regression-gate → ship → confirm; authorized deploys only, never mask an exit code, confirm the release is actually live. |
 | **[code-review](code-review/SKILL.md)** | reviewing a diff/PR or your own change before "done" — what to look for in priority order, refute before you trust, and feedback that lands. |
 | **[debugging](debugging/SKILL.md)** | investigating any bug or failure — reproduce first, read the real evidence, isolate one variable at a time, fix the cause not the symptom, and ship the regression test that would have caught it. |
@@ -91,4 +91,4 @@ Read-only watchers (Read/Grep/Glob[/Bash]) — each maps a diff to risks and req
 
 The orchestrated pass that fans these out on a diff and turns their verdicts plus the regression layers into one GO / NO-GO is [preflight](preflight/SKILL.md).
 
-> These sit alongside, and do not modify, the other entries in this directory (`marketingskills/`).
+> The always-on layer these all defer to is [`../CLAUDE.md`](../CLAUDE.md); its depth lives in [ask-dont-guess](ask-dont-guess/SKILL.md).
