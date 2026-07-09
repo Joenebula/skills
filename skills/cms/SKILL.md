@@ -12,7 +12,7 @@ Editable content is [[data-modelling]]; the editing UI is [[forms-and-input]]; d
 ## Law 1 — Editable content vs fixed app
 
 - Draw the line explicitly: **editors own** copy, images, pages, menus, SEO text, promotional content; **the app owns** logic, layout rules, data behaviour.
-- **Content is not catalogue.** On a commerce build, products, variants, prices, and inventory belong to [[ecommerce-admin]]'s modules — never modelled as CMS pages; and editorial pages (about, journal, landing) are CMS content — never admin modules. The two have different owners, lifecycles, and integrity rules.
+- **Content is not catalogue.** On a commerce build, products, variants, prices, and inventory belong to [[commerce]]'s back-office modules — never modelled as CMS pages; and editorial pages (about, journal, landing) are CMS content — never admin modules. The two have different owners, lifecycles, and integrity rules.
 - A control that *looks* editable but isn't wired (or vice-versa) is the [[ask-dont-guess]] failure — make the boundary honest.
 - **Persist editable content to the data store**, not to files written at runtime; ship defaults as embedded code ([[data-modelling]], gotcha d in [[engineering-standards]]).
 

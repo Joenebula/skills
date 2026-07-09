@@ -11,7 +11,7 @@ Every displayed number obeys the data-reconciliation rule in [[engineering-stand
 
 ## Law 1 — Define each metric precisely, first
 
-- Write the **exact definition**: what's counted, the **time window**, the filters, the unit, how edge cases are handled. "Revenue" = gross or net? incl. refunds? which currency? ([[internationalization]], [[payments]]).
+- Write the **exact definition**: what's counted, the **time window**, the filters, the unit, how edge cases are handled. "Revenue" = gross or net? incl. refunds? which currency? ([[internationalization]], [[commerce]]).
 - **Name it unambiguously** on the dashboard so two people read it the same way.
 - Separate **product/business analytics** (orders, revenue, conversion, retention) from **system/operational metrics** (latency, error rate, job health — those live in [[observability]]).
 

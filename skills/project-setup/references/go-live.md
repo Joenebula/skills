@@ -20,7 +20,7 @@ Go area by area — a quick click-through hides exactly the gaps that bite. Each
 **Flows that must work end-to-end**
 - [ ] **Forms** — validate inline (→ [[design-system]]), submit, persist, show success AND error, send their email, with spam protection on. (→ [[forms-and-input]])
 - [ ] **Auth** — sign-up, sign-in, sign-out, password/magic-link reset, email verification, session survives a reload, protected routes redirect anon users. (→ [[security]])
-- [ ] **Payments** (if any) — live keys set, one real end-to-end test transaction, webhooks verified, refund + receipt paths work. (→ [[payments]])
+- [ ] **Payments** (if any) — live keys set, one real end-to-end test transaction, webhooks verified, refund + receipt paths work. (→ [[commerce]])
 - [ ] **Email deliverability** — every transactional mail actually sends, from a verified domain, links use the canonical host, lands in the inbox (SPF/DKIM/DMARC) not spam, with unsubscribe where required.
 
 **The site as a product**

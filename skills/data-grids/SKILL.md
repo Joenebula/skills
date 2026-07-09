@@ -7,7 +7,7 @@ description: Use when building any list, table, or management view of many recor
 
 The one core truth: **a management list is a workhorse, and every workhorse list needs the same mechanics — so build them once and reuse them.** Search, filter, sort, paginate, select-in-bulk, export: a project re-implementing these per screen ends up with ten inconsistent, half-broken lists. One shared grid mechanism, applied everywhere, is the win.
 
-This is the list half of every [[ecommerce-admin]] and [[cms]] module; the contract feeding it is [[api-design]]; large-data behaviour is [[performance]].
+This is the list half of every [[commerce]] back-office and [[cms]] module; the contract feeding it is [[api-design]]; large-data behaviour is [[performance]].
 
 ## Law 1 — Server-side vs client-side, decided by size
 
@@ -52,5 +52,5 @@ This is the list half of every [[ecommerce-admin]] and [[cms]] module; the contr
 - [[engineering-standards]] — the shared search/pagination/bulk mechanisms and the count-vs-capped-page gotchas.
 - [[api-design]] — the pagination/filter/sort contract behind the grid.
 - [[performance]] — server-side paging and virtualization for large data.
-- [[ecommerce-admin]] / [[cms]] — the modules built on this list pattern.
+- [[commerce]] / [[cms]] — the modules built on this list pattern.
 - [[responsive-design]] / [[accessibility]] — usable tables on every device and input.

@@ -11,13 +11,15 @@ The library is four layers. Above everything sits [`../CLAUDE.md`](../CLAUDE.md)
 The spine and cross-cutting craft apply to **every** build. The domain guides are conditional: **a domain guide fires only when the project actually contains its domain.**
 
 - **Design / content track** — brand, marketing, portfolio, editorial, civic sites: [frontend-design](frontend-design/SKILL.md) + [design-system](design-system/SKILL.md) for the look, [cms](cms/SKILL.md) for the content, [seo](seo/SKILL.md) for findability; auth / email / grids / analytics / integrations only if the site actually has accounts, sends mail, or manages records.
-- **Commerce track** — anything that sells: everything above **plus** the commerce quartet — [storefront](storefront/SKILL.md), [ecommerce-admin](ecommerce-admin/SKILL.md), [payments](payments/SKILL.md), [loyalty](loyalty/SKILL.md).
+- **Commerce track** — anything that sells: everything above **plus** [commerce](commerce/SKILL.md), which owns the whole selling surface — storefront, back-office, payments, and loyalty — as one skill.
 
 **No crossover, in either direction:**
 
-1. **On a build that sells nothing, the commerce quartet stays silent.** Never import a cart, checkout, order lifecycle, gateway, or points ledger into a site with no purchase — a portfolio doesn't get an "orders" table because the pattern was handy.
+1. **On a build that sells nothing, [commerce](commerce/SKILL.md) stays silent.** Never import a cart, checkout, order lifecycle, gateway, or points ledger into a site with no purchase — a portfolio doesn't get an "orders" table because the pattern was handy.
 2. **On a commerce build, the boundary is per surface, not per repo.** Brand, landing, and editorial pages are design-track surfaces — [frontend-design](frontend-design/SKILL.md) may be bold there. Product → cart → checkout → account is the commerce path, where **convention, clarity, and trust outrank novelty**: same tokens, plainest patterns, no experiments on the money path.
-3. **Content is not catalogue.** Editorial pages live in the [cms](cms/SKILL.md); products/variants/inventory live in [ecommerce-admin](ecommerce-admin/SKILL.md). Never model products as CMS pages or pages as products — the two have different owners, lifecycles, and integrity rules.
+3. **Content is not catalogue.** Editorial pages live in the [cms](cms/SKILL.md); products/variants/inventory live in [commerce](commerce/SKILL.md). Never model products as CMS pages or pages as products — the two have different owners, lifecycles, and integrity rules.
+
+> **Why commerce is one skill and not four.** It was four — `storefront`, `ecommerce-admin`, `payments`, `loyalty`. They fire independently: "wire up Stripe" fired `payments` and `loyalty` but never `storefront`, so `storefront`'s *"every total is computed server-side"* rule was unreachable on the most money-critical prompt in the eval. Four independently-firing skills cannot share a law without duplicating it — and two laws (**margin floors**, **tax/shipping rates**) ended up owned by nobody, each file deferring to the other. Deduplication is only possible inside a unit that loads atomically. Measured: cluster cohesion 0.58, more than twice any other candidate, and zero agent references. See `../eval/`.
 
 ## The spine — process & craft (`skills/<name>/SKILL.md`)
 
@@ -68,14 +70,17 @@ Domain guides are conditional — each fires only when the project contains its 
 | **[data-grids](data-grids/SKILL.md)** | any list of many records — search/filter/sort/paginate/bulk/export; server- vs client-side by size. |
 | **[integrations](integrations/SKILL.md)** | connecting a third party — field ownership, idempotent sync, verified webhooks, graceful fallback. |
 
-### Commerce track — fire ONLY when the project sells
+### Commerce track — fires ONLY when the project sells
 
-| Skill | Use it… |
+One skill, five shared laws, four surfaces. The laws hold everywhere; the surfaces are where they land.
+
+| **[commerce](commerce/SKILL.md)** | Covers |
 |---|---|
-| **[storefront](storefront/SKILL.md)** | the customer-facing shop — product/cart/checkout; prices and totals computed server-side; checkout idempotent and atomic. |
-| **[ecommerce-admin](ecommerce-admin/SKILL.md)** | a commerce back-office — catalogue/variants, orders, customers, promotions, inventory, tax/shipping on one list→detail→form pattern. |
-| **[payments](payments/SKILL.md)** | taking money — gateways, idempotent charges/refunds, subscriptions; card data off your servers, webhook = source of truth. |
-| **[loyalty](loyalty/SKILL.md)** | memberships/subscriptions/points/referrals — an append-only points ledger, billing lifecycle, margin floors. |
+| **The five laws** | money is the server's truth · every financial op is idempotent · every number reconciles to source · **margin floors are enforced here** · **tax/shipping rates have one source**. The last two are owned by this file precisely because two surfaces read them and neither may define them. |
+| **Storefront** | the customer-facing shop — product/cart/checkout; checkout idempotent and atomic; no oversell; recover, don't lose. |
+| **Back-office** | catalogue/variants, orders, customers, promotions, inventory, tax/shipping on one list→detail→form pattern; every control does exactly what it says. |
+| **Payments** | gateways, idempotent charges/refunds, subscriptions and dunning; card data off your servers, webhook = source of truth. |
+| **Loyalty** | memberships/subscriptions/points/referrals — an append-only points ledger you sum, never a mutable balance. |
 
 ## Auditor agents (`../agents/<name>.md`)
 

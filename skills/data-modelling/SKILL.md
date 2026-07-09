@@ -21,7 +21,7 @@ For anything touching live data, [[engineering-standards]] (data-gotchas + recon
 
 - Default to **normalised**: one fact in one place. A value stored twice will drift.
 - Denormalise (a cached count, a copied label) **only** for a measured read cost, and then you **own the consistency** — every write updates both, and a reconciliation check asserts they agree ([[engineering-standards]]).
-- A **money** value is minor-units integer + currency, never a float. A **point/credit** balance is an append-only ledger you sum, never a mutable number — see [[loyalty]].
+- A **money** value is minor-units integer + currency, never a float. A **point/credit** balance is an append-only ledger you sum, never a mutable number — see [[commerce]].
 
 ## Law 3 — Migrations are additive, reversible, and ordered
 

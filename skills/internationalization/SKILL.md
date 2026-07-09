@@ -7,7 +7,7 @@ description: Invoke BEFORE hard-coding user-facing text, dates, money, or layout
 
 The one core truth: **i18n is cheap as a habit and brutal as a retrofit.** Every hard-coded string, concatenated sentence, and `£`/MM-DD assumption is a place you'll have to find and fix later across the whole codebase. Externalise from the start even if you ship one language — the structure costs little now and saves a rewrite.
 
-(*i18n* = build so it *can* be localised; *l10n* = the actual translations/regional data.) Storefront money/currency specifics live in [[storefront]] and [[payments]].
+(*i18n* = build so it *can* be localised; *l10n* = the actual translations/regional data.) Storefront money/currency specifics live in [[commerce]].
 
 ## Law 1 — Externalise every user-facing string
 
@@ -47,7 +47,7 @@ The one core truth: **i18n is cheap as a habit and brutal as a retrofit.** Every
 
 ## Cross-links
 - [[data-modelling]] — money as minor-units + currency; per-locale content modelling.
-- [[storefront]] / [[payments]] — multi-currency pricing, display, and settlement.
+- [[commerce]] — multi-currency pricing, display, and settlement.
 - [[cms]] — per-locale content with fallback.
 - [[seo]] — locale routing and `hreflang`.
 - [[responsive-design]] — layouts that absorb text expansion and mirror for RTL.

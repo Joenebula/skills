@@ -33,7 +33,7 @@ The data behind the contract is modelled in [[data-modelling]]; how the response
 |---|---|
 | **Pagination** | Lists are **always** paginated (cursor preferred for stability; offset for jump-to-page). A bigger `limit` does **not** lift a fixed cap — page through for full sweeps (gotcha a in [[engineering-standards]]). |
 | **Totals** | A returned `total` is an exact `COUNT`, never the length of a capped page ([[engineering-standards]] reconciliation). |
-| **Idempotency** | Writes that can be retried (payments, sync, queued jobs) accept an idempotency key and de-duplicate. See [[payments]], [[background-jobs]]. |
+| **Idempotency** | Writes that can be retried (payments, sync, queued jobs) accept an idempotency key and de-duplicate. See [[commerce]], [[background-jobs]]. |
 | **Filtering/sorting** | Whitelist sortable/filterable fields; reject arbitrary ones (injection + perf). Mirrors [[data-grids]]. |
 
 ## Law 5 — Versioning and evolution

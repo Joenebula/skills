@@ -33,7 +33,7 @@ The direction becomes real in STEP 6 of [[design-system]] — it *is* the token 
 - **No literal values in screens.** The direction is expressed once, in tokens and primitives; screens compose them (RULE ZERO, [[design-system]]).
 - **No second accent, no emoji-as-icon, no un-tokened gradient** — the STEP 4 invariants hold whatever the aesthetic.
 - **Accessibility survives the direction** — contrast-checked token pairings, visible focus, reduced-motion honoured ([[accessibility]]). A gorgeous interface that excludes people is broken, not bold.
-- **Commerce trust surfaces are not the canvas.** On product, cart, checkout, payment, and account surfaces, convention, clarity, and trust are what convert — a surprised shopper abandons. Keep the grid-breaking and the drama on brand, marketing, and editorial surfaces; the money path follows [[storefront]] and the system's plainest patterns, in the same tokens.
+- **Commerce trust surfaces are not the canvas.** On product, cart, checkout, payment, and account surfaces, convention, clarity, and trust are what convert — a surprised shopper abandons. Keep the grid-breaking and the drama on brand, marketing, and editorial surfaces; the money path follows [[commerce]] and the system's plainest patterns, in the same tokens.
 - **Match implementation complexity to the vision** — maximalist directions need elaborate, well-organised effect code; minimalist directions need restraint and precision in spacing and type. Elegance is executing the vision well, not adding more.
 
 ## Cross-links

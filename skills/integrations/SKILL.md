@@ -55,4 +55,4 @@ Sync jobs run via [[background-jobs]]; secrets and signatures are [[security]]; 
 - [[observability]] — key-aware fallbacks, circuit-breaking, integration health and alerts.
 - [[data-modelling]] — field ownership and the source-of-truth decision.
 - [[privacy-and-compliance]] — propagate erasure/rectification to third parties.
-- [[payments]] — a specialised, high-stakes integration (webhook = truth).
+- [[commerce]] — the payment gateway is a specialised, high-stakes integration (webhook = truth).

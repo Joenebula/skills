@@ -98,8 +98,8 @@ When a diff touches one of these domains, its named checks are **non-negotiable 
 | Domain touched | The checks that must pass |
 |---|---|
 | **Auth / sessions** ([[auth-and-accounts]]) | Signed-out stays out of every protected surface; the denied actor stays denied (negative path asserted); expired/invalidated token refused; sign-in → sign-out round-trip. |
-| **Checkout / payments** ([[storefront]], [[payments]]) | Double-submit creates ONE order; webhook redelivery = one financial effect; the decline/timeout path preserves the cart and creates no half-order; totals re-derived server-side. |
-| **Ledgers & balances** ([[loyalty]]) | Balance == sum of ledger entries; earn/redeem idempotent under replay; no negative balance under contention. |
+| **Checkout / payments** ([[commerce]]) | Double-submit creates ONE order; webhook redelivery = one financial effect; the decline/timeout path preserves the cart and creates no half-order; totals re-derived server-side. |
+| **Ledgers & balances** ([[commerce]]) | Balance == sum of ledger entries; earn/redeem idempotent under replay; no negative balance under contention. |
 | **Displayed numbers** ([[analytics-dashboards]], [[data-grids]]) | Displayed count/total/KPI reconciles to the source aggregate (never a capped page). |
 | **Destructive / bulk ops** ([[engineering-standards]], [[security]]) | Preview→execute enforced; the blast radius is bounded; a non-target record demonstrably survives. |
 | **Forms** ([[forms-and-input]]) | Invalid input errors inline on the field; user input survives a failed submit; the unsaved-changes guard fires; double-submit prevented. |
