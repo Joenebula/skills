@@ -40,15 +40,19 @@ Before building an interaction, check whether one of these already exists and **
 |---|---|
 | **Confirmation dialog** | One reusable confirm component (title / message / yes / no / danger). **NEVER** a native `confirm/alert/prompt`. Every destructive action confirms through it. |
 | **Predictive search / autocomplete** | One component for any input that references an existing entity — **type-constrained** (only suggests the valid type). |
-| **Per-row async state** | **Every** server-backed row action shows a *busy* state + disabled control (prevents a double-fire), then a *done* state (or re-render). No silent waits. |
+| **Per-row async state** | Reuse the shared busy → disabled → done state. *That* a row action needs one, you know; that one already exists, you don't. Never hand-roll a second. |
 | **Pagination** | One paginator (prev/next + jump-to-page) + a per-page selector. Every long list paginates the same way. |
 | **First-letter index** | A first-character index for long lists, applied consistently (client filter or a server `letter` param). |
 | **Bulk-select** | Row checkbox + select-all header + a context bulk-action bar, on every long management list. |
-| **Soft-delete / trash** | Remove = recoverable archive; a permanent "delete forever" is **opt-in** and separate. Don't reintroduce a raw destructive "remove." |
+| **Soft-delete / trash** | Reuse the existing recoverable-archive mechanism; a permanent "delete forever" is **opt-in** and separate. Never reintroduce a raw destructive "remove." |
 | **Search behaviour** | Server-side vs client-side, debounce, matching — change one, change **all** search sites together. |
 | **Clean per-type URLs** | Every entity type owns its path (e.g. `/<type>/<slug>`). **All** sites that build/parse/emit URLs (links, router, canonical/metadata, sitemap) must agree on the shape — a type that defaults to the wrong value silently creates duplicate URLs. |
 
 ## The living data-gotchas list (each has caused a real bug — keep adding)
+
+> **Start with (a).** It is the one rule in this file you will not arrive at on your own, and until you know it, it silently corrupts every count, every sweep, and every "no results" screen.
+>
+> *Letters are stable anchors — [[api-design]], [[debugging]], [[refactoring]], [[data-modelling]], [[analytics-dashboards]], [[data-grids]] and [[cms]] all cite them by letter. Append new gotchas; never renumber.*
 
 - **(a) Query pagination caps.** A single query often caps at a fixed row count; a bigger `limit` flag does **NOT** lift it. For full sweeps/counts, **page through in a loop** (range/offset) until a short page returns.
 - **(b) A capped sample shown as a TOTAL.** A headline count must be an exact `COUNT`/aggregate from the source — **never `array.length` of a capped query.** (See the data-reconciliation rule.)
@@ -60,19 +64,18 @@ Before building an interaction, check whether one of these already exists and **
 
 ## The data-reconciliation rule
 
-**Any number shown to a user MUST equal its real source value** — never a capped page, a loaded window, or a fixture proxy dressed as a total. A number that *looks* right but is a capped sample is a silent lie.
+**Any number shown to a user MUST equal its real source value** — an exact `COUNT`/aggregate, never `array.length` of a capped page. You already reach for this. What you don't reach for is *why the page was capped* — gotcha (a).
 
-- Compute every displayed count / KPI from the **authoritative source** — an exact `COUNT` or aggregate, not the length of a loaded array.
-- **Ship a check** that asserts `displayed == source` within a tight tolerance — see the reconciliation layer in [[regression-testing]]. If you can't reconcile it, the number isn't trustworthy — don't show it.
+- **Ship a check** that asserts `displayed == source` within a tight tolerance — see the reconciliation layer in [[regression-testing]]. Computing a number correctly once is not the same as it staying correct. If you can't reconcile it, don't show it.
 
 ## Security & gating (audited by security-route-auditor)
 
-- **A client-side gate is UX only.** The **server gate is mandatory**: every write endpoint verifies identity **and** capability server-side and returns **401/403 BEFORE any write**.
-- **Use a privileged/service credential only for the write** — and only *after* the auth/session check has verified the actor. The auth check runs on the user-scoped client; the privileged credential never gates, only writes.
+The first three **correct** what you would otherwise do. The last line you already know — it is here for completeness, not instruction.
+
+- **Gate on CAPABILITIES, not hard-coded role names.** Checking `role === 'admin'` is the default instinct and it is wrong here. Roles are additive (an actor may hold several); a capability table maps roles → capabilities, and code asks "can this actor do X," never "is this actor role Y." Role/permission additions ship as migrations the user must apply — query only values an applied migration has (gotcha c).
 - **The sacred write path.** Low-privilege actors may only ever insert **review/submission** records; live data changes only via reviewer/admin endpoints.
-- **Destructive / bulk ops are two-step:** a `preview` returns counts + a sample; a separate, explicitly-confirmed `execute` performs.
-- **Never leak** secrets, PII, or raw upstream errors in a response.
-- **Gate on CAPABILITIES, not hard-coded role names.** Roles are additive (an actor may hold several); a capability table maps roles → capabilities, and code asks "can this actor do X," never "is this actor role Y." Role/permission additions ship as migrations the user must apply — query only values an applied migration has (gotcha c).
+- **Use a privileged/service credential only for the write** — and only *after* the auth/session check has verified the actor. The auth check runs on the user-scoped client; the privileged credential never gates, only writes.
+- Server gate mandatory (401/403 before any write, capability verified server-side); destructive/bulk ops are two-step `preview` → confirmed `execute`; never leak secrets, PII, or raw upstream errors.
 
 ## Stage 12 — keep the docs current
 
