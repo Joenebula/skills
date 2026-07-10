@@ -5,7 +5,7 @@ description: Invoke immediately BEFORE any deploy, merge, or "it's done" claim �
 
 # preflight — the gate, actually run
 
-The one core truth: **a verification model nobody executes is documentation, not protection.** [[regression-testing]] defines the layers and [[shipping]] defines where the gate sits in the release; this skill is the repeatable pass that runs them — same steps, same order, every time, ending in one explicit verdict. If preflight didn't run, the change is unverified — say so in those words.
+The one core truth: **a verification model nobody executes is documentation, not protection.** [[regression-testing]] defines the layers and [[releasing]] defines where the gate sits in the release; this skill is the repeatable pass that runs them — same steps, same order, every time, ending in one explicit verdict. If preflight didn't run, the change is unverified — say so in those words.
 
 Run this before every deploy or merge, and before telling the user a change is "done". A tiny change gets the same pass — "it's small" is how regressions ship.
 
@@ -42,7 +42,7 @@ An auditor that cannot run is **DECLARED**, never silently dropped. An auditor's
 
 Run the layers the diff armed, in order, per [[regression-testing]]:
 
-1. **Layer A — static gate.** Always. Typecheck + production build + the structural checks. Judge by the **real exit code** of each command run standalone — never a piped/filtered status ([[shipping]] rule c).
+1. **Layer A — static gate.** Always. Typecheck + production build + the structural checks. Judge by the **real exit code** of each command run standalone — never a piped/filtered status ([[releasing]] rule c).
 2. **Layer B — smoke + reconciliation.** Against the target being shipped to. Reachability, auth-refusal, displayed==source, no leaks. Degrades to *skip* without credentials — a skip is declared, not passed.
 3. **Layer C — behavioural E2E.** Every journey the diff can plausibly reach. If Layer C cannot run (no environment, no test accounts), it is **DECLARED — "Layer C not run: <reason>"** — never implied green.
 
@@ -71,5 +71,5 @@ Close with the report, always in this shape:
 ## Where this sits
 
 - Stages 10–11 of the build pipeline in [[engineering-standards]] are this pass.
-- Step 2 of the release sequence in [[shipping]] is this pass; a GO here still isn't deploy authorization — that's rule (a) there.
+- Step 2 of the release sequence in [[releasing]] is this pass; a GO here still isn't deploy authorization — that's rule (a) there.
 - The layers, the domain must-pass catalogue, and the auditor contract live in [[regression-testing]]; ambiguity about what a check should assert is an [[ask-dont-guess]] stop.

@@ -118,7 +118,7 @@ Build in this order even under deadline — primitives-from-tokens is cheaper th
 - **Delegate the diff to the design-system-auditor agent** to catch what a search can't: wrong component for the need, a second accent, a hard-coded close destination, a missing catalogue/gallery entry.
 - **Run the accessibility-auditor alongside it** — an off-token value is also an unverifiable contrast, and a bespoke widget is a keyboard/focus risk; the two audits pair on every UI diff.
 
-This is the "components" gate of the build pipeline in [[engineering-standards]]; the full pre-ship gauntlet lives in [[regression-testing]] and the release flow in [[shipping]]. When the system itself is ambiguous, don't guess — see [[ask-dont-guess]]. The system carries three concerns that have their own depth: [[accessibility]] (bake it into the tokens/components so screens inherit it), [[responsive-design]] (breakpoints, fluid type, the spacing scale), and [[forms-and-input]] (the validation/error/upload behaviour STEP 3 starts).
+This is the "components" gate of the build pipeline in [[engineering-standards]]; the full pre-ship gauntlet lives in [[regression-testing]] and the release flow in [[releasing]]. When the system itself is ambiguous, don't guess — see [[ask-dont-guess]]. The system carries three concerns that have their own depth: [[accessibility]] (bake it into the tokens/components so screens inherit it), [[responsive-design]] (breakpoints, fluid type, the spacing scale), and [[forms-and-input]] (the validation/error/upload behaviour STEP 3 starts).
 
 ---
 

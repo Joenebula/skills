@@ -127,4 +127,4 @@ Faithful reporting includes bad news early. A surfaced failure is a gift; a buri
 - [[engineering-standards]] — the build pipeline enforces these checks at each stage; the feature-completeness-auditor catches the Law 4 anti-patterns before they ship.
 - [[regression-testing]] — the no-verify-shipping rule (Law 6) is enforced there; static green ≠ "it works", and the regression-auditor maps a change to the checks that prove behaviour.
 - [[design-system]] — Law 3's "find the documented component, don't invent one."
-- [[shipping]] — the final gate where "done AND verified" is required, not claimed.
+- [[releasing]] — the final gate where "done AND verified" is required, not claimed.

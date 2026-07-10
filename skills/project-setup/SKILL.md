@@ -11,7 +11,7 @@ description: Use when standing up or onboarding to a GitHub + Supabase + Vercel 
 
 This stack is built so every external dependency **degrades gracefully**: an `isConfigured` guard makes each service optional, so a missing key never blocks boot. You will see the whole app working — on a bundled demo/fixture fallback — *before* you create a single account. Only after that do you connect GitHub, then Supabase, then Vercel, each in its own step, verifying as you go.
 
-This skill covers **first-time wiring only**. The repeatable verify → gate → ship → confirm release loop lives in [[shipping]] — once you're set up, that's the lane you live in.
+This skill covers **first-time wiring only**. The repeatable verify → gate → ship → confirm release loop lives in [[releasing]] — once you're set up, that's the lane you live in.
 
 The phases, in order:
 
@@ -153,7 +153,7 @@ Watch the **real exit code** — a build can print warnings and still fail, or f
 - An API route answers (not a 500).
 - Auth works end-to-end: request a magic link / sign-in email, click it, land signed-in.
 
-**"Pushed" ≠ "live."** Confirm the *new* build is the one actually serving (check the deployment hash/timestamp in Vercel), not a stale cache. This verification pairs with [[regression-testing]]; the full release discipline is [[shipping]].
+**"Pushed" ≠ "live."** Confirm the *new* build is the one actually serving (check the deployment hash/timestamp in Vercel), not a stale cache. This verification pairs with [[regression-testing]]; the full release discipline is [[releasing]].
 
 ---
 
@@ -187,7 +187,7 @@ Watch the **real exit code** — a build can print warnings and still fail, or f
 
 ## Cross-links
 
-- [[shipping]] — the repeatable release loop (verify → gate → ship → confirm; authorized deploys; exit codes). This skill is first-time wiring only; that one is every release after.
+- [[releasing]] — the repeatable release loop (verify → gate → ship → confirm; authorized deploys; exit codes). This skill is first-time wiring only; that one is every release after.
 - [[engineering-standards]] — security gating, secret handling, code quality bars.
 - [[regression-testing]] — proving "it still works", not just "it compiles", before and after deploy.
 - [[ask-dont-guess]] — when migration order, a destructive step, or a key's destination is unclear, stop and confirm.

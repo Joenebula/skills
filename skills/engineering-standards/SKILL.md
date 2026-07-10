@@ -12,7 +12,7 @@ The one core truth: **"it compiles" is not "it works."** A change is done only w
 1. **Flag before continuing when unsure.** Ambiguous intent, unclear scope, more than one reasonable reading, or any destructive action → STOP and ask. The full guardrail (how to ask, recommend-then-act, honesty) lives in [[ask-dont-guess]].
 2. **Recommend, then act.** State what you'll do and the recommended approach (with the trade-off), then do it. For multi-step or destructive work, lay out the plan and get a yes first.
 3. **Change once = change everywhere.** A shared mechanism is shared. Change how one behaves (search, confirm, pagination, row-state, predictive input, bulk…) → change it in **every** site it appears, unless the user explicitly scopes it to one. See the catalogue below.
-4. **Verify, then deploy.** Typecheck → production build → gate → ship, in that order. Static green is necessary, never sufficient. The release sequence lives in [[shipping]].
+4. **Verify, then deploy.** Typecheck → production build → gate → ship, in that order. Static green is necessary, never sufficient. The release sequence lives in [[releasing]].
 5. **Done means wired end-to-end AND behaviourally verified** — not "it compiles." Every affordance traces to a real backend that persists or acts; data shown loads from a real source; settings round-trip (write → read back); copy matches behaviour. Proof lives in [[regression-testing]].
 
 ## The build pipeline — walk EVERY stage in order
@@ -29,7 +29,7 @@ Consider each stage for any non-trivial change. **Skip a stage only with a state
 8. **Build** — implement; if you touched a shared mechanism, **sweep all its sites** (stage 5).
 9. **Verify (static)** — typecheck → production build. Watch the build's **exit code**, not just its log. *(This proves it DEPLOYS — not that it works.)*
 10. **Completeness & regression** — run the auditors and trace BOTH ways: **forward** — every new affordance → the real route/persistence backing it (no toast-success-that-no-ops, no fixture dressed as real, no dead control left visible, copy == behaviour); **reverse** — every new route is actually called, every migration applied (or it degrades gracefully), every stored field consumed. Run feature-completeness-auditor and regression-auditor always; design-system-auditor + accessibility-auditor on any UI diff; security-route-auditor on any route diff — the orchestrated pass is [[preflight]]. A behavioural / signed-in / data-changing feature is NOT verified until its end-to-end check is green. Detail: [[regression-testing]].
-11. **Ship** — the [[preflight]] gate must be GO before you push. Detail: [[shipping]].
+11. **Ship** — the [[preflight]] gate must be GO before you push. Detail: [[releasing]].
 12. **Learn** — update the skills / catalogue / gotchas list / gallery / memory **in the same change**. New shared mechanism or hard rule → this skill's catalogue; new bug-that-bit-us → the gotchas list; durable working rule → memory. Skipping is allowed only as a *consciously cleared* stage, never a forgotten one.
 
 ## The shared-mechanism catalogue (build once, reuse, sweep all sites)
@@ -83,4 +83,4 @@ When a change adds or alters a pattern, the docs are part of the change: new/cha
 
 > **HARD RULE — never update a skill without asking first.** The skills library is updated *only* with the user's explicit say-so. When a **major** change lands — a new reusable mechanism, a new hard rule, a gotcha that bit us, a new domain pattern, a shift in how we build — **propose** the skill update (which skill, what edit, why) and **WAIT for a yes**. No edits to any skill **or agent** file until the user approves. Don't propose for trivial/one-off changes — only when the learning is durable and reusable. Capturing learnings is continuous; *writing* them is gated on approval. (This mirrors [[ask-dont-guess]] — ask before acting on anything that changes shared, durable artifacts.)
 
-Cross-references: [[design-system]], [[regression-testing]], [[ask-dont-guess]], [[shipping]]. Deeper dives on the concerns this skill touches: [[reviewing-code]] (the review pass), [[security]] (the full trust model behind the gating section), [[data-modelling]] (entities + safe migrations behind the data stages), [[api-design]] (the contract shape), and [[observability]] (what happens when a stage's wiring fails).
+Cross-references: [[design-system]], [[regression-testing]], [[ask-dont-guess]], [[releasing]]. Deeper dives on the concerns this skill touches: [[reviewing-code]] (the review pass), [[security]] (the full trust model behind the gating section), [[data-modelling]] (entities + safe migrations behind the data stages), [[api-design]] (the contract shape), and [[observability]] (what happens when a stage's wiring fails).

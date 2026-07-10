@@ -7,7 +7,7 @@ description: Invoke when setting up environments, config, backups, or scaling �
 
 The one core truth: **the time to set up backups, environments, and rollback is before the incident, not during it.** Infrastructure is insurance — invisible until something breaks, and then the only thing that matters. Separate your environments, keep config out of code, prove your backups restore, and always have a path back to the last good state.
 
-First-time **bootstrap** (which services, where each key goes) is [[project-setup]]; the **release sequence** (verify → gate → ship → confirm) is [[shipping]]. This skill is the standing environment, not the per-deploy act.
+First-time **bootstrap** (which services, where each key goes) is [[project-setup]]; the **release sequence** (verify → gate → ship → confirm) is [[releasing]]. This skill is the standing environment, not the per-deploy act.
 
 ## Law 1 — Separate environments, identical shape
 
@@ -33,7 +33,7 @@ First-time **bootstrap** (which services, where each key goes) is [[project-setu
 
 ## Law 4 — A rollback path, always
 
-- Every deploy has a **way back** — redeploy the previous artefact, or a forward-fix you can ship fast ([[shipping]]).
+- Every deploy has a **way back** — redeploy the previous artefact, or a forward-fix you can ship fast ([[releasing]]).
 - **Migrations are reversible or forward-fixable** and decoupled from code rollback (you can't un-run a destructive migration by reverting code — [[data-modelling]]).
 - **Feature-flag** risky changes so you can disable without a deploy ([[refactoring]]).
 - Keep the last-known-good identified so "roll back" isn't a scramble.
@@ -53,7 +53,7 @@ First-time **bootstrap** (which services, where each key goes) is [[project-setu
 
 ## Cross-links
 - [[project-setup]] — first-time bootstrap order and where every key belongs.
-- [[shipping]] — the per-deploy verify → gate → ship → confirm sequence and rollback trigger.
+- [[releasing]] — the per-deploy verify → gate → ship → confirm sequence and rollback trigger.
 - [[data-modelling]] — reversible migrations, decoupled from code rollback.
 - [[refactoring]] — feature flags to disable risky changes without redeploying.
 - [[observability]] — health checks and alerting on the running environment.

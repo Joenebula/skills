@@ -78,7 +78,7 @@ Then decide, explicitly:
 - **Any red → NO-GO.** Name the failing check. Fix it. Re-run. Do not ship around it.
 - **A layer you could not run** (no client, no credentials) is **DECLARED — never silently skipped.** "Layer C not run: no test environment" is acceptable; pretending it passed is not.
 
-A NO-GO is a result, not a failure. Shipping red is the failure. Where this gauntlet sits in the release flow lives in [[shipping]]; the orchestrated, repeatable run of it — which auditors fire on which diff, in what order, ending in the verdict — is [[preflight]].
+A NO-GO is a result, not a failure. Shipping red is the failure. Where this gauntlet sits in the release flow lives in [[releasing]]; the orchestrated, repeatable run of it — which auditors fire on which diff, in what order, ending in the verdict — is [[preflight]].
 
 ---
 
@@ -138,4 +138,4 @@ Read-only is the contract: an auditor that can mutate is no longer trustworthy a
 
 ---
 
-See also: [[engineering-standards]] for the discipline these checks enforce, and [[shipping]] for where the gauntlet sits in the release flow.
+See also: [[engineering-standards]] for the discipline these checks enforce, and [[releasing]] for where the gauntlet sits in the release flow.

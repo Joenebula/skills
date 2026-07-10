@@ -49,7 +49,6 @@ This skill covers the whole selling surface as one thing, because its laws canno
 
 - Rates, classes, and zones are **modelled once** (they live in the back-office data model, §Back-office below) and are **read** by the storefront, the cart, the order, and the invoice.
 - Change once, and every surface agrees. A storefront that computes shipping from its own table will silently disagree with the invoice.
-- *(Note: "shipping" here means parcels and fulfilment. The deploy runbook is [[shipping]] — a different thing entirely.)*
 
 ---
 

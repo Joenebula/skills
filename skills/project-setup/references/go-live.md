@@ -1,6 +1,6 @@
 # Going live safely
 
-How to take a Next.js + Supabase app on Vercel from "it deploys" to "it's safely public" — the first-time cutover. Read this when your build is green in CI and you're about to point a real domain at it and let real users in. For the *repeatable* release loop on every change after launch, see [[shipping]]; this file covers the one-time wiring you do once.
+How to take a Next.js + Supabase app on Vercel from "it deploys" to "it's safely public" — the first-time cutover. Read this when your build is green in CI and you're about to point a real domain at it and let real users in. For the *repeatable* release loop on every change after launch, see [[releasing]]; this file covers the one-time wiring you do once.
 
 ---
 
@@ -72,7 +72,7 @@ Return: a GO / NO-GO verdict, then a numbered, prioritised gap list (area · wha
 
 > **Do §0 (the launch-readiness audit) FIRST.** This gauntlet proves the build *ships* — not that every area exists; a green gauntlet on an incomplete site is still a NO-GO.
 
-Run these in order. Stop at the first failure — do not "ship anyway and watch." The full per-release discipline (verify → gate → ship → confirm, authorized deploys, reading exit codes) lives in [[shipping]] and the test layers live in [[regression-testing]]; this is the first-launch checklist that points at them.
+Run these in order. Stop at the first failure — do not "ship anyway and watch." The full per-release discipline (verify → gate → ship → confirm, authorized deploys, reading exit codes) lives in [[releasing]] and the test layers live in [[regression-testing]]; this is the first-launch checklist that points at them.
 
 - [ ] **Typecheck.** `npm run typecheck` (or `npx tsc --noEmit`). Zero errors.
 - [ ] **Production build — watch the REAL exit code.** Run `npm run build`. A prod build catches what dev never does: env vars baked at build time, server/client boundary mistakes, route export errors.
@@ -148,12 +148,12 @@ You've flipped the gate open. Stay at the keyboard.
   1. **Flip the flag OFF** (fastest, surface-scoped, no deploy) — for "feature X is broken."
   2. **Promote the previous deployment**: Vercel → **Deployments** → the last-known-good → **⋯ → Promote to Production** (instant, whole-site) — for "the whole build is bad."
   3. **Revert the commit + redeploy** (`git revert <sha>` → push) — the durable fix; do this after an instant lever has stopped the bleeding.
-- [ ] If you ship a hotfix in this window, it still goes through [[shipping]]'s release loop — don't push straight to production unverified just because you're in a hurry. A panicked unguarded push is how the first hour becomes the first day.
+- [ ] If you ship a hotfix in this window, it still goes through [[releasing]]'s release loop — don't push straight to production unverified just because you're in a hurry. A panicked unguarded push is how the first hour becomes the first day.
 
 ---
 
 ## See also
-- [[shipping]] — the repeatable release loop you'll use for every change after this first cutover (verify → gate → ship → confirm, authorized deploys, exit-code discipline).
+- [[releasing]] — the repeatable release loop you'll use for every change after this first cutover (verify → gate → ship → confirm, authorized deploys, exit-code discipline).
 - [[regression-testing]] — the test layers behind the smoke pass in §1.
 - [[engineering-standards]] — the server-side gating / capability check your feature flags should reuse.
 - [[ask-dont-guess]] — when a canonical-host or flag decision is ambiguous, confirm before flipping, don't guess.

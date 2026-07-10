@@ -1,11 +1,11 @@
 ---
-name: shipping
+name: releasing
 description: Use BEFORE and DURING any deploy or release — verify → regression-gate → ship → confirm; authorized + controlled deploys only, never mask a verification exit code, and confirm the release is actually live.
 ---
 
-# Shipping
+# releasing — "pushed" is not "live"
 
-**"Pushed" is not "live", and a green local build is not a verified release.** A release is done only when the new build is *confirmed serving* to real users — not when the command exited 0, not when the commit landed, not when the push succeeded.
+**A green local build is not a verified release.** A release is done only when the new build is *confirmed serving* to real users — not when the command exited 0, not when the commit landed, not when the push succeeded.
 
 This skill is the controlled-release playbook. Read it before every deploy. Releasing is a sequence with gates, not a single command.
 

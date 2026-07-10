@@ -2,7 +2,7 @@
 
 Optional third-party services for the GitHub + Supabase + Vercel + Next.js stack. Read this when you want to switch on a feature that needs an outside provider — captcha, transactional email, scheduled jobs, or a third-party data API. Each service here is **optional**: it **unlocks** a feature and **degrades gracefully** when its key is absent. Set the key only when you want the feature. A missing optional key must **never** crash the app.
 
-> This file covers the OPTIONAL layer. The required core wiring — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` — lives in the parent `SKILL.md`. For the ongoing verify → gate → ship → confirm release loop (and where prod env vars get set on the host), see [[shipping]]. This file owns FIRST-TIME wiring of each optional service.
+> This file covers the OPTIONAL layer. The required core wiring — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL` — lives in the parent `SKILL.md`. For the ongoing verify → gate → ship → confirm release loop (and where prod env vars get set on the host), see [[releasing]]. This file owns FIRST-TIME wiring of each optional service.
 
 ## The mental model (read once)
 
@@ -161,4 +161,4 @@ Whenever you add a new optional integration, follow this exact sequence:
 3. **Guard the feature** behind an `isConfigured` / `enabled` check that reads the key.
 4. **The feature lights up.** With the key present it runs; with it **absent it degrades gracefully** — a no-op, a stub, a skipped send, or (for privileged triggers like cron) a safe `401`. It must **never crash**.
 
-This is the contract from [[engineering-standards]] (graceful degradation: a missing optional dependency is an expected state, not an error) and [[ask-dont-guess]] (surface an honest "not configured" state rather than faking success or silently half-working). Forms gated by any of these keys still follow [[design-system]] for their validation and "not configured" messaging, and every key change is verified through [[regression-testing]] before it ships via [[shipping]].
+This is the contract from [[engineering-standards]] (graceful degradation: a missing optional dependency is an expected state, not an error) and [[ask-dont-guess]] (surface an honest "not configured" state rather than faking success or silently half-working). Forms gated by any of these keys still follow [[design-system]] for their validation and "not configured" messaging, and every key change is verified through [[regression-testing]] before it ships via [[releasing]].

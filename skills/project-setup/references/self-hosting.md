@@ -2,7 +2,7 @@
 
 Same app, hosted yourself. This reference covers shipping the app to any host that runs a long-lived Node process — a cPanel "Setup Node.js App", a managed Node host, or a plain VPS — instead of Vercel. Read it when the target is NOT Vercel.
 
-The key idea: **you BUILD LOCALLY and ship a self-contained bundle.** Nothing on the host compiles your app. Your laptop produces a finished Node server plus its static output, you upload that, and the host just runs it. The trade-off vs. Vercel: you give up auto-deploy-on-push and get a manual **build → bundle → upload → restart** loop instead. The first-time wiring is below; once it's wired, the ongoing release discipline (verify → gate → ship → confirm) is owned by [[shipping]] — follow that for every subsequent deploy.
+The key idea: **you BUILD LOCALLY and ship a self-contained bundle.** Nothing on the host compiles your app. Your laptop produces a finished Node server plus its static output, you upload that, and the host just runs it. The trade-off vs. Vercel: you give up auto-deploy-on-push and get a manual **build → bundle → upload → restart** loop instead. The first-time wiring is below; once it's wired, the ongoing release discipline (verify → gate → ship → confirm) is owned by [[releasing]] — follow that for every subsequent deploy.
 
 > Prerequisite: the rest of the bootstrap (GitHub repo, Supabase project, schema migrations, seed, admin-bootstrap migration) is done elsewhere in this skill. This file is only the "host it yourself" slice. If anything below is ambiguous for your specific host, stop and ask — see [[ask-dont-guess]].
 
@@ -166,7 +166,7 @@ In the Node app's **"Environment variables"** panel (cPanel: the *Detected confi
 edit → npm run build → bash scripts/bundle.sh → upload deploy.tar.gz → extract over app folder → restart
 ```
 
-This is the manual cost of self-hosting (no push-to-deploy). Run the full release gate from [[shipping]] before each one, and the behavioural/regression checks from [[regression-testing]] before you call it shipped — "it built" is not "it works."
+This is the manual cost of self-hosting (no push-to-deploy). Run the full release gate from [[releasing]] before each one, and the behavioural/regression checks from [[regression-testing]] before you call it shipped — "it built" is not "it works."
 
 ---
 
@@ -196,4 +196,4 @@ This is the canonical runtime-filesystem rule — see the runtime-filesystem got
 - [ ] App started/restarted; homepage + one server route verified live
 - [ ] No runtime `fs.write` of user content — it goes to the database
 
-For everything that happens on every subsequent release (authorized deploys, verify→gate→ship→confirm, exit codes), follow [[shipping]]. This reference only stands the host up the first time.
+For everything that happens on every subsequent release (authorized deploys, verify→gate→ship→confirm, exit codes), follow [[releasing]]. This reference only stands the host up the first time.

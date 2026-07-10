@@ -24,7 +24,7 @@ Turn a diff into the precise set of regression checks that must pass before it s
 - **Coverage must grow.** If the change adds a NEW user-facing feature or fixes a bug with NO covering test, REQUIRE a new test in the SAME change. Coverage never lags the feature.
 - **The verdict honours exit codes.** A check counts as passing only if its real signal (the build's exit code, the script's status) is green — not a glanced-at log line.
 
-See [[engineering-standards]] for the change-once-everywhere and stat-source rules, and [[shipping]] for the go-live gate. A NEW feature with unclear intended behaviour is an [[ask-dont-guess]] moment — name it, don't assume it.
+See [[engineering-standards]] for the change-once-everywhere and stat-source rules, and [[releasing]] for the go-live gate. A NEW feature with unclear intended behaviour is an [[ask-dont-guess]] moment — name it, don't assume it.
 
 ## Output format
 

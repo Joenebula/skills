@@ -7,7 +7,7 @@ description: Invoke when investigating any bug, failure, or "it doesn't work" re
 
 The one core truth: **a fix for a bug you never reproduced is a guess wearing a fix's clothes.** You don't know you fixed it — you know you changed something and the symptom went quiet. Real debugging is evidence-driven: see it fail, understand *why* it fails, change the cause, watch it pass, and leave behind the test that makes this bug impossible to ship twice.
 
-A bug report is a request to *investigate* — releasing the fix still needs its own explicit go ([[shipping]] rule a).
+A bug report is a request to *investigate* — releasing the fix still needs its own explicit go ([[releasing]] rule a).
 
 ## Law 1 — Reproduce before you touch anything
 
@@ -54,4 +54,4 @@ A bug report is a request to *investigate* — releasing the fix still needs its
 - [[preflight]] — the pass a fix runs before it's called done.
 - [[engineering-standards]] — the gotchas list (where root causes become rules) and the shared-mechanism sweep.
 - [[ask-dont-guess]] — ambiguous reports, honest interim states, faithful reporting.
-- [[shipping]] — a fix ships only on an explicit go.
+- [[releasing]] — a fix ships only on an explicit go.
