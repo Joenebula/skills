@@ -23,7 +23,8 @@ Job: catch the excluding-someone class of bug before it ships — every barrier 
 - **Colour-only signalling** — an error, status, or chart series distinguished by colour alone, with no text/icon/pattern companion.
 - **State and announcements** — toggles/expanders missing their state attribute (`aria-expanded`, `aria-pressed`, checked); async outcomes (saved, loading, error) rendered visually with no announcement path; form errors not programmatically tied to their field (the documented field-error element handles this — bespoke error rendering is a flag).
 - **Motion** — animation/transition added with no reduced-motion guard; information conveyed only by animation.
-- **Target size** — fixed dimensions that put a control below the ~44px target floor ([[responsive-design]]).
+- **Target size** — fixed dimensions that put a control below the WCAG 2.2 AA floor of **24×24 CSS px** (aim ≥44px for primary controls) ([[responsive-design]]).
+- **WCAG 2.2 additions (static signals only)** — a login flow demanding a cognitive test (transcribe-this, solve-this) with no paste/password-manager/OAuth path (3.3.8); a drag-only interaction with no click/tap handler (2.5.7). The rest of 2.2 — focus-not-obscured (2.4.11), consistent-help (3.2.6), redundant-entry (3.3.7) — is behavioural; route it to the manual block below, never a static green.
 
 ## What a static read cannot prove — declare it
 

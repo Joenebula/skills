@@ -5,7 +5,7 @@ description: Invoke BEFORE calling any UI done — labels, contrast, keyboard, f
 
 # accessibility — a gate, not a garnish
 
-The one core truth: **an interface that excludes people isn't "mostly done" — it's broken for those people.** Accessibility is measurable, mostly mechanical, and cheapest when built in. Treat WCAG AA as the bar and zero critical issues as a release gate, the same way [[regression-testing]] gates behaviour.
+The one core truth: **an interface that excludes people isn't "mostly done" — it's broken for those people.** Accessibility is measurable, mostly mechanical, and cheapest when built in. Treat **WCAG 2.2 AA** as the bar and zero critical issues as a release gate, the same way [[regression-testing]] gates behaviour.
 
 This pairs with [[design-system]] (accessible components built once) and [[forms-and-input]] (the highest-risk surface). Build it into the tokens and components and most screens inherit it.
 
@@ -36,6 +36,7 @@ This pairs with [[design-system]] (accessible components built once) and [[forms
 - **Contrast**: ≥ 4.5:1 for normal text, ≥ 3:1 for large text and meaningful UI/graphics. Verify, don't eyeball.
 - **Images**: meaningful ones get descriptive `alt`; decorative ones get empty `alt` so they're skipped.
 - **Don't rely on colour alone** — pair it with text, icon, or pattern (error states, status, charts).
+- **Resize & reflow**: text scales to **200%** (1.4.4) and content **reflows to a 320px width** (1.4.10) with no loss of content/function and no horizontal scroll. *There is no minimum font size in WCAG — this is the real requirement.*
 - Respect **reduced-motion** preferences; no essential information conveyed only by animation.
 
 ## Law 4 — Names, labels, and errors
@@ -43,6 +44,19 @@ This pairs with [[design-system]] (accessible components built once) and [[forms
 - Every input has a **programmatic label** (not just a placeholder). Icon-only buttons get an accessible name.
 - Errors are **announced, specific, and tied to the field** — "Enter a valid email", next to the input, not a generic banner. Detail in [[forms-and-input]].
 - Status changes (saved, loading, error) are announced to assistive tech, not just shown.
+
+## New in WCAG 2.2 — the six AA criteria added in 2023
+
+AA and current; a build targeting "AA" in 2026 must meet these, not just the 2.1 set above.
+
+- **2.4.11 Focus Not Obscured** — a focused control is never fully hidden behind a sticky header/footer or an overlay. Test by tabbing with sticky elements present.
+- **2.5.7 Dragging Movements** — any drag action (reorder, slider, map pan) has a single-pointer alternative (tap/click).
+- **2.5.8 Target Size (Minimum)** — interactive targets are **≥ 24×24 CSS px**, or have ≥ 24px spacing between them. *(Aim ≥ 44px for primary controls — comfortably clears the floor.)*
+- **3.2.6 Consistent Help** — help/contact routes appear in a consistent place across pages.
+- **3.3.7 Redundant Entry** — don't re-ask for information already provided earlier in the same process; auto-populate or let the user pick it.
+- **3.3.8 Accessible Authentication** — no cognitive-function test (memorising, transcribing, puzzle-solving) is required to log in; allow paste, password managers, and OAuth. *(Admin Google sign-in passes this; any future password flow must too.)*
+
+Four of these — 2.4.11, 2.5.7, 3.2.6, 3.3.7 — are largely **behavioural**, proven by a manual pass, not a static check.
 
 ## Stand this up in a new project
 
