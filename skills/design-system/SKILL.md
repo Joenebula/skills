@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: Use BEFORE building or changing ANY UI (page, screen, component, form, modal, or stylesheet) — build every UI from a documented design system (tokens + a component catalogue + a live gallery), never invent one-off classes or values; also covers standing a design system up from scratch.
+description: Use BEFORE building or changing ANY UI (page, screen, component, form, modal, or stylesheet) — build every UI from a documented design system (tokens + a component catalogue + a live gallery), never invent one-off classes or values; also covers standing a design system up from scratch, including choosing its aesthetic direction — bold, intentional, context-specific — when none exists yet.
 ---
 
 # design-system
@@ -95,7 +95,28 @@ First exhaust STEP 1 — most "new" components are an existing one you didn't fi
 
 ## STEP 6 — Standing up a design system from scratch
 
-When a project has no system yet, build it in this order. Each layer depends only on the layer below it.
+When a project has no system yet, this is also the moment its visual identity gets decided — the two choices are inseparable: you can't pick a token value before deciding what the tokens should express.
+
+**Commit to a direction before you pick a single token value.**
+
+- **Purpose** — what problem does this interface solve? Who uses it?
+- **Tone** — pick a direction and hold it: brutally minimal, maximalist, retro-futuristic, organic/natural, luxury/refined, playful/toy-like, editorial/magazine, brutalist/raw, art-deco/geometric, soft/pastel, industrial/utilitarian… Choose one true to the context, not a favourite.
+- **Constraints** — framework, performance budget ([[performance]]), accessibility ([[accessibility]]) — the direction must survive all three.
+- **Differentiation** — what's the one thing someone will remember?
+
+Bold maximalism and refined minimalism both work — **the key is intentionality, not intensity.**
+
+**The direction becomes real AS the tokens below** — it doesn't sit beside them, it *is* them:
+
+- **Typography** — distinctive, characterful faces; pair a display font with a refined body font. Avoid the defaults everyone reaches for (Inter, Roboto, Arial, system stacks) — and equally avoid converging on the *fashionable* AI default (Space Grotesk is a tell too).
+- **Colour** — a dominant palette with sharp accents outperforms a timid, evenly-distributed one, resolved into the neutral ramp + semantic set + exactly one accent below. The boldness is *which* colours the tokens hold, not how many accents you smuggle in.
+- **Motion** — one well-orchestrated page-load with staggered reveals beats scattered effects. CSS-first; respect reduced-motion.
+- **Spatial composition** — asymmetry, overlap, diagonal flow, grid-breaking moments, generous negative space *or* controlled density — built on the spacing scale below, so the drama is repeatable, not one screen's accident.
+- **Atmosphere** — texture, depth, and background treatment matched to the direction, only as documented tokened decisions. The moment an effect is "the default look" rather than a choice, it's a RULE ZERO tell (gradient-mesh wallpaper, glassmorphism-as-decoration, shadow-on-everything — see STEP 4).
+
+Two things a bold direction never gets to break: **accessibility** — contrast-checked token pairings, visible focus, reduced-motion honoured; a gorgeous interface that excludes people is broken, not bold — and **the money/trust path**. On checkout, payment, and account surfaces, convention and clarity outrank novelty; a surprised shopper or user abandons. Keep the grid-breaking for brand, marketing, and editorial surfaces, and use the plainest version of the same tokens there. Match implementation complexity to the vision: a maximalist direction earns elaborate, well-organised effect code; a minimalist one earns restraint.
+
+Then build in this order. Each layer depends only on the layer below it.
 
 1. **Tokens first.** Define once, at the root, as the single source of values:
    - **Colour** — a neutral ramp, the semantic set (success / warning / danger / info), and **exactly ONE accent**.
@@ -118,7 +139,7 @@ Build in this order even under deadline — primitives-from-tokens is cheaper th
 - **Delegate the diff to the design-system-auditor agent** to catch what a search can't: wrong component for the need, a second accent, a hard-coded close destination, a missing catalogue/gallery entry.
 - **Run the accessibility-auditor alongside it** — an off-token value is also an unverifiable contrast, and a bespoke widget is a keyboard/focus risk; the two audits pair on every UI diff.
 
-This is the "components" gate of the build pipeline in [[engineering-standards]]; the full pre-ship gauntlet lives in [[regression-testing]] and the release flow in [[releasing]]. When the system itself is ambiguous, don't guess — see [[ask-dont-guess]]. The system carries three concerns that have their own depth: [[accessibility]] (bake it into the tokens/components so screens inherit it), [[responsive-design]] (breakpoints, fluid type, the spacing scale), and [[forms-and-input]] (the validation/error/upload behaviour STEP 3 starts).
+This is the "components" gate of the build pipeline in [[engineering-standards]]; the full pre-ship gauntlet lives in [[regression-testing]] and the release flow in [[releasing]]. When the system itself is ambiguous, don't guess — name the gap and ask. The system carries three concerns that have their own depth: [[accessibility]] (bake it into the tokens/components so screens inherit it), [[responsive-design]] (breakpoints, fluid type, the spacing scale), and [[forms-and-input]] (the validation/error/upload behaviour STEP 3 starts).
 
 ---
 

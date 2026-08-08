@@ -7,7 +7,7 @@ description: Invoke BEFORE creating or changing any table, column, relation, enu
 
 The one core truth: **a bad schema is the most expensive mistake in the project.** Code is cheap to rewrite; data is not. A wrong column name ships forever, a lost migration loses real records, and a model that doesn't match reality forces every feature above it to lie. Model deliberately, migrate safely.
 
-For anything touching live data, [[engineering-standards]] (data-gotchas + reconciliation) and [[ask-dont-guess]] (never guess a field exists — read it) are mandatory companions.
+For anything touching live data, [[engineering-standards]] (data-gotchas + reconciliation) is a mandatory companion — never guess a field exists, read it.
 
 ## Law 1 — Model the entities before you touch a schema
 
@@ -15,13 +15,13 @@ For anything touching live data, [[engineering-standards]] (data-gotchas + recon
 2. **Define relations** — one-to-many, many-to-many (needs a join table), one-to-one. Draw it.
 3. **Pick the keys** — a stable surrogate id; natural keys only when truly immutable.
 4. **Decide ownership** — who is the source of truth for each field? (Critical when a value also lives in another system — see [[integrations]].)
-5. **Name for clarity and forever** — names are user-facing to every future developer; renaming a column is a migration, so get it right once. Anything user-facing → confirm the name, don't guess ([[ask-dont-guess]]).
+5. **Name for clarity and forever** — names are user-facing to every future developer; renaming a column is a migration, so get it right once. Anything user-facing → confirm the name, don't guess.
 
 ## Law 2 — Normalise, then denormalise only with a reason
 
 - Default to **normalised**: one fact in one place. A value stored twice will drift.
 - Denormalise (a cached count, a copied label) **only** for a measured read cost, and then you **own the consistency** — every write updates both, and a reconciliation check asserts they agree ([[engineering-standards]]).
-- A **money** value is minor-units integer + currency, never a float. A **point/credit** balance is an append-only ledger you sum, never a mutable number — see [[commerce]].
+- A **money** value is minor-units integer + currency, never a float. A **point/credit** balance is an append-only ledger you sum, never a mutable number.
 
 ## Law 3 — Migrations are additive, reversible, and ordered
 
@@ -35,12 +35,12 @@ For anything touching live data, [[engineering-standards]] (data-gotchas + recon
 
 ## Law 4 — Destructive changes are confirmed, never casual
 
-Drop column, drop table, mass delete, type change that loses precision → **STOP**, confirm a backup exists, preview the row count, and get an explicit yes ([[ask-dont-guess]]). Prefer **soft-delete** (a recoverable archive) over a hard delete on anything a user created — the shared soft-delete mechanism in [[engineering-standards]].
+Drop column, drop table, mass delete, type change that loses precision → **STOP**, confirm a backup exists, preview the row count, and get an explicit yes. Prefer **soft-delete** (a recoverable archive) over a hard delete on anything a user created — the shared soft-delete mechanism in [[engineering-standards]].
 
 ## Law 5 — Seeds and fixtures are idempotent and honest
 
 - A seed re-runs safely (upsert by stable key), never duplicating or clobbering edited data.
-- Demo/sample data is **clearly separable** from real and stripped on live surfaces — an undisclosed fixture is a lie ([[ask-dont-guess]]).
+- Demo/sample data is **clearly separable** from real and stripped on live surfaces — an undisclosed fixture is a lie.
 - Ship reference/default data as code the bundler embeds, not files written at runtime (gotcha d in [[engineering-standards]]).
 
 ## Stand this up in a new project
@@ -52,7 +52,6 @@ Drop column, drop table, mass delete, type change that loses precision → **STO
 
 ## Cross-links
 - [[engineering-standards]] — the data-gotchas list, the data-reconciliation rule, and the soft-delete mechanism.
-- [[ask-dont-guess]] — verify a field/route/value EXISTS by reading it; never infer from a sibling.
 - [[api-design]] — the contract that exposes the model; pagination and validation live there.
 - [[integrations]] — field-ownership and conflict rules when data is shared with another system.
 - [[project-setup]] — bootstrap order, migration gotchas, admin/seed setup.

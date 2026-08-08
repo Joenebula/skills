@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  SECURITY REPORT — HTML TEMPLATE (fill in per audit)
+  ----------------------------------------------------------------------------
+  - Replace every {{TOKEN}}. One <article class="finding SEV"> per finding
+    (SEV = critical|high|medium|low), grouped most-urgent first.
+  - SIX REPORTING RULES: plain-English first; numbered fix steps; every finding
+    rated; secrets rule stated; owner 2FA surfaced; honest about reach.
+  - ALL code/paths/commits go ONLY inside the <details class="dev"> box.
+  - Readiness dot: <span class="dot red|amber|green"> — red = criticals open,
+    amber = highs open / awaiting a decision, green = nothing blocking launch.
+  - Delete the two EXAMPLE findings + this comment before delivering.
+  - Save to /mnt/user-data/outputs and present. Self-contained; print = PDF.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security review — {{SITE_NAME}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12181a; --ink-deep:#0d1113; --paper:#f4f5f2; --card:#ffffff; --band:#f6f7f4;
+    --line:#e4e6e1; --line-soft:#eceee9;
+    --text:#1a1f22; --soft:#4a524d; --muted:#8a938f; --faint:#9aa29d;
+    --accent:#2fae93; --accent-deep:#1e7a68; --accent-lift:#6fdcc4; --accent-ink:#04140f;
+    --crit:#c02a21; --crit-bg:#fbeae8; --crit-ink:#7d1a15;
+    --high:#c2701c; --high-bg:#fbf1e3; --high-ink:#8a5416;
+    --med:#8a7000;  --med-bg:#f8f2dc;  --med-ink:#6b5300;
+    --low:#5f6870;  --low-bg:#eef0f0;  --low-ink:#3d4348;
+    --alert:#e5563f;
+    --shadow:0 1px 2px rgba(16,20,24,.04);
+    --shadow-card:0 1px 2px rgba(16,20,24,.05), 0 12px 30px rgba(16,20,24,.04);
+    --glow:radial-gradient(85% 90% at 100% 0%, rgba(47,174,147,.2), transparent 55%);
+    --r:16px; --r-sm:13px; --r-xs:11px; --r-btn:9px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--text);
+    font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:16px; line-height:1.6;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px; margin:0 auto; padding:0 22px 96px}
+  h1,h2{font-family:"Instrument Serif",serif; font-weight:400; line-height:1.12; letter-spacing:-.01em; color:var(--ink)}
+  h3{font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:1.06rem; margin:0 0 .35em; letter-spacing:-.01em; color:var(--ink)}
+  p{margin:.5em 0}
+  a{color:var(--accent-deep); text-underline-offset:2px}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; text-transform:uppercase; letter-spacing:.16em;
+    font-size:.66rem; color:var(--muted); margin:0 0 .5em}
+  .eyebrow::before{content:"// "; color:var(--accent)}
+  .sym{font-family:"Material Symbols Rounded"; font-size:1.1em; vertical-align:-.18em; line-height:1;
+    font-feature-settings:'liga'}
+
+  /* ============ MASTHEAD ============ */
+  .masthead{position:relative; background:var(--ink-deep); color:#c9d1d3; overflow:hidden}
+  .masthead::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(80% 70% at 100% 0%, rgba(47,174,147,.18), transparent 60%)}
+  .masthead-inner{position:relative; z-index:1; max-width:960px; margin:0 auto; padding:0 22px 46px}
+  .brandbar{display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+    padding:20px 0; border-bottom:1px solid rgba(255,255,255,.07)}
+  .brand{display:flex; align-items:center; gap:11px; flex:1; min-width:0}
+  .brand-mark{width:34px; height:34px; border-radius:var(--r-btn); background:var(--accent);
+    color:var(--accent-ink); display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 14px rgba(47,174,147,.4); flex:0 0 auto}
+  .brand-mark .sym{font-size:21px}
+  .brand-name{font-weight:600; color:#fff; letter-spacing:-.01em; line-height:1.15}
+  .brand-kind{font-family:"IBM Plex Mono",monospace; font-size:.63rem; letter-spacing:.12em;
+    text-transform:uppercase; color:#6f7a7d}
+  .readiness{display:flex; align-items:center; gap:9px; flex:0 0 auto}
+  .readiness .state{font-size:.83rem; font-weight:600; color:#f0f3f3}
+  .dot{width:8px; height:8px; border-radius:50%; flex:0 0 auto}
+  .dot.red{background:var(--alert); box-shadow:0 0 0 4px rgba(229,86,63,.16)}
+  .dot.amber{background:var(--high); box-shadow:0 0 0 4px rgba(194,112,28,.16)}
+  .dot.green{background:var(--accent); box-shadow:0 0 0 4px rgba(47,174,147,.16)}
+  .masthead .eyebrow{color:#6f7a7d; margin-top:38px}
+  .masthead h1{color:#fff; font-size:2.9rem; margin:.12em 0 .18em; max-width:18ch}
+  .masthead h1 em{font-style:italic; color:var(--accent-lift)}
+  .masthead .meta{font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:#6f7a7d;
+    margin:.7em 0 0; display:flex; flex-wrap:wrap; gap:.5em 1.6em}
+  .masthead .meta .sym{color:var(--accent); font-size:1.15em}
+
+  /* ============ METRIC TILES ============ */
+  .tiles{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin:-26px 0 22px; position:relative; z-index:2}
+  .tile{background:var(--card); border-radius:15px; padding:18px 20px; box-shadow:var(--shadow)}
+  .tile-top{display:flex; align-items:center; justify-content:space-between; gap:8px}
+  .chip{font-family:"IBM Plex Mono",monospace; font-size:.62rem; font-weight:600; text-transform:uppercase;
+    letter-spacing:.1em; padding:3px 9px; border-radius:999px}
+  .tile .n{font-family:"Instrument Serif",serif; font-size:3.25rem; line-height:1; margin-top:14px}
+  .tile .note{font-family:"IBM Plex Mono",monospace; font-size:.63rem; color:var(--muted); margin-top:6px;
+    text-transform:uppercase; letter-spacing:.08em}
+  .tile.c .chip{background:var(--crit-bg); color:var(--crit-ink)} .tile.c .n,.tile.c .sym{color:var(--crit)}
+  .tile.h .chip{background:var(--high-bg); color:var(--high-ink)} .tile.h .n,.tile.h .sym{color:var(--high)}
+  .tile.m .chip{background:var(--med-bg);  color:var(--med-ink)}  .tile.m .n,.tile.m .sym{color:var(--med)}
+  .tile.l .chip{background:var(--low-bg);  color:var(--low-ink)}  .tile.l .n,.tile.l .sym{color:var(--low)}
+
+  /* ============ DARK PANEL (honesty / owner actions) ============ */
+  .dark{position:relative; overflow:hidden; background:var(--ink); color:#e9eeed;
+    border-radius:var(--r); padding:26px 30px}
+  .dark::after{content:""; position:absolute; inset:0; pointer-events:none; background:var(--glow)}
+  .dark > *{position:relative; z-index:1}
+  .dark .eyebrow{color:var(--accent)}
+  .dark h2,.dark h3{color:#fff}
+  .dark p:not(.eyebrow){color:rgba(255,255,255,.74); font-size:.88rem; line-height:1.65}
+  .dark a{color:var(--accent-lift)}
+  .dark .lead{font-family:"Instrument Serif",serif; font-size:1.45rem; line-height:1.32; color:#fff; margin:0 0 12px}
+  .dark .lead em{font-style:italic; color:var(--accent-lift)}
+  .dark strong{color:#fff; font-weight:600}
+
+  /* ============ REQUIRED SETUP GATE ============ */
+  .gate{display:flex; gap:16px; align-items:flex-start; background:var(--high-bg); border-radius:var(--r);
+    box-shadow:var(--shadow); padding:22px 24px; margin:22px 0 0; position:relative; overflow:hidden}
+  .gate::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--high)}
+  .gate-mark{flex:0 0 auto; width:42px; height:42px; border-radius:var(--r-xs); background:var(--high);
+    color:#fff; display:flex; align-items:center; justify-content:center; margin-top:2px}
+  .gate-mark .sym{font-size:23px}
+  .gate .eyebrow{color:var(--high-ink)} .gate .eyebrow::before{color:var(--high)}
+  .gate h3{color:#5a3a10} .gate p:not(.eyebrow){font-size:.88rem; color:#6f5330}
+  .gate code{font-family:"IBM Plex Mono",monospace; background:rgba(20,23,26,.06); padding:1px 5px; border-radius:4px}
+  .gate ol.steps li{color:#6f5330}
+  .gate ol.steps li::before{background:var(--high)}
+
+  section.block{margin-top:46px}
+  .block > h2{font-size:1.85rem; margin:0 0 .5em}
+
+  /* ============ FINDINGS ============ */
+  .finding{position:relative; overflow:hidden; background:var(--card); border-radius:var(--r);
+    padding:24px 26px 22px; margin:16px 0; box-shadow:var(--shadow-card)}
+  .finding::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px}
+  .finding.critical::before{background:var(--crit)}
+  .finding.high::before{background:var(--high)}
+  .finding.medium::before{background:var(--med)}
+  .finding.low::before{background:var(--low)}
+  .fhead{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px}
+  .idx{font-family:"IBM Plex Mono",monospace; font-size:.81rem; color:var(--faint)}
+  .badge{display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace;
+    font-size:.65rem; font-weight:500; text-transform:uppercase; letter-spacing:.08em;
+    color:#fff; padding:4px 11px; border-radius:999px}
+  .badge .sym{font-size:15px}
+  .critical .badge{background:var(--crit)} .high .badge{background:var(--high)}
+  .medium .badge{background:var(--med)} .low .badge{background:var(--low)}
+  .fhead .spacer{flex:1}
+  .status{display:inline-flex; align-items:center; gap:6px; font-size:.81rem; font-weight:600;
+    padding:5px 12px; border-radius:999px}
+  .status .sym{font-size:16px}
+  .status.fixed{background:rgba(47,174,147,.16); color:var(--accent-deep)}
+  .status.proposed{background:var(--high-bg); color:var(--high-ink)}
+  .status.decision{background:var(--high-bg); color:var(--high-ink)}
+  .finding h3{font-size:1.18rem; margin:0 0 14px}
+  .fgrid{display:grid; grid-template-columns:1fr 1fr; gap:16px 22px}
+  .k{font-family:"IBM Plex Mono",monospace; font-size:.62rem; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--faint); display:block; margin-bottom:5px}
+  .fgrid p{margin:0; font-size:.88rem; color:#39413d; line-height:1.6}
+  .scenario{background:rgba(20,23,26,.045); border-radius:var(--r-xs); padding:11px 14px;
+    font-size:.85rem; color:#2a312e; line-height:1.55}
+  .field{margin-top:16px}
+  .note{margin:.4em 0 0; font-size:.85rem; color:var(--soft)}
+  ol.steps{margin:0; padding:0; list-style:none}
+  ol.steps li{position:relative; padding:5px 0 5px 38px; margin:0; font-size:.86rem;
+    color:#39413d; line-height:1.6}
+  ol.steps li::before{content:counter(step); counter-increment:step;
+    position:absolute; left:0; top:4px; width:25px; height:25px; border-radius:50%;
+    background:var(--ink); color:#fff; font-family:"IBM Plex Mono",monospace; font-size:.75rem;
+    display:flex; align-items:center; justify-content:center}
+  ol.steps{counter-reset:step}
+  .verify{display:flex; gap:8px; align-items:flex-start; background:rgba(47,174,147,.1);
+    border-radius:var(--r-xs); padding:11px 15px; margin-top:14px; font-size:.85rem; color:#28322e}
+  .verify .sym{font-size:18px; color:var(--accent-deep); flex:0 0 auto}
+  .verify strong{font-weight:600}
+  details.dev{margin-top:12px; background:var(--ink); border-radius:var(--r-xs); padding:0 15px}
+  details.dev summary{cursor:pointer; padding:12px 0; font-family:"IBM Plex Mono",monospace;
+    font-size:.62rem; text-transform:uppercase; letter-spacing:.1em; color:#6f7a7d;
+    list-style:none; display:flex; align-items:center; gap:.5em}
+  details.dev summary::-webkit-details-marker{display:none}
+  details.dev summary::before{content:"add"; font-family:"Material Symbols Rounded";
+    font-size:1.5em; letter-spacing:0; color:#6f7a7d}
+  details.dev[open] summary::before{content:"remove"}
+  details.dev pre{margin:0 0 14px; font-family:"IBM Plex Mono",monospace; font-size:.75rem;
+    color:#c8d9d3; line-height:1.55; white-space:pre-wrap; word-break:break-word}
+
+  /* ============ PANELS ============ */
+  .panel{background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:26px 30px; margin:16px 0}
+  .cards2{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px}
+  .subcard{background:rgba(255,255,255,.05); border-radius:var(--r-sm); padding:20px 22px}
+  .subhead{display:flex; align-items:center; gap:9px; margin-bottom:8px}
+  .subhead .num{font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--accent-ink);
+    background:var(--accent); width:22px; height:22px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center; flex:0 0 auto}
+  .subhead h3{margin:0; font-size:.97rem}
+  .dark ol.steps li{color:rgba(255,255,255,.82); font-size:.83rem; padding:4px 0 4px 32px}
+  .dark ol.steps li::before{background:var(--accent); color:var(--accent-ink); width:22px; height:22px; top:3px; font-size:.7rem}
+  .secrets-rule{background:rgba(47,174,147,.14); border-radius:10px; padding:12px 14px; margin-top:14px;
+    font-size:.79rem; color:#dfeee9; line-height:1.55}
+  .secrets-rule code{font-family:"IBM Plex Mono",monospace; background:rgba(255,255,255,.1);
+    padding:1px 5px; border-radius:4px}
+  .ring3{background:var(--high-bg); border-radius:var(--r); padding:24px 26px; margin:16px 0;
+    position:relative; overflow:hidden}
+  .ring3::before{content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--high)}
+  .ring3 .eyebrow{color:var(--high-ink)} .ring3 .eyebrow::before{color:var(--high)}
+  .ring3 h2{font-size:1.4rem; margin:0 0 .3em; color:#5a3a10}
+  .ring3 p:not(.eyebrow){font-size:.88rem; color:#6f5330; line-height:1.65}
+  .row{display:flex; gap:15px; align-items:flex-start; padding:18px 20px; background:var(--band);
+    border-radius:var(--r-sm); margin-top:12px}
+  .row .sym{font-size:24px; color:var(--accent); flex:0 0 auto}
+  .row h3{margin:0 0 3px; font-size:.97rem}
+  .row p{margin:0; font-size:.85rem; color:#5a625d}
+
+  /* ============ TABLE ============ */
+  .panel.flush{padding:20px 0 0; overflow:hidden}
+  .panel.flush .phead{padding:0 26px}
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:.88rem}
+  th{text-align:left; padding:10px 26px; font-family:"IBM Plex Mono",monospace; font-size:.62rem;
+    text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-weight:500}
+  td{padding:14px 26px; border-top:1px solid var(--line-soft)}
+  .tag{font-family:"IBM Plex Mono",monospace; font-size:.7rem; padding:3px 9px; border-radius:999px; white-space:nowrap}
+  .tag.was{background:var(--crit-bg); color:var(--crit-ink)}
+  .tag.now{background:rgba(47,174,147,.16); color:var(--accent-deep)}
+  .tag.wait{background:var(--high-bg); color:var(--high-ink)}
+
+  footer{margin-top:52px; padding-top:22px; border-top:1px solid var(--line);
+    color:var(--muted); font-size:.72rem; font-family:"IBM Plex Mono",monospace; line-height:1.8}
+
+  @media (max-width:760px){
+    .tiles{grid-template-columns:repeat(2,1fr)}
+    .fgrid,.cards2{grid-template-columns:1fr}
+    .masthead h1{font-size:2.1rem}
+  }
+  @media print{
+    body{background:#fff; font-size:11pt; color:#000}
+    .masthead,.dark,details.dev pre{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .masthead{background:var(--ink-deep) !important}
+    .dark{background:var(--ink) !important}
+    .tiles{margin-top:18px}
+    .finding,.panel,.tile,.gate{box-shadow:none; border:1px solid var(--line)}
+    details.dev{display:none}
+    .wrap{max-width:none; padding:0 0 0}
+    section.block{break-inside:avoid}
+    .finding{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brandbar">
+        <div class="brand">
+          <div class="brand-mark"><span class="sym">shield_lock</span></div>
+          <div class="brand-text">
+            <div class="brand-name">{{SITE_NAME}}</div>
+            <div class="brand-kind">Security console</div>
+          </div>
+        </div>
+        <div class="readiness">
+          <span class="dot red"></span>
+          <span class="state">{{READINESS — e.g. Not launch-ready / Launch-ready}}</span>
+        </div>
+      </div>
+      <p class="eyebrow">Security posture · {{DATE}}</p>
+      <h1>{{SITE_NAME}} — <em>the honest read</em></h1>
+      <p class="meta">
+        <span><span class="sym">calendar_today</span> {{DATE}}</span>
+        <span><span class="sym">folder_open</span> {{SCOPE}}</span>
+        <span><span class="sym">shield</span> code &amp; config review</span>
+      </p>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- ============ METRIC TILES ============ -->
+    <div class="tiles">
+      <div class="tile c">
+        <div class="tile-top"><span class="chip">Critical</span><span class="sym">error</span></div>
+        <div class="n">{{N_CRIT}}</div><div class="note">fix before launch</div>
+      </div>
+      <div class="tile h">
+        <div class="tile-top"><span class="chip">High</span><span class="sym">warning</span></div>
+        <div class="n">{{N_HIGH}}</div><div class="note">fix before traffic</div>
+      </div>
+      <div class="tile m">
+        <div class="tile-top"><span class="chip">Medium</span><span class="sym">info</span></div>
+        <div class="n">{{N_MED}}</div><div class="note">plan soon</div>
+      </div>
+      <div class="tile l">
+        <div class="tile-top"><span class="chip">Low</span><span class="sym">low_priority</span></div>
+        <div class="n">{{N_LOW}}</div><div class="note">nice to have</div>
+      </div>
+    </div>
+
+    <!-- ============ HONESTY NOTE ============ -->
+    <section class="dark">
+      <p class="eyebrow">Read this first</p>
+      <p class="lead">{{PLAIN_HEADLINE — 1–2 sentences: overall state + the single most important thing to do today. Wrap the sharpest clause in <em>…</em> for the italic teal accent.}}</p>
+      <p><strong>What this is and isn’t:</strong> this reliably catches the common, high-impact flaws — but it is <strong>not a full penetration test</strong>, and it can’t see inside your GitHub, Vercel, or Stripe accounts. Anything outside the code is given to you as steps. For a shop taking real money, a professional pentest before you scale is still worth doing — this makes that cheaper, it doesn’t replace it.</p>
+    </section>
+
+    <!-- ============ REQUIRED SETUP GATE (surface on first scan; keep until confirmed) ============ -->
+    <section class="gate">
+      <div class="gate-mark"><span class="sym">notifications_active</span></div>
+      <div>
+        <p class="eyebrow">Action required before you rely on this</p>
+        <h3>Set up your security alerts email</h3>
+        <p style="margin:0 0 .6em">The automatic checks only protect you if their alerts reach you. Set up one dedicated email address to receive every security alert — vulnerable packages, failed scans, and fixes to approve — and route the sources to it. Do this before moving on.</p>
+        <ol class="steps">
+          <li>Create or choose a dedicated alerts address (e.g. <code>security@yourdomain</code>) that you'll actually check.</li>
+          <li>In GitHub → Settings → Notifications, set that address and turn on Actions + Dependabot email alerts.</li>
+          <li>In each repo → Settings → Code security, enable Dependabot alerts + security updates.</li>
+          <li>(Recommended) add a free error-monitor (e.g. Sentry) and send its alerts to the same address, so live errors reach you too.</li>
+        </ol>
+        <p style="margin:.7em 0 0"><strong>Honest note:</strong> these reliably alert you to vulnerable packages, failed scans, and fixes to approve. Catching an active breach (not just a weakness) needs the monitoring layer above — silence doesn't guarantee safety.</p>
+      </div>
+    </section>
+
+    <!-- ============ FINDINGS ============ -->
+    <section class="block">
+      <p class="eyebrow">What needs fixing · most urgent first</p>
+      <h2>The findings</h2>
+
+      <!-- ===== EXAMPLE finding (delete before delivering) ===== -->
+      <article class="finding critical">
+        <div class="fhead">
+          <span class="idx">/01</span>
+          <span class="badge"><span class="sym">error</span>Critical · fix before launch</span>
+          <span class="spacer"></span>
+          <span class="status decision"><span class="sym">pending</span>Needs a decision</span>
+        </div>
+        <h3>Card checkout takes no money but creates real orders</h3>
+        <div class="fgrid">
+          <div>
+            <span class="k">What it is</span>
+            <p>When a customer pays by card or Google Pay, the site marks the order paid and gives loyalty points — but never actually charges anything. Only PayPal takes real money.</p>
+          </div>
+          <div>
+            <span class="k">What someone could do</span>
+            <div class="scenario">Any visitor can order your products, choose “Card”, and receive a real, fulfillable order plus loyalty points <strong>without paying a penny</strong> — no hacking, just normal use of the shop.</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="k">What to do</span>
+          <ol class="steps">
+            <li>Decide: switch card/Google Pay <em>off</em> for now (only PayPal takes money), or have me wire up real Stripe card payments.</li>
+            <li>Until then, I’ll make the card path <strong>refuse to complete</strong> so no free orders can be created.</li>
+            <li>Tell me which way to go — I’ll make the change and show you before it goes live.</li>
+          </ol>
+          <p class="note">Turning the fake path off is safe and I can do it now. Wiring up real Stripe card payments is a bigger change I’d want your go-ahead for first.</p>
+        </div>
+        <div class="verify"><span class="sym">check_circle</span><div><strong>How you’ll know it’s fixed:</strong> choosing “Card” at checkout no longer creates a paid order.</div></div>
+        <details class="dev"><summary>Developer detail</summary>
+          <pre>src/app/checkout/actions.ts:118
+persistOrder(..., { status: "simulated" })   // no gateway call
+Fix: gate fulfilment on a verified payment; disable the
+non-PayPal path until Stripe Payment Intents are wired.</pre></details>
+      </article>
+
+      <!-- ===== EXAMPLE finding 2 (delete before delivering) ===== -->
+      <article class="finding high">
+        <div class="fhead">
+          <span class="idx">/02</span>
+          <span class="badge"><span class="sym">warning</span>High · fix before real traffic</span>
+          <span class="spacer"></span>
+          <span class="status fixed"><span class="sym">check_circle</span>Fixed for you</span>
+        </div>
+        <h3>Anyone can view another customer’s saved address</h3>
+        <div class="fgrid">
+          <div>
+            <span class="k">What it is</span>
+            <p>A logged-in customer can load someone else’s account details by changing a number in the web address — the site doesn’t check the record belongs to them.</p>
+          </div>
+          <div>
+            <span class="k">What someone could do</span>
+            <div class="scenario">Read other customers’ names and delivery addresses — a privacy breach and, under UK data-protection rules, a reportable one.</div>
+          </div>
+        </div>
+        <div class="field">
+          <span class="k">What to do</span>
+          <ol class="steps">
+            <li>Nothing needed from you — the fix is applied.</li>
+            <li>Push the change and let Vercel deploy so it goes live.</li>
+          </ol>
+        </div>
+        <div class="verify"><span class="sym">check_circle</span><div><strong>How you’ll know it’s fixed:</strong> opening another account’s address now shows “not found”.</div></div>
+        <details class="dev"><summary>Developer detail</summary>
+          <pre>account/actions.ts saveAddress — scoped the lookup to the
+current customerId; every record fetch now filters by owner.</pre></details>
+      </article>
+      <!-- ===== end examples ===== -->
+
+    </section>
+
+    <!-- ============ THINGS ONLY YOU CAN DO (Ring 2) ============ -->
+    <section class="block">
+      <div class="dark">
+        <p class="eyebrow">Things only you can do</p>
+        <h2 style="font-size:1.65rem; margin:0 0 .2em">Outside the code — your accounts &amp; settings</h2>
+        <p>I can’t click these for you, so here they are as plain steps. The first matters most.</p>
+
+        <div class="cards2">
+          <div class="subcard">
+            <div class="subhead"><span class="num">1</span><h3>Turn on two-factor auth (2FA)</h3></div>
+            <p style="margin:0 0 10px">On GitHub, Vercel, and Stripe. I can’t see whether it’s on, so treat it as <strong>off until you’ve confirmed it</strong> — the single most valuable thing on this page.</p>
+            <ol class="steps">
+              <li>Open each account’s security settings.</li>
+              <li>Enable 2FA (an authenticator app beats text messages).</li>
+              <li>Save the backup codes somewhere safe — not in your repo.</li>
+            </ol>
+          </div>
+          <div class="subcard">
+            <div class="subhead"><span class="num">2</span><h3>Rotate any leaked keys {{OMIT_IF_NONE}}</h3></div>
+            <ol class="steps">
+              <li>Log into the provider (e.g. Stripe) and regenerate the exposed key.</li>
+              <li>Paste the new key into Vercel → Settings → Environment Variables.</li>
+              <li>Redeploy so the site uses the new key.</li>
+            </ol>
+            <div class="secrets-rule"><strong>The rule for secrets:</strong> a secret key belongs only on your computer (<code>.env.local</code>) and in Vercel’s settings — never in the code, the repository, or the browser. If one turns up in the wrong place it’s removed <em>and</em> regenerated, because it may already have been copied.</div>
+          </div>
+        </div>
+
+        <p style="margin-top:1.3em">{{OTHER_OWNER_STEPS — e.g. restrict the database from the public internet, test a backup restore, turn on the registrar account’s 2FA, set up SPF/DKIM/DMARC — each as its own .subcard with a numbered list.}}</p>
+      </div>
+    </section>
+
+    <!-- ============ DECISIONS & OUTSIDE HELP (Ring 3) ============ -->
+    <section class="block">
+      <div class="ring3">
+        <p class="eyebrow">Decisions &amp; outside help</p>
+        <h2>These need your judgement or a professional</h2>
+        <p style="margin-top:0">I flag these honestly — I don’t certify them.</p>
+        <p>{{RING3_ITEMS — only what applies: age-verification legal sufficiency; legal pages / company details / returns / cookies (UK e-commerce law advice); customer 2FA (a business trade-off); third-party tools; an incident-readiness plan to prepare before launch; a professional penetration test before taking serious money.}}</p>
+      </div>
+    </section>
+
+    <!-- ============ AUTOMATION ============ -->
+    <section class="block">
+      <p class="eyebrow">Keeping it secure over time</p>
+      <h2>An audit is a snapshot</h2>
+      <div class="panel">
+        <p style="margin:0; font-size:.92rem; color:var(--soft)">Your site is clean today, not three changes from now. I can set up, with plain steps:</p>
+        <div class="row">
+          <span class="sym">verified_user</span>
+          <div><h3>Pre-upload check</h3><p>On your computer — blocks you from ever uploading a secret key.</p></div>
+        </div>
+        <div class="row">
+          <span class="sym">event_repeat</span>
+          <div><h3>Weekly + on-every-change check</h3><p>On GitHub — emails you if something’s caught.</p></div>
+        </div>
+        <div class="row">
+          <span class="sym">plagiarism</span>
+          <div><h3>This deep review</h3><p>Run before a launch, or whenever the checks flag something.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BEFORE / AFTER ============ -->
+    <section class="block">
+      <div class="panel flush">
+        <div class="phead">
+          <p class="eyebrow">Summary</p>
+          <h2 style="font-size:1.4rem; margin:0">Before &amp; after</h2>
+        </div>
+        <table>
+          <thead><tr><th>Finding</th><th>Was</th><th>Now</th></tr></thead>
+          <tbody>
+            <tr><td>{{C1 title}}</td><td><span class="tag was">Critical</span></td><td><span class="tag wait">Awaiting decision</span></td></tr>
+            <tr><td>{{H1 title}}</td><td><span class="tag was">High</span></td><td><span class="tag now">Fixed</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer>
+      Security review for {{SITE_NAME}} · {{DATE}}<br>
+      Generated by the e-commerce security audit skill · a code-and-configuration review, not a penetration test.
+    </footer>
+
+  </div>
+</body>
+</html>

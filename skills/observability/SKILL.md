@@ -7,12 +7,12 @@ description: Invoke when adding error handling, logging, monitoring, or a failur
 
 The one core truth: **a failure you can't observe is a failure you'll find out about from a user.** Production will break in ways you didn't predict; the question is whether you see it, understand it, and recover — or whether it fails silently and rots. Log with intent, surface health, and make every failure path deliberate.
 
-Errors must never leak secrets/PII/stack traces to users ([[security]]); the contract's error shapes are [[api-design]].
+Errors must never leak secrets/PII/stack traces to users; the contract's error shapes are [[api-design]].
 
 ## Law 1 — Never fail silently
 
 - Every failure does **something visible**: a logged error with context, a user-facing fallback, an alert — never a swallowed exception and a blank screen.
-- **Empty/zero is ambiguous** — distinguish "genuinely none" from "failed to load" from "not permitted". A zeroed metric that should have data is the data-not-loaded anti-pattern ([[ask-dont-guess]]).
+- **Empty/zero is ambiguous** — distinguish "genuinely none" from "failed to load" from "not permitted". A zeroed metric that should have data is the data-not-loaded anti-pattern.
 - A caught error you can't handle is **re-raised or reported**, not discarded.
 
 ## Law 2 — Structured logging with context
@@ -20,7 +20,7 @@ Errors must never leak secrets/PII/stack traces to users ([[security]]); the con
 - Log **structured** (key-value/JSON), not prose strings — so you can search and aggregate.
 - Every log line carries **context**: a request/correlation id, the actor (not their secrets), the operation, the outcome. A trace across services shares the id.
 - **Right levels**: error (needs attention), warn (suspicious), info (key events), debug (off in prod). Don't log a flood; don't log nothing.
-- **Never log** secrets, tokens, passwords, full PII, or card data ([[security]], [[privacy-and-compliance]]).
+- **Never log** secrets, tokens, passwords, full PII, or card data ([[privacy-and-compliance]]).
 
 ## Law 3 — Degrade gracefully
 
@@ -48,7 +48,6 @@ Graceful degradation is the difference between "one widget is unavailable" and "
 - Make "what happens when this fails?" a required question in [[reviewing-code]] and the build pipeline ([[engineering-standards]]).
 
 ## Cross-links
-- [[security]] — no secrets/PII/stack traces in logs or responses.
 - [[privacy-and-compliance]] — what you may and may not log/retain about people.
 - [[integrations]] — key-aware fallbacks when a third party is down.
 - [[background-jobs]] — alert on failed/stuck jobs and dead-letter growth.

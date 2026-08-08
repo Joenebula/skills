@@ -87,7 +87,7 @@ A NO-GO is a result, not a failure. Shipping red is the failure. Where this gaun
 - **Static green ≠ it works.** It never has. Treat a green build as permission to start verifying, not as verification.
 - **Coverage grows with every feature.** A NEW user-facing feature ships WITH a new test for it, in the SAME change. Coverage that lags features is coverage that is already wrong.
 - **Every bug fix ships with the test that would have caught it** — failing before the fix, passing after ([[debugging]]). A bug that can ship twice was never really fixed.
-- **Never claim verification you didn't run.** If you couldn't run Layer C, say "Layer C not run" plainly — see [[ask-dont-guess]] for the honesty rule.
+- **Never claim verification you didn't run.** If you couldn't run Layer C, say "Layer C not run" plainly — that is the honesty rule.
 
 ---
 
@@ -98,10 +98,10 @@ When a diff touches one of these domains, its named checks are **non-negotiable 
 | Domain touched | The checks that must pass |
 |---|---|
 | **Auth / sessions** ([[auth-and-accounts]]) | Signed-out stays out of every protected surface; the denied actor stays denied (negative path asserted); expired/invalidated token refused; sign-in → sign-out round-trip. |
-| **Checkout / payments** ([[commerce]]) | Double-submit creates ONE order; webhook redelivery = one financial effect; the decline/timeout path preserves the cart and creates no half-order; totals re-derived server-side. |
-| **Ledgers & balances** ([[commerce]]) | Balance == sum of ledger entries; earn/redeem idempotent under replay; no negative balance under contention. |
+| **Checkout / payments** | Double-submit creates ONE order; webhook redelivery = one financial effect; the decline/timeout path preserves the cart and creates no half-order; totals re-derived server-side. |
+| **Ledgers & balances** | Balance == sum of ledger entries; earn/redeem idempotent under replay; no negative balance under contention. |
 | **Displayed numbers** ([[analytics-dashboards]], [[data-grids]]) | Displayed count/total/KPI reconciles to the source aggregate (never a capped page). |
-| **Destructive / bulk ops** ([[engineering-standards]], [[security]]) | Preview→execute enforced; the blast radius is bounded; a non-target record demonstrably survives. |
+| **Destructive / bulk ops** ([[engineering-standards]]) | Preview→execute enforced; the blast radius is bounded; a non-target record demonstrably survives. |
 | **Forms** ([[forms-and-input]]) | Invalid input errors inline on the field; user input survives a failed submit; the unsaved-changes guard fires; double-submit prevented. |
 | **Email / notifications** ([[email-and-notifications]]) | One event → one send under replay; opt-out honoured (assert the absence); no real sends outside production; merge fields resolve. |
 | **Integrations / webhooks** ([[integrations]]) | Unsigned webhook rejected; redelivered event processed once; echo-loop suppressed; provider-down degrades without taking the page down. |

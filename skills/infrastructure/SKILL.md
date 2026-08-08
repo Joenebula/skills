@@ -18,7 +18,7 @@ First-time **bootstrap** (which services, where each key goes) is [[project-setu
 ## Law 2 — Configuration per environment, secrets out of code
 
 - **All config is environment-driven** — URLs, feature flags, limits, keys come from the environment, never hard-coded or committed.
-- **Secrets** live in per-environment secret storage, rotated, least-privilege ([[security]], [[project-setup]] maps the keys).
+- **Secrets** live in per-environment secret storage, rotated, least-privilege ([[project-setup]] maps the keys).
 - A new environment is stood up from a **documented config list**, not by copying a teammate's machine. Missing config fails **loudly at boot**, not silently at runtime.
 
 ## Law 3 — Backups you have actually restored

@@ -11,7 +11,7 @@ Every displayed number obeys the data-reconciliation rule in [[engineering-stand
 
 ## Law 1 — Define each metric precisely, first
 
-- Write the **exact definition**: what's counted, the **time window**, the filters, the unit, how edge cases are handled. "Revenue" = gross or net? incl. refunds? which currency? ([[internationalization]], [[commerce]]).
+- Write the **exact definition**: what's counted, the **time window**, the filters, the unit, how edge cases are handled. "Revenue" = gross or net? incl. refunds? which currency? ([[internationalization]]).
 - **Name it unambiguously** on the dashboard so two people read it the same way.
 - Separate **product/business analytics** (orders, revenue, conversion, retention) from **system/operational metrics** (latency, error rate, job health — those live in [[observability]]).
 
@@ -29,7 +29,7 @@ Every displayed number obeys the data-reconciliation rule in [[engineering-stand
 | **Right chart for the question** | trend → line; composition → bar/stacked; share → proportion. Don't decorate. |
 | **Honest axes** | start at zero for magnitude; no truncated axis that exaggerates. |
 | **Show the window + filters** | a number without its date range is meaningless. |
-| **Empty/loading/error are distinct** | a true zero ≠ "not loaded" ≠ "no access" ([[ask-dont-guess]], [[observability]]). |
+| **Empty/loading/error are distinct** | a true zero ≠ "not loaded" ≠ "no access" ([[observability]]). |
 | **Comparison gives meaning** | vs previous period / target / segment — a lone number rarely informs. |
 | **Accessible** | not colour-only; readable contrast; a table alternative ([[accessibility]]). |
 

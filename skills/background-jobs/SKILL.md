@@ -13,7 +13,7 @@ Heavy work moves here from the request ([[performance]]); failures surface throu
 
 Move work out of the user's request when it is slow, periodic, or fan-out:
 - **Slow/heavy**: report generation, bulk import/export, image processing, large emails.
-- **Scheduled**: nightly digests, retention purges ([[privacy-and-compliance]]), points/credit expiry ([[commerce]]), sale activation, subscription renewals.
+- **Scheduled**: nightly digests, retention purges ([[privacy-and-compliance]]), points/credit expiry, sale activation, subscription renewals.
 - **Reactive**: send-on-event, sync-on-change ([[integrations]]), abandoned-flow follow-ups.
 
 The request returns fast and enqueues; the job does the work.
@@ -21,7 +21,7 @@ The request returns fast and enqueues; the job does the work.
 ## Law 2 — Idempotent, always
 
 - A job may run **more than once** (retry, redelivery, overlap). Design every job so a second run is a **no-op**, not a double-effect.
-- Use an **idempotency key / processed-marker** so "send the email", "charge the card" ([[commerce]]), "award the points" happen **once** even if delivered twice.
+- Use an **idempotency key / processed-marker** so "send the email", "charge the card", "award the points" happen **once** even if delivered twice.
 - Guard against **overlap**: a long job that's still running when the next tick fires must not stomp itself (a lock or a "skip if running").
 
 ## Law 3 — Retry, back off, and dead-letter
@@ -55,6 +55,5 @@ The request returns fast and enqueues; the job does the work.
 - [[performance]] — move heavy/slow work off the request path.
 - [[observability]] — structured run logs and alerts on failed/stuck/dead-lettered jobs.
 - [[integrations]] — sync and webhook-driven jobs; idempotency on redelivery.
-- [[commerce]] — charge/refund jobs must be exactly-once via idempotency keys.
 - [[email-and-notifications]] — queued sends, digests, and fan-out run here, exactly once.
-- [[privacy-and-compliance]] / [[commerce]] — retention purges, points expiry, lifecycle automation.
+- [[privacy-and-compliance]] — retention purges and lifecycle automation.

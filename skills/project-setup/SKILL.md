@@ -101,7 +101,7 @@ Confirm the files appear on GitHub. Vercel (Step 4) imports from here.
    supabase gen types typescript --project-id <project-ref> > lib/database.types.ts
    ```
 
-When unsure of migration order, or whether a step is destructive, **stop and check — do not guess** (see [[ask-dont-guess]]).
+When unsure of migration order, or whether a step is destructive, **stop and check — do not guess.**
 
 ---
 
@@ -157,9 +157,8 @@ Watch the **real exit code** — a build can print warnings and still fail, or f
 
 ---
 
-> ## THE ENV MODEL — two gotchas that bite everyone
-> 1. **`NEXT_PUBLIC_*` are inlined into the browser bundle at BUILD time** — not read at runtime. So the **build** must have the correct **production** public values, and changing one requires a **rebuild/redeploy** to take effect.
-> 2. **Server-only secrets are read at RUNTIME** from the host's secure env (Vercel's encrypted store). They are never bundled and never exposed to the browser.
+> ## THE ENV MODEL — gotcha (h), concretely
+> The lifecycle split behind this is gotcha (h) in [[engineering-standards]]: `NEXT_PUBLIC_*` values are inlined into the browser bundle at **build** time (change one → rebuild/redeploy to take effect); server-only secrets are read at **runtime** from the host's secure env (Vercel's encrypted store) and are never bundled or exposed to the browser.
 >
 > **Which keys block boot:** only `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` are needed to leave demo mode. Everything else is **optional and graceful** — a missing key disables just that one feature.
 
@@ -190,7 +189,6 @@ Watch the **real exit code** — a build can print warnings and still fail, or f
 - [[releasing]] — the repeatable release loop (verify → gate → ship → confirm; authorized deploys; exit codes). This skill is first-time wiring only; that one is every release after.
 - [[engineering-standards]] — security gating, secret handling, code quality bars.
 - [[regression-testing]] — proving "it still works", not just "it compiles", before and after deploy.
-- [[ask-dont-guess]] — when migration order, a destructive step, or a key's destination is unclear, stop and confirm.
 - [[design-system]] — build UI from documented tokens/components once the app is wired.
 
 ---

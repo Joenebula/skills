@@ -27,7 +27,7 @@ The one core truth: **you cannot optimise what you haven't measured, and the bot
 
 - Cache the **expensive and stable** — but own the invalidation. A stale cache showing a wrong number is the data-reconciliation failure in [[engineering-standards]].
 - Layer where it pays: in-memory, shared cache, CDN/edge for static + cacheable responses.
-- A cached **count/KPI** must still reconcile to source on a defined cadence, or it's a silent lie ([[ask-dont-guess]]).
+- A cached **count/KPI** must still reconcile to source on a defined cadence, or it's a silent lie.
 
 ## Law 4 — Frontend weight and rendering
 

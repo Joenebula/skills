@@ -12,8 +12,8 @@ Editable content is [[data-modelling]]; the editing UI is [[forms-and-input]]; d
 ## Law 1 — Editable content vs fixed app
 
 - Draw the line explicitly: **editors own** copy, images, pages, menus, SEO text, promotional content; **the app owns** logic, layout rules, data behaviour.
-- **Content is not catalogue.** On a commerce build, products, variants, prices, and inventory belong to [[commerce]]'s back-office modules — never modelled as CMS pages; and editorial pages (about, journal, landing) are CMS content — never admin modules. The two have different owners, lifecycles, and integrity rules.
-- A control that *looks* editable but isn't wired (or vice-versa) is the [[ask-dont-guess]] failure — make the boundary honest.
+- **Content is not catalogue.** On a build that sells things, products, variants, prices, and inventory are catalogue/admin data — never modelled as CMS pages; editorial pages (about, journal, landing) are CMS content — never admin modules. The two have different owners, lifecycles, and integrity rules.
+- A control that *looks* editable but isn't wired (or vice-versa) is a broken-promise failure — make the boundary honest.
 - **Persist editable content to the data store**, not to files written at runtime; ship defaults as embedded code ([[data-modelling]], gotcha d in [[engineering-standards]]).
 
 ## Law 2 — Content types are structured
@@ -26,7 +26,7 @@ Editable content is [[data-modelling]]; the editing UI is [[forms-and-input]]; d
 
 | Capability | Rule |
 |---|---|
-| **Rich text** | A constrained editor that outputs clean, safe markup — sanitised, no arbitrary scripts ([[security]]). |
+| **Rich text** | A constrained editor that outputs clean, safe markup — sanitised, no arbitrary scripts. |
 | **Media library** | Upload once, reuse; with alt text ([[accessibility]]), sensible sizes ([[performance]]), and organisation. |
 | **Navigation/menus** | Editable, ordered, validated links — no dead/duplicate URLs ([[seo]]). |
 | **Preview** | See it before it's live; draft vs published is unmistakable. |
@@ -34,7 +34,7 @@ Editable content is [[data-modelling]]; the editing UI is [[forms-and-input]]; d
 
 ## Law 4 — Publishing, versioning, and workflow
 
-- **Draft → published** states are explicit; unpublished content never leaks to the public surface (no undisclosed fixture, [[ask-dont-guess]]).
+- **Draft → published** states are explicit; unpublished content never leaks to the public surface (no undisclosed fixture).
 - **Scheduling** (publish/expire at a time) runs via a job, not a hopeful check ([[background-jobs]]).
 - **History/versioning** so an editor can see and revert changes; for multi-author, a review/approval step where it matters.
 - **Localisation**: per-locale content with fallback, not copy-paste forks ([[internationalization]]).
@@ -51,4 +51,3 @@ Editable content is [[data-modelling]]; the editing UI is [[forms-and-input]]; d
 - [[seo]] — per-page metadata, sitemap, canonical, structured data authored here.
 - [[internationalization]] — per-locale content with fallback.
 - [[background-jobs]] — scheduled publish/expire.
-- [[security]] — sanitise rich-text/markup; safe media handling.

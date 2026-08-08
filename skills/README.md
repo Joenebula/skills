@@ -2,35 +2,27 @@
 
 Claude Code skills and read-only auditor agents distilled from real web builds, drop-in for any project under this workspace. The engineering skills name no product, stack, or filename — only transferable principles. The one deliberate exception, **project-setup**, is concrete to the GitHub + Supabase + Vercel + Next.js stack (that's what makes it a usable click-by-click), while keeping the specific project identity generic. They cross-reference each other with `[[skill-name]]` links.
 
-> **Evolving this library — HARD RULE.** Everything under `…/Web/.claude` — **skills _and_ agents** — is approval-gated. The library is meant to grow as we learn, but **never add or edit a skill or agent here without explicit approval first.** When something **major** changes (a new durable lesson, a repeated mistake worth a rule, a new pattern/gotcha, a shifted convention), *propose* the update — which file, what edit, why — and **wait for an explicit "yes."** No edits until then; "continue", a bug report, or finishing a task is **not** approval. Don't propose trivial/one-off churn. Capturing learnings is continuous; _writing_ them is gated. See [engineering-standards](engineering-standards/SKILL.md) Stage 12 and [ask-dont-guess](ask-dont-guess/SKILL.md).
+> **Evolving this library — HARD RULE.** Everything under `…/Web/.claude` — **skills _and_ agents** — is approval-gated. The library is meant to grow as we learn, but **never add or edit a skill or agent here without explicit approval first.** When something **major** changes (a new durable lesson, a repeated mistake worth a rule, a new pattern/gotcha, a shifted convention), *propose* the update — which file, what edit, why — and **wait for an explicit "yes."** No edits until then; "continue", a bug report, or finishing a task is **not** approval. Don't propose trivial/one-off churn. Capturing learnings is continuous; _writing_ them is gated. See [engineering-standards](engineering-standards/SKILL.md) Stage 12.
 
 The library is four layers. Above everything sits [`../CLAUDE.md`](../CLAUDE.md) — the **working agreement**, loaded unconditionally into every session: the disposition (rigorous partner, not agreeable assistant) and the stop-triggers, which must be in view before they can fire. Below it: the **spine** (the process and craft below), a **cross-cutting craft** set (the quality concerns every feature touches), and **domain build guides** ("how to build X"). Together they cover clarify → design → build → review → verify → secure → ship → operate.
 
-## Two tracks, one spine — the no-crossover rule
+## Scope — no crossover
 
-The spine and cross-cutting craft apply to **every** build. The domain guides are conditional: **a domain guide fires only when the project actually contains its domain.**
+The spine and cross-cutting craft apply to **every** build. The domain guides are conditional: **a domain guide fires only when the project actually contains its domain** — auth / email / grids / analytics / integrations only if the site actually has accounts, sends mail, or manages records; [cms](cms/SKILL.md) for editable content, [seo](seo/SKILL.md) for findability.
 
-- **Design / content track** — brand, marketing, portfolio, editorial, civic sites: [frontend-design](frontend-design/SKILL.md) + [design-system](design-system/SKILL.md) for the look, [cms](cms/SKILL.md) for the content, [seo](seo/SKILL.md) for findability; auth / email / grids / analytics / integrations only if the site actually has accounts, sends mail, or manages records.
-- **Commerce track** — anything that sells: everything above **plus** [commerce](commerce/SKILL.md), which owns the whole selling surface — storefront, back-office, payments, and loyalty — as one skill.
+**Content is not catalogue.** Editorial pages (about, journal, landing) are CMS content; products/variants/prices/inventory on a build that sells things are admin/catalogue data. The two have different owners, lifecycles, and integrity rules — never model one as the other.
 
-**No crossover, in either direction:**
-
-1. **On a build that sells nothing, [commerce](commerce/SKILL.md) stays silent.** Never import a cart, checkout, order lifecycle, gateway, or points ledger into a site with no purchase — a portfolio doesn't get an "orders" table because the pattern was handy.
-2. **On a commerce build, the boundary is per surface, not per repo.** Brand, landing, and editorial pages are design-track surfaces — [frontend-design](frontend-design/SKILL.md) may be bold there. Product → cart → checkout → account is the commerce path, where **convention, clarity, and trust outrank novelty**: same tokens, plainest patterns, no experiments on the money path.
-3. **Content is not catalogue.** Editorial pages live in the [cms](cms/SKILL.md); products/variants/inventory live in [commerce](commerce/SKILL.md). Never model products as CMS pages or pages as products — the two have different owners, lifecycles, and integrity rules.
-
-> **Why commerce is one skill and not four.** It was four — `storefront`, `ecommerce-admin`, `payments`, `loyalty`. They fire independently: "wire up Stripe" fired `payments` and `loyalty` but never `storefront`, so `storefront`'s *"every total is computed server-side"* rule was unreachable on the most money-critical prompt in the eval. Four independently-firing skills cannot share a law without duplicating it — and two laws (**margin floors**, **tax/shipping rates**) ended up owned by nobody, each file deferring to the other. Deduplication is only possible inside a unit that loads atomically. Measured: cluster cohesion 0.58, more than twice any other candidate, and zero agent references. See `../eval/`.
+> **This library carries no build guidance for a commerce money path** (cart, checkout, orders, payment gateways, points/loyalty ledgers) — that domain guide (`commerce`, and before it the four skills it replaced) was removed by request. What remains for a commerce build: [ecommerce-security-audit](ecommerce-security-audit/SKILL.md) audits one for security and data exposure once it exists, but does not teach how to build the money path correctly (it explicitly excludes general correctness/performance/ops from its scope). A build touching money still gets the generic spine — [engineering-standards](engineering-standards/SKILL.md)' server-side-gating and reconciliation rules, [data-modelling](data-modelling/SKILL.md)'s money-as-minor-units and append-only-ledger rules — but nothing commerce-specific (idempotent checkout, margin floors, webhook-as-truth). If commerce build guidance is needed again, the eval evidence for why it should be ONE skill rather than four (`storefront`/`ecommerce-admin`/`payments`/`loyalty` fired independently and left two laws — margin floors, tax/shipping rates — owned by nobody) is in `../eval/`.
 
 ## The spine — process & craft (`skills/<name>/SKILL.md`)
 
 | Skill | Use it… |
 |---|---|
 | **[project-setup](project-setup/SKILL.md)** | standing up or onboarding to a GitHub + Supabase + Vercel + Next.js app — the bootstrap order, where every API key goes, and local-first boot; plus `references/` for optional services, go-live, and self-hosting. (Concrete to that stack.) |
-| **[design-system](design-system/SKILL.md)** | before any UI work — build from documented tokens + components + a live gallery; never invent classes or hand-pick values; also: how to stand a design system up from scratch. |
+| **[design-system](design-system/SKILL.md)** | before any UI work — build from documented tokens + components + a live gallery; never invent classes or hand-pick values; also: how to stand a design system up from scratch, including choosing its aesthetic direction when none exists yet. |
 | **[engineering-standards](engineering-standards/SKILL.md)** | before building/changing any feature, action, module, API, or shared mechanism — the process laws, the 12-stage build pipeline, the reuse catalogue, the data-gotchas list, server-side gating, and the data-reconciliation rule. |
 | **[regression-testing](regression-testing/SKILL.md)** | before calling a change "done" and before any deploy — the layered static → smoke+reconcile → behavioural model, the domain must-pass catalogue, the GO/NO-GO gate, and the guardian-auditor pattern. "It builds" is not "it works." |
 | **[preflight](preflight/SKILL.md)** | immediately before any deploy, merge, or "done" claim — the orchestrated pass that scopes the diff, fans out the auditors, climbs the layers, and emits ONE explicit GO / NO-GO. The gate, actually run. |
-| **[ask-dont-guess](ask-dont-guess/SKILL.md)** | the six laws behind the stop-triggers in [`../CLAUDE.md`](../CLAUDE.md) — how to ask, recommend before acting, verify don't assume, and never ship anything that looks done but isn't. |
 | **[releasing](releasing/SKILL.md)** | before and during any deploy — verify → regression-gate → ship → confirm; authorized deploys only, never mask an exit code, confirm the release is actually live. |
 | **[reviewing-code](reviewing-code/SKILL.md)** | reviewing a diff/PR or your own change before "done" — what to look for in priority order, refute before you trust, and feedback that lands. |
 | **[debugging](debugging/SKILL.md)** | investigating any bug or failure — reproduce first, read the real evidence, isolate one variable at a time, fix the cause not the symptom, and ship the regression test that would have caught it. |
@@ -43,7 +35,6 @@ The spine and cross-cutting craft apply to **every** build. The domain guides ar
 | **[data-modelling](data-modelling/SKILL.md)** | before any table/column/enum/migration — model entities first; additive, reversible, non-destructive migrations; idempotent seeds. |
 | **[api-design](api-design/SKILL.md)** | before adding/changing an endpoint — shape, validation, one error format, pagination, idempotency, versioning. |
 | **[security](security/SKILL.md)** | auth, permissions, secrets, user input, uploads, third-party calls — gate on the server, treat all input as hostile. |
-| **[frontend-design](frontend-design/SKILL.md)** | choosing the aesthetic direction for a NEW interface or a new system's visual identity — bold, intentional, context-specific, executed through tokens; defers to design-system wherever one exists. |
 | **[privacy-and-compliance](privacy-and-compliance/SKILL.md)** | collecting/storing personal data — minimise, consent, retention, subject-access/erasure, cookies, age gating. |
 | **[accessibility](accessibility/SKILL.md)** | before any UI is "done" — WCAG AA: labels, contrast, keyboard, focus, semantics. A gate, not a garnish. |
 | **[responsive-design](responsive-design/SKILL.md)** | before any UI is "done" — mobile-first, no overflow, fluid type, ≥44px targets, a real device matrix. |
@@ -70,17 +61,13 @@ Domain guides are conditional — each fires only when the project contains its 
 | **[data-grids](data-grids/SKILL.md)** | any list of many records — search/filter/sort/paginate/bulk/export; server- vs client-side by size. |
 | **[integrations](integrations/SKILL.md)** | connecting a third party — field ownership, idempotent sync, verified webhooks, graceful fallback. |
 
-### Commerce track — fires ONLY when the project sells
+### Commerce sites — pre-deploy security gate only
 
-One skill, five shared laws, four surfaces. The laws hold everywhere; the surfaces are where they land.
+No build guidance remains for the commerce money path (see the note above). This is the one commerce-specific skill left, and it is an **audit**, not a build guide:
 
-| **[commerce](commerce/SKILL.md)** | Covers |
+| Skill | Use it… |
 |---|---|
-| **The five laws** | money is the server's truth · every financial op is idempotent · every number reconciles to source · **margin floors are enforced here** · **tax/shipping rates have one source**. The last two are owned by this file precisely because two surfaces read them and neither may define them. |
-| **Storefront** | the customer-facing shop — product/cart/checkout; checkout idempotent and atomic; no oversell; recover, don't lose. |
-| **Back-office** | catalogue/variants, orders, customers, promotions, inventory, tax/shipping on one list→detail→form pattern; every control does exactly what it says. |
-| **Payments** | gateways, idempotent charges/refunds, subscriptions and dunning; card data off your servers, webhook = source of truth. |
-| **Loyalty** | memberships/subscriptions/points/referrals — an append-only points ledger you sum, never a mutable balance. |
+| **[ecommerce-security-audit](ecommerce-security-audit/SKILL.md)** | before deploying any site that **sells or stores customer data** — a concrete, owner-facing audit of the money path and data exposure (price-tampering & fake/simulated payment paths, webhook verification, IDOR / broken access control, exposed keys, injection, security headers, regulated-goods age checks, UK selling law) that produces a plain-English report + fixes for a non-developer owner. It **complements** the generic [security](security/SKILL.md) skill and the [security-route-auditor](../agents/security-route-auditor.md) agent (it cross-links both); run it as part of [preflight](preflight/SKILL.md) on any commerce build. It explicitly does not audit general correctness, performance, or ops — see its own boundary rule. Approval-gated to add/edit like every skill here. |
 
 ## Auditor agents (`../agents/<name>.md`)
 
@@ -96,4 +83,4 @@ Read-only watchers (Read/Grep/Glob[/Bash]) — each maps a diff to risks and req
 
 The orchestrated pass that fans these out on a diff and turns their verdicts plus the regression layers into one GO / NO-GO is [preflight](preflight/SKILL.md).
 
-> The always-on layer these all defer to is [`../CLAUDE.md`](../CLAUDE.md); its depth lives in [ask-dont-guess](ask-dont-guess/SKILL.md).
+> The always-on layer these all defer to is [`../CLAUDE.md`](../CLAUDE.md).

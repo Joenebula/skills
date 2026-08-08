@@ -30,7 +30,7 @@ Run these in order. Do not collapse steps. Do not skip a gate because "it's a ti
 - Deploy or push ONLY on an explicit go from the user ("ship it", "push", "deploy").
 - A bug report is a request to *investigate*, not to release the fix.
 - "Continue" / "go on" / "looks good" continues your current work; it is **not** deploy authorization.
-- If you're unsure whether you're cleared to release — you're not. Stop and ask. Defer to [[ask-dont-guess]].
+- If you're unsure whether you're cleared to release — you're not. Stop and ask.
 
 ### (b) Commit and deploy are SEPARATE steps
 - Never chain commit-then-push (`&&` or `;`) in one command.
@@ -92,4 +92,4 @@ Close every release with a short, concrete report:
 - Treating a bug report or a casual "continue" as permission to release.
 - Shipping a change that needs a migration/env without telling the user to apply it.
 
-When any gate is ambiguous, stop and ask — see [[ask-dont-guess]]. For *what* the regression gauntlet must prove before you reach step 3, see [[regression-testing]].
+When any gate is ambiguous, stop and ask. For *what* the regression gauntlet must prove before you reach step 3, see [[regression-testing]].

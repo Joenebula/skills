@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plugin starter</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&family=Roboto+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ---------------------------------------------------------------------------
+   Paste assets/ui-kit.css here. It is omitted from this file only to keep the
+   starter readable — the classes below assume it.
+   --------------------------------------------------------------------------- */
+</style>
+</head>
+<body>
+
+<div class="sr" id="announcer" role="status" aria-live="polite"></div>
+
+<main class="plugin" id="plugin">
+
+  <!-- ---- transport ------------------------------------------------------- -->
+  <div class="fxhead">
+    <button id="btnPlay" class="fxbtn fixw w-sm" data-ic="play" title="Play / stop (Space)">Play</button>
+    <button id="btnPanic" class="fxbtn iconbtn" data-ic="power" title="Panic — stop everything"></button>
+    <div class="spacer"></div>
+    <div class="sl"><span class="lbl">Tempo</span>
+      <input type="range" id="bpm" min="40" max="220" step="0.5" value="120" aria-label="Tempo">
+      <span class="valmono edit" id="bpmVal" contenteditable inputmode="decimal">120</span></div>
+    <button id="btnSide" class="fxbtn" data-ic="grid">Rack</button>
+  </div>
+
+  <!-- ---- a section ------------------------------------------------------- -->
+  <div class="panel">
+    <div class="fxhead">
+      <span class="eyebrow">Colour</span>
+      <span class="hint">drive, tone &amp; pump</span>
+      <div class="spacer"></div>
+      <select id="colourPreset" aria-label="Colour preset"><option value="">Presets…</option></select>
+      <button id="btnMuteColour" class="fxbtn fixw w-md" data-ic="mute">Mute all</button>
+      <button id="btnColourOn" class="fxbtn fixw w-md on" data-ic="power">FX On</button>
+      <button id="btnColourRand" class="fxbtn iconbtn" data-ic="dice" title="Randomise"></button>
+      <button class="fxbtn iconbtn helpbtn" data-ic="help" data-help="colour" title="What do these do?"></button>
+    </div>
+    <div class="fxrow">
+      <div class="fx off" id="fxDrive"><span class="lbl">Drive</span>
+        <input type="range" id="drive" min="0" max="100" value="0" aria-label="Drive">
+        <span class="valmono edit" id="driveVal" contenteditable inputmode="numeric">0%</span></div>
+      <div class="fx off" id="fxTone"><span class="lbl">Tone</span>
+        <input type="range" id="tone" min="0" max="100" value="100" aria-label="Tone">
+        <span class="valmono edit" id="toneVal" contenteditable inputmode="numeric">100%</span></div>
+      <div class="fx off" id="fxPump"><span class="lbl">Pump</span>
+        <input type="range" id="pump" min="0" max="100" value="0" aria-label="Pump">
+        <span class="valmono edit" id="pumpVal" contenteditable inputmode="numeric">0%</span></div>
+    </div>
+  </div>
+
+</main>
+
+<canvas id="overlayCanvas" aria-hidden="true"></canvas>
+<aside id="side" aria-label="Rack"><div class="fxhead"><span class="eyebrow">Rack</span></div></aside>
+
+<div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="sheet">
+    <div class="sheethead"><h3 id="helpTitle">What these do</h3><div class="spacer"></div>
+      <button id="helpClose" class="iconbtn" data-ic="close" aria-label="Close">✕</button></div>
+    <div class="sheetbody" id="helpBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+const announce = m => { const a = $("announcer"); if (a) a.textContent = m; };
+
+/* ===========================================================================
+   1. CONTEXT — offline for decoding at boot, real one on first gesture.
+   =========================================================================== */
+let ctx = null, decodeCtx = null, graph = null;
+const dctx = () => ctx || (decodeCtx ||= new OfflineAudioContext(2, 1, 44100));
+function ac(){
+  if (!ctx) { ctx = new (window.AudioContext || window.webkitAudioContext)(); build(ctx); }
+  if (ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+
+/* ===========================================================================
+   2. THE ONE PARAMETER WRITER.
+   Once an AudioParam has automation, `.value = x` is IGNORED — forever. So a
+   sequencer that schedules automation will silently kill every slider that
+   assigns .value. One mechanism, everywhere, and a slider always wins.
+   =========================================================================== */
+const setParam = (p, v, tc = 0.02) => {
+  if (!p || !ctx) return;
+  try { p.cancelScheduledValues(ctx.currentTime);
+        p.setTargetAtTime(v, ctx.currentTime, tc); }
+  catch { try { p.value = v; } catch {} }
+};
+
+/* ===========================================================================
+   3. GRAPH
+   =========================================================================== */
+function build(c){
+  const input  = c.createGain();
+  const pre    = c.createGain();
+  const shaper = c.createWaveShaper(); shaper.oversample = "4x"; shaper.curve = driveCurve(0);
+  const filt   = c.createBiquadFilter(); filt.type = "lowpass"; filt.frequency.value = 20000;
+  const duck   = c.createGain();
+  const post   = c.createGain();
+  input.connect(pre).connect(shaper).connect(filt).connect(duck).connect(post)
+       .connect(c.destination);
+  graph = { input, pre, shaper, filt, duck, post };
+  applyFX();
+}
+function driveCurve(amount){
+  const n = 1024, curve = new Float32Array(n), k = amount * 60;
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;
+    curve[i] = (1 + k) * x / (1 + k * Math.abs(x));      // soft clip
+  }
+  return curve;
+}
+
+/* ===========================================================================
+   4. STATE — plain variables. The DOM is a view, not the source of truth.
+   =========================================================================== */
+let bpm = 120, division = 16, playing = false, fxOn = true;
+let drive = 0, tone = 100, pump = 0;
+const NEUTRAL = { drive: 0, tone: 100, pump: 0 };   // every effect needs a neutral,
+                                                    // or "mute all" can't return to dry
+
+/* Every automatable param goes through setParam — including the ones the
+   sequencer will later automate. That is the whole point. */
+function applyFX(){
+  if (!ctx || !graph) return;
+  const d = fxOn ? drive / 100 : 0, t = fxOn ? tone / 100 : 1;
+  setParam(graph.pre.gain, 1 + d * 5);
+  graph.shaper.curve = driveCurve(d);                 // not a param — assignment is right
+  setParam(graph.filt.frequency, 200 * Math.pow(100, t), 0.03);
+  setParam(graph.post.gain, 0.9);
+  if (playing) scheduleDuck(nextTime, 60);
+  // visuals derive from the SAME state that drives audio — never a second flag
+  const hot = (id, on) => { const e = $(id); if (e) { e.classList.toggle("hot", fxOn && on);
+                                                     e.classList.toggle("off", !(fxOn && on)); } };
+  hot("fxDrive", drive > 0); hot("fxTone", tone < 100); hot("fxPump", pump > 0);
+}
+
+/* Sidechain pump without needing a kick to trigger it. */
+function scheduleDuck(startTime, lengthSec){
+  if (!graph) return;
+  const g = graph.duck.gain, amt = fxOn ? pump / 100 : 0;
+  g.cancelScheduledValues(0);
+  if (amt <= 0) { g.setValueAtTime(1, startTime); return; }
+  const beat = 60 / bpm, depth = 1 - amt * 0.85;
+  for (let i = 0; i < Math.ceil(lengthSec / beat) + 1; i++) {
+    const t = startTime + i * beat;
+    g.setValueAtTime(depth, t);
+    g.exponentialRampToValueAtTime(1, t + beat * 0.85);
+  }
+}
+
+/* ===========================================================================
+   5. VOICES — if you don't hold a reference you cannot stop a scheduled sound.
+   =========================================================================== */
+const voices = new Set();
+function register(src){ voices.add(src); src.onended = () => voices.delete(src); }
+function stopAllVoices(){
+  voices.forEach(v => { try { v.stop(); } catch {} try { v.disconnect(); } catch {} });
+  voices.clear();
+}
+
+/* ===========================================================================
+   6. SCHEDULER — coarse timer, schedules AHEAD on the audio clock.
+   =========================================================================== */
+const stepDur = () => (60 / bpm) * (4 / division);
+const outLatency = () => ctx ? (ctx.outputLatency || ctx.baseLatency || 0) : 0;
+const visualNow = () => ac().currentTime - outLatency();
+
+let step = 0, nextTime = 0, timer = null;
+function scheduler(){
+  const c = ac();
+  while (nextTime < c.currentTime + 0.1) {          // 100ms lookahead
+    playStep(step % 16, nextTime);
+    nextTime += stepDur();
+    step++;
+  }
+}
+function playStep(pos, t){
+  const c = ac();
+  const o = c.createOscillator(), g = c.createGain();
+  o.frequency.value = pos % 4 === 0 ? 110 : 220;    // replace with your source
+  o.connect(g).connect(graph.input);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(0.5, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+  register(o);
+  o.start(t); o.stop(t + 0.2);
+}
+function start(){
+  if (playing) return;
+  ac(); playing = true; step = 0; nextTime = ctx.currentTime + 0.06;
+  scheduleDuck(nextTime, 60);
+  timer = setInterval(scheduler, 25);
+  $("btnPlay").classList.add("on"); $("btnPlay").textContent = "Stop";
+  announce("Playing");
+}
+function stop(){
+  playing = false; clearInterval(timer); timer = null;
+  stopAllVoices();                                 // and drain any feedback tails here
+  if (graph && ctx) { graph.duck.gain.cancelScheduledValues(0);
+                      graph.duck.gain.setValueAtTime(1, ctx.currentTime); }
+  $("btnPlay").classList.remove("on"); $("btnPlay").textContent = "Play";
+  announce("Stopped");
+}
+
+/* ===========================================================================
+   7. CONTROLS — one wiring function; a slider updates state and calls apply.
+   =========================================================================== */
+const fxSet = (k, v) => { ({ drive: () => drive = v, tone: () => tone = v,
+                             pump:  () => pump  = v })[k](); applyFX(); };
+[["drive","driveVal"],["tone","toneVal"],["pump","pumpVal"]].forEach(([k, vid]) => {
+  $(k).oninput = e => { ac(); fxSet(k, +e.target.value); $(vid).textContent = Math.round(+e.target.value) + "%"; };
+});
+$("bpm").oninput = e => { bpm = +e.target.value; $("bpmVal").textContent = Math.round(bpm); };
+$("btnPlay").onclick = () => { ac(); playing ? stop() : start(); };
+$("btnPanic").onclick = () => { stop(); };
+$("btnColourOn").onclick = e => {
+  fxOn = !fxOn; applyFX();
+  e.currentTarget.classList.toggle("on", fxOn);
+  e.currentTarget.textContent = fxOn ? "FX On" : "FX Off";
+  announce(fxOn ? "FX on" : "FX bypassed");
+};
+$("btnMuteColour").onclick = () => {
+  Object.entries(NEUTRAL).forEach(([k, v]) => { fxSet(k, v); $(k).value = v;
+    $(k + "Val").textContent = v + "%"; });
+  announce("All colour effects muted — back to the dry sound.");
+};
+$("btnColourRand").onclick = () => {
+  const r = (a, b) => Math.round(a + Math.random() * (b - a));
+  // cast a small ensemble — randomising EVERYTHING is mush, not a sound
+  const cast = ["drive","tone","pump"].filter(() => Math.random() < 0.6);
+  if (!cast.length) cast.push("drive");
+  Object.keys(NEUTRAL).forEach(k => { const v = cast.includes(k) ? r(20, 85) : NEUTRAL[k];
+    fxSet(k, v); $(k).value = v; $(k + "Val").textContent = v + "%"; });
+  announce("Colour: " + cast.join(", "));
+};
+
+/* ---- the sliding panel: ONE class, the CSS does the rest ---- */
+let sideOpen = false;
+$("btnSide").onclick = () => {
+  sideOpen = !sideOpen;
+  $("side").classList.toggle("open", sideOpen);
+  document.body.classList.toggle("side-open", sideOpen);
+  // anything drawn relative to the moving panel must redraw every frame, BOTH ways
+  const t0 = performance.now();
+  (function follow(){ /* drawOverlay(); */
+    if (performance.now() - t0 < 520) requestAnimationFrame(follow); })();
+};
+
+/* ---- help sheet: written from the CODE, not the labels ---- */
+const HELP = {
+  colour: {
+    title: "Colour",
+    intro: "The tone stage. Everything here sits in the main path.",
+    items: [
+      ["Drive", "Gain into the waveshaper — it gets dirtier, not just louder.", ""],
+      ["Tone",  "Lowpass filter. 100% is fully open.", ""],
+      ["Pump",  "Sidechain ducking once per beat. The classic move, with no kick needed to trigger it.", "Above ~70% it becomes the rhythm rather than supporting it."]
+    ]
+  }
+};
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-help]");
+  if (!b) return;
+  const h = HELP[b.dataset.help]; if (!h) return;
+  $("helpTitle").textContent = h.title;
+  $("helpBody").innerHTML = (h.intro ? `<div class="helpintro">${h.intro}</div>` : "") +
+    h.items.map(([n, w, tip]) => `<div class="helprow"><div class="helpname">${n}</div>
+      <div class="helpwhat">${w}${tip ? `<span class="helptip">${tip}</span>` : ""}</div></div>`).join("");
+  $("helpModal").classList.add("open");
+});
+$("helpClose").onclick = () => $("helpModal").classList.remove("open");
+$("helpModal").addEventListener("click", e => { if (e.target === $("helpModal")) $("helpModal").classList.remove("open"); });
+
+/* ---- keyboard: claim Space FIRST, or a focused button eats it ---- */
+window.addEventListener("keydown", e => {
+  if (e.repeat) return;
+  if (e.key === "Escape") $("helpModal").classList.remove("open");
+  if (e.code === "Space") {
+    const t = e.target, tag = (t.tagName || "").toLowerCase(), ty = (t.type || "").toLowerCase();
+    const typing = t.isContentEditable || tag === "textarea" ||
+      (tag === "input" && !["range","checkbox","radio","file","button"].includes(ty));
+    if (typing) return;
+    e.preventDefault(); e.stopPropagation();
+    document.activeElement?.blur?.();
+    ac(); playing ? stop() : start();
+  }
+});
+
+announce("Ready.");
+})();
+</script>
+</body>
+</html>

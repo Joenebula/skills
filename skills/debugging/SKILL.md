@@ -12,7 +12,7 @@ A bug report is a request to *investigate* — releasing the fix still needs its
 ## Law 1 — Reproduce before you touch anything
 
 - Get the failure happening **in front of you**: the exact steps, input, actor/privilege, and environment. A bug you can't reproduce is a bug you can't verify fixed.
-- Can't reproduce? **Gather evidence, don't fix blind** — logs, error tracking, the correlation id for the failing flow ([[observability]]). If the report is ambiguous about what "broken" means, that's an [[ask-dont-guess]] stop: ask for the observed vs expected behaviour, don't infer it.
+- Can't reproduce? **Gather evidence, don't fix blind** — logs, error tracking, the correlation id for the failing flow ([[observability]]). If the report is ambiguous about what "broken" means, that's a stop: ask for the observed vs expected behaviour, don't infer it.
 - Write the reproduction down — it becomes the regression test in Law 5.
 
 ## Law 2 — Read the actual evidence, not your memory of similar bugs
@@ -33,13 +33,13 @@ A bug report is a request to *investigate* — releasing the fix still needs its
 - A retry loop, a swallowed exception, a defensive `?? default`, or a "just refresh it" that makes the symptom vanish is **failure made silent** — the bug is still there, now invisible ([[observability]]).
 - Ask **why** the state got wrong, not just where it surfaced. Fixing the render when the source is corrupt ships a lie ([[engineering-standards]] reconciliation rule).
 - If the cause lives in a **shared mechanism**, the bug exists at every call site — sweep them all, not just the reported one (change once = change everywhere, [[engineering-standards]]).
-- If the true fix is large, an honest interim (disable the control, show a real error) beats a cosmetic patch — [[ask-dont-guess]] Law 4.
+- If the true fix is large, an honest interim (disable the control, show a real error) beats a cosmetic patch.
 
 ## Law 5 — Every fix ships with its test, and its lesson
 
 - Turn the Law 1 reproduction into a **regression test that fails before the fix and passes after** — in the same change. Coverage never lags the bug ([[regression-testing]]).
 - Run the preflight pass before calling it fixed — a fix is a change like any other ([[preflight]]).
-- Report faithfully: "reproduced, root-caused, fixed, test added, verified" is a fix; "changed X, symptom gone" is a patch — say which one you did ([[ask-dont-guess]] Law 6).
+- Report faithfully: "reproduced, root-caused, fixed, test added, verified" is a fix; "changed X, symptom gone" is a patch — say which one you did.
 - A bug that represents a **class** (a new gotcha, a shared-mechanism trap) is a candidate for the gotchas list — *propose* the skill update and wait for the yes (Stage 12 hard rule, [[engineering-standards]]).
 
 ## Stand this up in a new project
@@ -53,5 +53,4 @@ A bug report is a request to *investigate* — releasing the fix still needs its
 - [[regression-testing]] — the fix's test, and the layers that verify the fix behaves.
 - [[preflight]] — the pass a fix runs before it's called done.
 - [[engineering-standards]] — the gotchas list (where root causes become rules) and the shared-mechanism sweep.
-- [[ask-dont-guess]] — ambiguous reports, honest interim states, faithful reporting.
 - [[releasing]] — a fix ships only on an explicit go.

@@ -7,7 +7,7 @@ description: Invoke when collecting, storing, processing, or sharing personal da
 
 The one core truth: **personal data is a liability you are holding, not an asset you own.** Every field you collect is something you must protect, justify, retain correctly, surface on request, and delete on demand. The cheapest way to comply is to not hold it in the first place.
 
-This sits on top of [[security]] (the technical controls) — privacy is *why* and *what*, security is *how* you protect it.
+Privacy is the *why* and *what* of holding personal data — the technical controls that protect it (encryption, access, audit) live wherever they're implemented.
 
 ## Law 1 — Data minimisation
 
@@ -33,7 +33,7 @@ People can ask to **see, correct, export, and delete** their data — build thes
 | **Rectification** | Let them correct wrong data. |
 | **Object / withdraw** | Turn off a processing type (e.g. marketing) and have it actually stop. |
 
-A "delete my account" button that leaves data in three other tables is a [[ask-dont-guess]] broken-promise, and a compliance breach.
+A "delete my account" button that leaves data in three other tables is a broken-promise, and a compliance breach.
 
 ## Law 4 — Sharing, transfers, and records
 
@@ -54,10 +54,8 @@ A "delete my account" button that leaves data in three other tables is a [[ask-d
 - A **retention job** ([[background-jobs]]) that purges expired data automatically.
 
 ## Cross-links
-- [[security]] — the technical controls (encryption, access, audit) that protect what you hold.
 - [[integrations]] — propagate erasure/rectification to synced third parties; document data sharing.
 - [[email-and-notifications]] — where marketing consent and unsubscribe are actually enforced at send time.
 - [[auth-and-accounts]] — the delete-account and data-export flows live in the account lifecycle.
 - [[background-jobs]] — scheduled retention purges and export generation.
-- [[ask-dont-guess]] — a half-wired "delete my data" is a broken promise; make it honest.
 - [[cms]] — where the legal/policy pages are authored and kept current.

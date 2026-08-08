@@ -25,6 +25,7 @@ Diff against the base (read-only). From the changed files, classify what this ch
 | A shared mechanism (confirm, search, paginator, row-state…) | + every call site swept and covered, not just the edited file |
 | A destructive / bulk path | + the preview→execute and non-target-survives checks |
 | A live user journey | + Layer B against the target, Layer C for that journey |
+| Commerce money path / payments / checkout / admin / customer data (a build that sells or stores PII) | + a full [[ecommerce-security-audit]] pass before GO — the concrete owner-facing money-path & data-exposure audit |
 
 ## Step 2 — Fan out the auditors (parallel, read-only)
 
@@ -72,4 +73,4 @@ Close with the report, always in this shape:
 
 - Stages 10–11 of the build pipeline in [[engineering-standards]] are this pass.
 - Step 2 of the release sequence in [[releasing]] is this pass; a GO here still isn't deploy authorization — that's rule (a) there.
-- The layers, the domain must-pass catalogue, and the auditor contract live in [[regression-testing]]; ambiguity about what a check should assert is an [[ask-dont-guess]] stop.
+- The layers, the domain must-pass catalogue, and the auditor contract live in [[regression-testing]]; ambiguity about what a check should assert is a stop — name it and ask.

@@ -7,18 +7,18 @@ description: Use when building sign-up, sign-in, sessions, password/magic-link f
 
 The one core truth: **auth is the one flow every user walks through and every attacker probes — it must be complete (no half-wired reset link), server-verified (no client-asserted identity), and its negative paths are product behaviour, not edge cases.** "Signed out stays out" is a feature you build and test, not a default you hope for.
 
-The trust model behind this is [[security]]; the capability-gating mechanics live in [[engineering-standards]]; the first-admin bootstrap is in [[project-setup]]. This skill is how the account experience itself gets built.
+The capability-gating mechanics live in [[engineering-standards]]; the first-admin bootstrap is in [[project-setup]]. This skill is how the account experience itself gets built.
 
 ## Law 1 — Sessions are server-verified, on every request
 
-- Identity comes from a **verified session/token resolved server-side** — never from a client-sent user id, email, or role flag ([[security]]).
+- Identity comes from a **verified session/token resolved server-side** — never from a client-sent user id, email, or role flag.
 - Sessions are short-lived, revocable, and carried in `HttpOnly`+`Secure` cookies or the platform's equivalent; **rotated on privilege change** (sign-in, password change, role grant).
 - **Sign-out actually invalidates the session server-side** — not just clears local state. A "signed out" user whose old token still works is a broken promise.
 - Use the **platform's auth primitives** (managed auth, hosted flows, proven libraries) — never hand-roll password hashing or session crypto.
 
 ## Law 2 — The lifecycle is complete, or honestly absent
 
-Every account flow is wired end-to-end or not offered — a dead "Forgot password?" link is the [[ask-dont-guess]] broken-promise anti-pattern.
+Every account flow is wired end-to-end or not offered — a dead "Forgot password?" link is a broken-promise anti-pattern.
 
 | Flow | Must include |
 |---|---|
@@ -34,8 +34,8 @@ Auth forms are still forms: preserve input on failure, disable the submit while 
 ## Law 3 — Enumeration-safe and abuse-resistant
 
 - **The same response whether or not the account exists** — "If an account exists for that address, we've emailed a link." Sign-up, sign-in, and reset must not reveal *who has an account* through messages or timing.
-- **Rate-limit and throttle** every auth endpoint; lockout/captcha under repeated failure — credential stuffing arrives on day one ([[security]]).
-- Failure messages are **generic to the caller, specific in the logs** — log attempts with context, never with credentials ([[observability]], [[security]]).
+- **Rate-limit and throttle** every auth endpoint; lockout/captcha under repeated failure — credential stuffing arrives on day one.
+- Failure messages are **generic to the caller, specific in the logs** — log attempts with context, never with credentials ([[observability]]).
 
 ## Law 4 — Roles and capabilities are administered, not hard-coded
 
@@ -57,13 +57,12 @@ Seed **one test account per privilege level** in the test target so these journe
 
 ## Stand this up in a new project
 
-- Wire the **session-resolution helper and the capability check once, at the boundary** — every route uses them; none re-implements them ([[security]], [[engineering-standards]]).
+- Wire the **session-resolution helper and the capability check once, at the boundary** — every route uses them; none re-implements them ([[engineering-standards]]).
 - Bootstrap the admin, then immediately **seed the per-privilege test accounts**.
 - Write the four negative-path journeys as the project's **first E2E specs** — they gate everything after.
 - Build the lifecycle flows from the shared form components with honest states ([[forms-and-input]], [[design-system]]).
 
 ## Cross-links
-- [[security]] — the trust model: authn vs authz, hostile input, session hygiene.
 - [[engineering-standards]] — capability gating, the sacred write path, server-side enforcement.
 - [[project-setup]] — admin bootstrap and where the auth keys live.
 - [[privacy-and-compliance]] — deletion, export, and consent as real account features.

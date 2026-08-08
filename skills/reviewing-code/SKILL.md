@@ -16,9 +16,9 @@ Spend your attention where the cost of a miss is highest:
 | Priority | Look for |
 |---|---|
 | **1. Correctness** | Does it do what it claims? Edge cases, empty/null, off-by-one, error paths, race conditions. Trace one real input end-to-end. |
-| **2. Security** | Untrusted input validated? Server-side authz on every write? Secrets/PII not leaked? See [[security]]. |
+| **2. Security** | Untrusted input validated? Server-side authz on every write? Secrets/PII not leaked? |
 | **3. Data integrity** | Migrations additive & reversible? Numbers reconcile to source, not a capped sample? See [[data-modelling]], [[engineering-standards]]. |
-| **4. Wired end-to-end** | Every new control hits a real backend; no dead button, no broken-promise copy, no fixture on a live surface. See [[ask-dont-guess]]. |
+| **4. Wired end-to-end** | Every new control hits a real backend; no dead button, no broken-promise copy, no fixture on a live surface. |
 | **5. Consistency** | Reuses the shared mechanism instead of a second one; matches [[design-system]] and house conventions. |
 | **6. Readability** | Names, dead code, comments that match the code, sensible structure. Last — never first. |
 
@@ -31,7 +31,7 @@ For each claim the change makes ("this fixes X", "this is safe"), actively try t
 - **Find the input that breaks it** before you accept it works.
 - **Assume the comment lies** — verify against the code, not the description.
 - **"It compiles" / "tests pass" is not "it's correct"** — read what the test actually asserts; a green test that asserts nothing is a false signal.
-- If you can't tell whether something is right, that's a **question**, not an approval — see [[ask-dont-guess]].
+- If you can't tell whether something is right, that's a **question**, not an approval.
 
 Default to "not yet" until proven. The reviewer who waves things through is the reason bugs reach production.
 
@@ -64,7 +64,5 @@ Before you call it done, re-read your diff as a hostile stranger:
 - Wire the read-only auditor agents into the flow so the mechanical checks are automatic and humans spend attention on judgement.
 
 ## Cross-links
-- [[ask-dont-guess]] — uncertainty in review is a question, not an approval; the "looks done but isn't" anti-patterns are the Law 4-wiring checks.
 - [[regression-testing]] — behaviour is proven by running, not by reading the diff.
-- [[security]] — the security pass of a review.
 - [[engineering-standards]] — the build pipeline, shared-mechanism reuse, and data-reconciliation a review enforces.

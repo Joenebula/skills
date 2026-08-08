@@ -7,7 +7,7 @@ description: Invoke when building any form, input, or data-entry flow — valida
 
 The one core truth: **a form is the moment a user trusts you with their effort — losing it or blocking them on a bad error is the fastest way to break that trust.** Validate clearly, fail helpfully, save defensively, and make the path obvious. This is also the highest-risk surface for [[accessibility]].
 
-Built from documented components ([[design-system]]); the server-side validation behind it is [[security]] + [[api-design]].
+Built from documented components ([[design-system]]); the server-side validation behind it is [[api-design]].
 
 ## Law 1 — Labels and structure
 
@@ -17,7 +17,7 @@ Built from documented components ([[design-system]]); the server-side validation
 
 ## Law 2 — Validate at the right time, in the right place
 
-- **On the client for fast feedback, on the server for truth.** Client validation is UX; the server re-validates everything ([[security]]).
+- **On the client for fast feedback, on the server for truth.** Client validation is UX; the server re-validates everything.
 - **Validate at the helpful moment** — on blur or on submit, not aggressively on every keystroke before they've finished. Re-validate a fixed field immediately so the error clears.
 - **Never trust client-sent** prices, totals, ids, or flags — re-derive server-side.
 
@@ -40,8 +40,8 @@ Built from documented components ([[design-system]]); the server-side validation
 ## Law 5 — Multi-step and file upload
 
 - **Multi-step**: show progress, allow back without losing entered data, validate per step, only commit on final confirm.
-- **File upload**: show progress, validate type/size **client and server**, handle failure/retry, and never execute or trust the file ([[security]]). Image uploads get preview + sensible constraints.
-- **Destructive form actions** (delete, overwrite) confirm through the shared confirm dialog — never a naked submit ([[ask-dont-guess]]).
+- **File upload**: show progress, validate type/size **client and server**, handle failure/retry, and never execute or trust the file. Image uploads get preview + sensible constraints.
+- **Destructive form actions** (delete, overwrite) confirm through the shared confirm dialog — never a naked submit.
 
 ## Stand this up in a new project
 
@@ -52,6 +52,4 @@ Built from documented components ([[design-system]]); the server-side validation
 ## Cross-links
 - [[design-system]] — documented field/label/error components, built once.
 - [[accessibility]] — labels, error association, announcements; the riskiest a11y surface.
-- [[security]] — server-side validation, never trust client values, safe file handling.
 - [[api-design]] — shared validation schema, idempotent submits, consistent error shapes.
-- [[ask-dont-guess]] — destructive submits confirm; a dead/no-op submit is a broken promise.

@@ -9,7 +9,7 @@ The one core truth: **"it compiles" is not "it works."** A change is done only w
 
 ## The process laws (non-negotiable)
 
-1. **Flag before continuing when unsure.** Ambiguous intent, unclear scope, more than one reasonable reading, or any destructive action → STOP and ask. The full guardrail (how to ask, recommend-then-act, honesty) lives in [[ask-dont-guess]].
+1. **Flag before continuing when unsure.** Ambiguous intent, unclear scope, more than one reasonable reading, or any destructive action → STOP and ask.
 2. **Recommend, then act.** State what you'll do and the recommended approach (with the trade-off), then do it. For multi-step or destructive work, lay out the plan and get a yes first.
 3. **Change once = change everywhere.** A shared mechanism is shared. Change how one behaves (search, confirm, pagination, row-state, predictive input, bulk…) → change it in **every** site it appears, unless the user explicitly scopes it to one. See the catalogue below.
 4. **Verify, then deploy.** Typecheck → production build → gate → ship, in that order. Static green is necessary, never sufficient. The release sequence lives in [[releasing]].
@@ -24,9 +24,9 @@ Consider each stage for any non-trivial change. **Skip a stage only with a state
 3. **Reuse** — does a shared mechanism already cover this (catalogue below)? Reuse it. If you're about to build a *second* confirm / search / paginator / row-state, stop and wire the existing one.
 4. **Components & styles** — any UI? → run [[design-system]]. Use documented components + tokens; never invent classes or hand-pick values. Tempted to → **flag**, then find or document the real one (in the same change).
 5. **Consistency** — touched a shared mechanism? List **every** site it appears and plan to update all of them, unless explicitly scoped to one.
-6. **Safety** — server-side gating, destructive = preview + confirm, migration-safe queries, no secrets/PII leaked. Anything irreversible → **flag** and confirm scope.
+6. **Safety** — apply the rules in *Security & gating* below (server-side gating, destructive preview+confirm, migration-safe queries, no leaks). Anything irreversible → **flag** and confirm scope.
 7. **Plan & recommend** — state the approach and your **recommendation** (with trade-offs). For destructive / ambiguous / large work, **get a yes first**.
-8. **Build** — implement; if you touched a shared mechanism, **sweep all its sites** (stage 5).
+8. **Build** — implement, and write the covering test in this same stage. Coverage discovered missing at Stage 10 arrived late; coverage written here grew *with* the feature, not after it (see [[regression-testing]]). If you touched a shared mechanism, **sweep all its sites** (stage 5).
 9. **Verify (static)** — typecheck → production build. Watch the build's **exit code**, not just its log. *(This proves it DEPLOYS — not that it works.)*
 10. **Completeness & regression** — run the auditors and trace BOTH ways: **forward** — every new affordance → the real route/persistence backing it (no toast-success-that-no-ops, no fixture dressed as real, no dead control left visible, copy == behaviour); **reverse** — every new route is actually called, every migration applied (or it degrades gracefully), every stored field consumed. Run feature-completeness-auditor and regression-auditor always; design-system-auditor + accessibility-auditor on any UI diff; security-route-auditor on any route diff — the orchestrated pass is [[preflight]]. A behavioural / signed-in / data-changing feature is NOT verified until its end-to-end check is green. Detail: [[regression-testing]].
 11. **Ship** — the [[preflight]] gate must be GO before you push. Detail: [[releasing]].
@@ -47,20 +47,23 @@ Before building an interaction, check whether one of these already exists and **
 | **Soft-delete / trash** | Reuse the existing recoverable-archive mechanism; a permanent "delete forever" is **opt-in** and separate. Never reintroduce a raw destructive "remove." |
 | **Search behaviour** | Server-side vs client-side, debounce, matching — change one, change **all** search sites together. |
 | **Clean per-type URLs** | Every entity type owns its path (e.g. `/<type>/<slug>`). **All** sites that build/parse/emit URLs (links, router, canonical/metadata, sitemap) must agree on the shape — a type that defaults to the wrong value silently creates duplicate URLs. |
+| **Idempotency key** | One helper generates and checks the key for any retriable write (charge, webhook, queued job, form resubmit). A second run with the same key is a no-op, never a duplicate effect. |
+| **Signed-webhook receiver** | One inbound handler verifies the provider's signature, dedupes by event id, and acks fast before queuing the real work. Every third-party webhook lands through it — never a bespoke per-integration parser. |
 
 ## The living data-gotchas list (each has caused a real bug — keep adding)
 
 > **Start with (a).** It is the one rule in this file you will not arrive at on your own, and until you know it, it silently corrupts every count, every sweep, and every "no results" screen.
 >
-> *Letters are stable anchors — [[api-design]], [[debugging]], [[refactoring]], [[data-modelling]], [[analytics-dashboards]], [[data-grids]] and [[cms]] all cite them by letter. Append new gotchas; never renumber.*
+> *Letters are stable anchors — [[api-design]], [[debugging]], [[refactoring]], [[data-modelling]], [[analytics-dashboards]], [[data-grids]], [[cms]] and [[project-setup]] all cite them by letter. Append new gotchas; never renumber.*
 
 - **(a) Query pagination caps.** A single query often caps at a fixed row count; a bigger `limit` flag does **NOT** lift it. For full sweeps/counts, **page through in a loop** (range/offset) until a short page returns.
-- **(b) A capped sample shown as a TOTAL.** A headline count must be an exact `COUNT`/aggregate from the source — **never `array.length` of a capped query.** (See the data-reconciliation rule.)
+- **(b) A capped sample shown as a TOTAL.** The classic form of gotcha (a) biting a display. Full rule: the data-reconciliation rule below.
 - **(c) Migration-safe enums.** Never query a value a not-yet-applied schema change adds — it errors the whole query. Reference only **existing** values; degrade gracefully until the change is applied.
 - **(d) Read-only runtime filesystem.** Don't write user-editable content to disk at runtime, and don't depend on reading bundled files there. Persist editable content to the **data store**; ship defaults as **inlined imports** the bundler embeds on every host.
 - **(e) Accidental duplicate top-level names that SILENTLY shadow.** Two top-level functions/consts sharing a name → the **later definition wins** and the earlier's callers break with **no error**. A syntax check will NOT catch it (it's legal). Before adding a top-level helper, search for the name; if it exists, use a distinct one. *(Triage: a deliberate "enhanced override" is fine; two unrelated things colliding is a real bug — never blanket-whitelist.)*
 - **(f) Scope leaks in a large/monolithic module.** One inner scope cannot see another's locals; a shared global is visible to both. Bridge across scopes **explicitly** — a syntax check won't catch a scope break; only running it will.
 - **(g) Fixture/demo data leaking onto a live surface.** Showcase/sample arrays must be stripped wherever real data is present, or fabricated content shows to real users. Guard every render for the empty (real) case.
+- **(h) Env-var timing confusion.** A build-time public value (inlined into the bundle when it's built) and a runtime server secret (read fresh from the host's secure store) are two different lifecycles conflated as one "env var." Changing a build-time value needs a **rebuild/redeploy** to take effect; a missing runtime secret should disable its feature gracefully, never crash boot. Concrete key map: [[project-setup]].
 
 ## The data-reconciliation rule
 
@@ -81,6 +84,6 @@ The first three **correct** what you would otherwise do. The last line you alrea
 
 When a change adds or alters a pattern, the docs are part of the change: new/changed shared mechanism, hard rule, gotcha, or capability → update this skill (and [[design-system]] as relevant) **in the same commit**; durable user preference → memory; a pattern an auditor relies on changed → update that agent too.
 
-> **HARD RULE — never update a skill without asking first.** The skills library is updated *only* with the user's explicit say-so. When a **major** change lands — a new reusable mechanism, a new hard rule, a gotcha that bit us, a new domain pattern, a shift in how we build — **propose** the skill update (which skill, what edit, why) and **WAIT for a yes**. No edits to any skill **or agent** file until the user approves. Don't propose for trivial/one-off changes — only when the learning is durable and reusable. Capturing learnings is continuous; *writing* them is gated on approval. (This mirrors [[ask-dont-guess]] — ask before acting on anything that changes shared, durable artifacts.)
+> **HARD RULE — never update a skill without asking first.** The skills library is updated *only* with the user's explicit say-so. When a **major** change lands — a new reusable mechanism, a new hard rule, a gotcha that bit us, a new domain pattern, a shift in how we build — **propose** the skill update (which skill, what edit, why) and **WAIT for a yes**. No edits to any skill **or agent** file until the user approves. Don't propose for trivial/one-off changes — only when the learning is durable and reusable. Capturing learnings is continuous; *writing* them is gated on approval.
 
-Cross-references: [[design-system]], [[regression-testing]], [[ask-dont-guess]], [[releasing]]. Deeper dives on the concerns this skill touches: [[reviewing-code]] (the review pass), [[security]] (the full trust model behind the gating section), [[data-modelling]] (entities + safe migrations behind the data stages), [[api-design]] (the contract shape), and [[observability]] (what happens when a stage's wiring fails).
+Cross-references: [[design-system]], [[regression-testing]], [[releasing]]. Deeper dives on the concerns this skill touches: [[reviewing-code]] (the review pass), [[data-modelling]] (entities + safe migrations behind the data stages), [[api-design]] (the contract shape), and [[observability]] (what happens when a stage's wiring fails).

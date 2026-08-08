@@ -45,4 +45,4 @@ End with a one-line summary of the single highest-impact fix.
 
 Read-only — propose no edits, only findings (Read, Grep, Glob). If you cannot confirm an affordance is wired, say so explicitly rather than assuming it is; an unverified wire is an issue, not a pass. If something is genuinely ambiguous (e.g. you can't tell whether a surface is meant to be live or a preview), NAME the ambiguity and what you'd need to resolve it — never invent a rule to paper over it.
 
-This is the generic counterpart to the honesty rules in [[ask-dont-guess]]; pairs with regression-auditor for "did it break what worked" and design-system-auditor for "does it match the system". For where this audit sits in the pre-ship gate, see [[regression-testing]] and [[releasing]].
+This pairs with regression-auditor for "did it break what worked" and design-system-auditor for "does it match the system". For where this audit sits in the pre-ship gate, see [[regression-testing]] and [[releasing]].
