@@ -55,6 +55,8 @@ for the price of a few minutes rather than a whole run.
    *done when*.
 5. **Show the user the plan and stop.** Numbered tasks, each with its done-when and the
    skills that will govern it. Flag anything you expect will need them. Wait for a go.
+   Pre-flight is a stop, so write `REPORT.html` too — at this point *What's next* is the
+   whole plan and *Needs you* is whatever the setup already turned up.
 
 ### Writing a good "done when"
 
@@ -109,7 +111,7 @@ For each task in the queue:
 3. Build it. Make surgical edits — do not rewrite existing files wholesale as a
    shortcut.
 4. Check it (below).
-5. Log what happened.
+5. Log what happened, tagging anything the report has to lift out (see Files to maintain).
 6. Commit inside the scope fence, one commit per finished task, with a message a
    non-developer can read. Commits are save points and need no permission — they are
    local and publish nothing. **Never push, never touch remotes, never rewrite history.**
@@ -125,8 +127,8 @@ Two tiers, deliberately:
 - **After every task** — check thoroughly, but only what that task touched: build,
   types, the relevant tests, and any governing skill's checks. Fast enough not to eat
   the run.
-- **Before you stop** — run the complete set across everything. Same safety as checking
-  everything every time, far more actually built.
+- **Before you stop** — run the complete set across everything, then write
+  `REPORT.html`. Same safety as checking everything every time, far more actually built.
 
 Running the full suite after every small change sounds safer but eats the run and
 creates pressure to cut corners to show progress. Don't.
@@ -195,7 +197,11 @@ user. Do not do it. This keeps the pile of changes reviewable.
 
 ## Files to maintain
 
-Both live in `keep-going/` inside the project folder.
+All three live in `keep-going/` inside the project folder. **All three are overwritten in
+place — never dated, never numbered.** The next session has to know which file is current
+without working it out; five dated queues is a guess waiting to happen, and resuming from
+a stale queue is the most expensive failure this skill has. Version history is already
+free in the project's save history. Put the timestamp *inside* the file instead.
 
 **`QUEUE.md`** — tasks in order, each with status (`pending` / `in progress` / `done` /
 `blocked`), its done-when, governing skills, and any dependency on another task.
@@ -206,6 +212,21 @@ queue only makes sense to someone who watched the chat, resuming will drift.
 **`LOG.md`** — append-only, newest last. Per task: what was built, skills loaded and
 their dates, commands run and their results, assumptions made, anything not checked and
 why.
+
+Tag the five things the report has to lift out, one per line, so building the report is
+extraction rather than re-reading. Readable as plain markdown, greppable as markers:
+
+```
+> DECIDE: needs a new library (sharp) to resize images - stopped, task 6
+> BLOCKED: task 6 - parked, tasks 7-9 do not depend on it and carried on
+> ASSUMED: "the whole page" includes the sidebar - cheap to undo, git history
+> UNCHECKED: never opened in a browser - proven by code only
+> IDEA: the header could lose 40px now the banner is gone - not doing it
+```
+
+**`REPORT.html`** — the readable version, for a user who will not read markdown. Built
+from the template next to this file. Its rules are in the comment at the top of that
+template; the two that matter most are repeated below because they are the ones that rot.
 
 ---
 
@@ -221,6 +242,69 @@ the chat summary, the log, and every stop message.
 - Never imply a check ran when it didn't.
 - Don't dumb it down to uselessness — name files and tools where it helps them look.
 
+### The HTML report — `keep-going/REPORT.html`
+
+Write it **once, at every stop** (and on "status"), not per task — rendering it after each
+task eats the run for no gain. `LOG.md` is written per task as usual; the report is built
+from it at the stop. Copy `report-template.html` from beside this file on the first run,
+then fill it. Never restyle it: two runs that look different are two things to learn.
+
+Order is the whole point. **Issues at the top, evidence at the bottom** — the user should
+never scroll to find what needs them. Sections, fixed: Needs you → Not checked → What's
+next → Done → Noticed → Full log → What the words mean. Every section stays even when
+empty, with its one-line empty state; a missing section reads as an oversight, an explicit
+*Nothing needs you* reads as an answer.
+
+**It is a worklist, not a record.** It shows only what is still outstanding. When an item
+is dealt with, **delete it from the file** — no tick, no strikethrough, no "resolved"
+pile. The length of the page is how much is left. Two rules keep that honest, and without
+them "I dealt with it" and "the skill quietly dropped it" look identical:
+
+- **Remove only what was observed resolved.** The user answered the decision; the check
+  actually ran and was seen to pass; the assumption was confirmed. **Never** remove an
+  item because you have grown confident it is probably fine — that turns `UNCHECKED` into
+  a lie, which is the one thing the tag exists to prevent.
+- **Record every removal in `LOG.md`**, one dated line: `> REMOVED: DAW round-trip - user
+  ran it, reported all three tabs correct (9 Aug)`. Nothing is ever deleted from the log;
+  items disappear from the page only.
+
+### Copy-prompts — two buttons, and every prompt discusses first
+
+Each item in **Needs you** and **What's next** carries buttons that copy a ready-made
+prompt. Write each one to stand alone: absolute project path, branch, read `QUEUE.md` and
+`LOG.md` first, and every hard-won rule already learned for that task — what must not be
+deleted, the mistake already made twice, the gate that decides done. The chat it lands in
+has never seen this run, so anything left implicit is lost.
+
+**Discuss** comes first and is always there — its prompt talks the item through and changes
+nothing. **Act** is secondary, and is only added where there is one unambiguous action:
+
+| Item | Buttons |
+|---|---|
+| `DECIDE` | **Discuss only.** Nothing has been decided, so no action can be pre-written. |
+| `BLOCKED` | **Discuss only**, unless the fix is already known and agreed. |
+| `ASSUMED` | Discuss + *Change it* |
+| `UNCHECKED` | Discuss + *Check it* — unless nothing a human could do would settle it yet. |
+| `NEXT` | Discuss + *Run task N* |
+
+That table is not fussiness — it means **the item that deletes the most has no button that
+deletes anything**. Label the act button with the real verb, never a generic "Copy prompt";
+a generic label is how the wrong button gets clicked. Give every button its own one-line
+hint saying what it does.
+
+**Every prompt ends with the discuss-first block** — the verbatim text is in the template.
+It makes the receiving session state the job, list every file it would change, say what it
+thinks is *wrong* in the queue or log, name the undo, and then **wait for "go"**. No
+exceptions, including resume prompts for tasks already agreed: what needs agreeing is the
+plan, not the task.
+
+That third point — invite the next session to disagree — is not politeness. It is the only
+independent read this run gets, and a report's items are often corrections of a previous
+session's own mistakes.
+
+Say plainly if asked: this is a disposition, not a lock. A session can still barrel past
+it. What actually prevents an edit is the user's approval settings.
+
 ### End-of-turn summary — use this shape exactly
 
 ```
@@ -234,6 +318,7 @@ the chat summary, the log, and every stop message.
 - [only genuinely actionable items, reason in about six words]
 
 [Queue: X done, Y left, Z blocked]
+[Full report: keep-going/REPORT.html]
 ```
 
 Order **Your turn** by what they should look at first — riskiest or most uncertain
@@ -248,7 +333,7 @@ empty, say so in one line: *Nothing — say keep going to continue.*
 
 ## Mid-run controls
 
-- **"status"** — report where the queue is without doing more work.
+- **"status"** — refresh `REPORT.html` and say where the queue is, without doing more work.
 - **"stop"** / **"pause"** — finish the current task cleanly if it is nearly done or
   abandon it if not, update the queue, and summarise. Never leave work half-saved.
 - **"add to queue"** — append tasks without disturbing the run order.

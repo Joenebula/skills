@@ -1,0 +1,626 @@
+<!doctype html>
+<!--
+  keep-going REPORT.html — the shell. Copy this file to <project>/keep-going/REPORT.html
+  and fill the marked regions. Everything between <style> and </style>, and everything in
+  <script>, is FIXED — never edit it, or two runs stop looking alike.
+
+  Fill only the regions marked  <!== FILL ==>  and delete the example rows.
+  The block snippets to copy from are in the comment at the very bottom of this file.
+
+  Rules that make this page trustworthy, and why each exists:
+
+  1. THIS PAGE IS A WORKLIST, NOT A RECORD. It shows only what is still outstanding.
+     When an item is dealt with, DELETE it from this file. Do not tick it, do not strike
+     it through, do not move it to a "resolved" section. The length of the page is how
+     much is left to do.
+
+  2. AN ITEM IS ONLY REMOVED WHEN ITS RESOLUTION WAS OBSERVED. The user answered the
+     decision; the check actually ran and was seen to pass; the assumption was confirmed.
+     NEVER remove one because you have grown confident it is probably fine. That would
+     turn UNCHECKED into a lie, which is the exact thing the tag exists to prevent.
+
+  3. EVERY REMOVAL IS RECORDED IN LOG.md, one line, dated:
+        > REMOVED: DAW round-trip check - user ran it, reported all three tabs correct (9 Aug)
+     The page stays clean; the audit trail lives off-page. Without this, "I dealt with it"
+     and "the skill quietly dropped it" look identical.
+
+  4. NOTHING IS EVER DELETED FROM LOG.md. It is append-only. Items disappear from this
+     page only.
+
+  5. EVERY SECTION STAYS, EVEN WHEN EMPTY. An empty section gets its one-line empty state
+     (in the snippets below) so the page's shape never changes and the user always knows
+     where to look. An absent section reads as an oversight; an explicit "Nothing needs
+     you" reads as an answer.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<!--== FILL: page title — "<project> — build run report" ==-->
+<title>PROJECT — build run report</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f5f1; --panel:#ffffff; --ink:#1a1a18; --ink-2:#5a5a53; --ink-3:#8d8d84;
+    --red:#b23b2b; --red-bg:#fbeeea;
+    --amber:#96650a; --amber-bg:#fbf3e2;
+    --green:#256b4b; --green-bg:#ebf4ee;
+    --grey-bg:#efeeea;
+    --code-bg:#f4f3ef; --code-ink:#3a3a36;
+    --accent:#1a1a18;
+    --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;border:0}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:0 24px 120px}
+
+  header.mast{padding:48px 0 8px}
+  .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+          font-weight:600;margin:0 0 10px}
+  h1{font-size:34px;line-height:1.15;margin:0 0 8px;letter-spacing:-.02em}
+  .stamp{color:var(--ink-2);font-size:14px;margin:0;max-width:70ch}
+  .stamp b{color:var(--ink);font-weight:600}
+
+  .scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));
+              gap:10px;margin:28px 0 4px}
+  .score{background:var(--panel);padding:14px 16px;border-radius:var(--radius)}
+  .score .n{font-size:25px;font-weight:650;letter-spacing:-.02em;display:block;line-height:1.2}
+  .score .l{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;
+            font-weight:600}
+  .score.red{background:var(--red-bg)} .score.red .n{color:var(--red)}
+  .score.amber{background:var(--amber-bg)} .score.amber .n{color:var(--amber)}
+  .score.green{background:var(--green-bg)} .score.green .n{color:var(--green)}
+
+  nav.jump{position:sticky;top:0;z-index:50;background:var(--bg);margin-top:26px;
+           display:flex;gap:4px;overflow-x:auto;padding:10px 0;
+           box-shadow:0 10px 14px -12px rgba(26,26,24,.18)}
+  nav.jump a{flex:0 0 auto;text-decoration:none;color:var(--ink-2);font-size:13.5px;
+             font-weight:550;padding:6px 12px;border-radius:99px;white-space:nowrap}
+  nav.jump a:hover{background:var(--panel);color:var(--ink)}
+  nav.jump a .c{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;
+                padding:1px 7px;border-radius:99px;background:var(--grey-bg);color:var(--ink-2)}
+  nav.jump a.has-red .c{background:var(--red);color:#fff}
+  nav.jump a.has-amber .c{background:var(--amber);color:#fff}
+
+  section{padding-top:42px;scroll-margin-top:64px}
+  h2{font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink-2);font-size:14.5px;margin:0 0 18px;max-width:66ch}
+
+  .item{background:var(--panel);border-radius:var(--radius);padding:17px 20px;margin-bottom:10px}
+  .item.decide,.item.blocked{background:var(--red-bg)}
+  .item.assumed,.item.unchecked{background:var(--amber-bg)}
+  .item.idea{background:var(--grey-bg)}
+  .empty{background:var(--green-bg);border-radius:var(--radius);padding:15px 20px;
+         font-size:15px;color:var(--green);font-weight:550}
+  .empty.neutral{background:var(--grey-bg);color:var(--ink-2);font-weight:400}
+
+  .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;
+       letter-spacing:.1em;padding:3px 7px;border-radius:5px;vertical-align:2px;margin-right:9px;
+       color:#fff}
+  .tag.decide,.tag.blocked{background:var(--red)}
+  .tag.assumed,.tag.unchecked{background:var(--amber)}
+  .tag.idea{background:var(--ink-3)}
+  .tag.next{background:var(--accent)}
+
+  .item h3{display:inline;font-size:16.5px;font-weight:620;margin:0;letter-spacing:-.005em}
+  .item .body{margin:10px 0 0;font-size:15px;color:var(--ink-2)}
+  .item .body strong{color:var(--ink);font-weight:600}
+  .meta{margin-top:11px;font-size:13px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 16px}
+  .meta code, .item code{font-family:var(--mono);font-size:12.5px;background:rgba(26,26,24,.055);
+             padding:1px 5px;border-radius:4px;color:var(--code-ink)}
+  .amber-txt{color:#96650a;font-weight:600}
+  .green-txt{color:#256b4b;font-weight:600}
+  .grey-txt{color:#8d8d84;font-weight:600}
+
+  .copyrow{margin-top:14px;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .copyrow+.copyrow{margin-top:9px}
+  button.copy{font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;
+              background:var(--accent);color:#fff;border-radius:8px;padding:8px 15px;
+              flex:0 0 auto;min-width:118px}
+  button.copy:hover{opacity:.86}
+  button.copy.secondary{background:rgba(26,26,24,.075);color:var(--ink-2)}
+  button.copy.secondary:hover{background:rgba(26,26,24,.12);opacity:1}
+  button.copy.ok{background:var(--green);color:#fff}
+  button.copy.fail{background:var(--red);color:#fff}
+  .hint{font-size:13px;color:var(--ink-3);flex:1 1 auto;min-width:140px}
+  .peek{font-size:13px;color:var(--ink-3);cursor:pointer;user-select:none;
+        text-decoration:underline;text-underline-offset:3px;background:none;
+        font-family:var(--sans);padding:0}
+  .peek:hover{color:var(--ink-2)}
+  pre.prompt{display:none;margin:13px 0 0;background:var(--code-bg);
+             border-radius:9px;padding:15px 17px;font-family:var(--mono);font-size:12.5px;
+             line-height:1.6;color:var(--code-ink);white-space:pre-wrap;word-break:break-word;
+             max-height:340px;overflow:auto}
+  pre.prompt.open{display:block}
+
+  details.task{background:var(--panel);border-radius:var(--radius);margin-bottom:8px;overflow:hidden}
+  details.task>summary{cursor:pointer;padding:14px 20px;list-style:none;display:flex;
+                       align-items:center;gap:12px;font-size:15.5px}
+  details.task>summary::-webkit-details-marker{display:none}
+  details.task>summary::after{content:"\203A";margin-left:auto;color:var(--ink-3);font-size:20px;
+                              transform:rotate(90deg);transition:transform .15s}
+  details.task[open]>summary::after{transform:rotate(-90deg)}
+  details.task>summary:hover{background:var(--code-bg)}
+  .pill{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+        padding:3px 9px;border-radius:99px;flex:0 0 auto}
+  .pill.done{background:var(--green-bg);color:var(--green)}
+  .pill.prog{background:var(--amber-bg);color:var(--amber)}
+  .pill.pend{background:var(--grey-bg);color:var(--ink-3)}
+  .tnum{font-family:var(--mono);font-size:13px;color:var(--ink-3);flex:0 0 auto}
+  .tname{font-weight:560}
+  .inner{padding:2px 20px 22px}
+  .inner h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+            margin:20px 0 8px;font-weight:650}
+  .inner p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2)}
+  .inner p strong{color:var(--ink)}
+  pre.out{background:var(--code-bg);border-radius:9px;padding:13px 15px;
+          font-family:var(--mono);font-size:12.5px;line-height:1.6;
+          color:var(--code-ink);overflow-x:auto;margin:0 0 10px}
+  pre.out .pass{color:var(--green);font-weight:700}
+  pre.out .fail{color:var(--red);font-weight:700}
+
+  .legend{background:var(--panel);border-radius:var(--radius);padding:8px 22px}
+  .legend dl{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;margin:16px 0}
+  .legend dt{margin:0}
+  .legend dd{margin:0;font-size:14px;color:var(--ink-2);align-self:center}
+  .legend dd strong{color:var(--ink)}
+
+  .note{font-size:13.5px;color:var(--ink-3);background:var(--grey-bg);border-radius:var(--radius);
+        padding:14px 18px;margin:16px 0}
+  .note b{color:var(--ink-2)}
+  footer{margin-top:64px;padding-top:22px;font-size:13px;color:var(--ink-3);
+         box-shadow:inset 0 1px 0 rgba(26,26,24,.09)}
+  footer code{font-family:var(--mono);font-size:12.5px}
+  a.file{color:var(--ink-2);font-family:var(--mono);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="kicker">Keep-going run report</p>
+  <!--== FILL: h1 = what this run is doing, in the user's words, not the branch name ==-->
+  <h1>PROJECT — WHAT THIS RUN IS DOING</h1>
+  <!--== FILL: stamp. The date is this file's date. Keep the second line verbatim. ==-->
+  <p class="stamp">Last updated <b>DAY DATE, TIME</b> · run resumed <b>N</b> times ·
+     branch <b>BRANCH</b> · started from save point <b>COMMIT</b><br>
+     This page shows <b>what is still outstanding</b>. Anything dealt with is removed from it.</p>
+
+  <!--== FILL: scoreboard. Six tiles max. Last tile is the run's own headline number
+        (tests passing, pages built, records migrated) — drop it if the run has none. ==-->
+  <div class="scoreboard">
+    <div class="score green"><span class="n">0</span><span class="l">Done</span></div>
+    <div class="score amber"><span class="n">0</span><span class="l">In progress</span></div>
+    <div class="score"><span class="n">0</span><span class="l">Left</span></div>
+    <div class="score red"><span class="n">0</span><span class="l">Needs you</span></div>
+    <div class="score amber"><span class="n">0</span><span class="l">Not checked</span></div>
+    <div class="score green"><span class="n">0</span><span class="l">Tests passing</span></div>
+  </div>
+</header>
+
+<!--== FILL: the counts in the nav must match the number of items in each section.
+      Use class="has-red" on Needs you and class="has-amber" on Not checked ONLY when
+      that section has at least one item — otherwise the chip stays grey. ==-->
+<nav class="jump">
+  <a href="#needs" class="has-red">Needs you <span class="c">0</span></a>
+  <a href="#unchecked" class="has-amber">Not checked <span class="c">0</span></a>
+  <a href="#next">What's next <span class="c">0</span></a>
+  <a href="#done">Done <span class="c">0</span></a>
+  <a href="#ideas">Noticed <span class="c">0</span></a>
+  <a href="#log">Full log</a>
+  <a href="#legend">What the words mean</a>
+</nav>
+
+<!-- ============ 1. NEEDS YOU — DECIDE and BLOCKED first, then ASSUMED ============ -->
+<section id="needs">
+  <h2>Needs you</h2>
+  <!--== FILL: one sentence naming what is here. Keep the last sentence verbatim. ==-->
+  <p class="sub">SUMMARY OF WHAT IS HERE. Riskiest first. Each has a ready-made prompt — copy it
+     and paste it into a new chat to deal with just that item. <strong>Once one is dealt with
+     it vanishes from this page</strong>, so what's left here is always what's still open.</p>
+
+  <!--== FILL: item blocks. Copy from the snippet library at the bottom of this file. ==-->
+
+</section>
+
+<!-- ============ 2. NOT CHECKED ============ -->
+<section id="unchecked">
+  <h2>Built, but not properly checked</h2>
+  <p class="sub">Things that are finished in code and pass the automatic gate, but that nobody
+     has actually watched work. Listed so a tidy "done" list doesn't invite you to assume more
+     than is true. Each one disappears once it has genuinely been checked.</p>
+
+  <!--== FILL: unchecked blocks ==-->
+
+</section>
+
+<!-- ============ 3. WHAT'S NEXT — the pending queue, in order ============ -->
+<section id="next">
+  <h2>What's next</h2>
+  <p class="sub">The remaining queue, in order. Each one can be run on its own from a fresh chat
+     with the prompt below it. Finished tasks move down to <em>Done</em>.</p>
+
+  <!--== FILL: next blocks ==-->
+
+</section>
+
+<!-- ============ 4. DONE — collapsed one-liners, full evidence inside ============ -->
+<section id="done">
+  <h2>Done</h2>
+  <p class="sub">Click any row for the full evidence — what changed, which rules it was built
+     against, and the real output of every command that was run.</p>
+
+  <!--== FILL: done blocks ==-->
+
+</section>
+
+<!-- ============ 5. NOTICED — the no-drift list ============ -->
+<section id="ideas">
+  <h2>Noticed along the way</h2>
+  <p class="sub">Spotted but deliberately not done, so the pile of changes stays reviewable.
+     Nothing here is urgent.</p>
+
+  <!--== FILL: idea blocks ==-->
+
+</section>
+
+<!-- ============ 6. FULL LOG ============ -->
+<section id="log">
+  <h2>Full log</h2>
+  <p class="sub">Everything above comes from here. This is the complete record, in the order it
+     happened, including the pre-flight setup.</p>
+
+  <!--== FILL: the pre-flight block, then any log entry not already shown under Done ==-->
+
+  <p class="note">The task entries above under <b>Done</b> are the rest of the log — the same
+     text, shown there so you don't read it twice. The plain-text originals are always on disk:
+     <a class="file" href="LOG.md">keep-going/LOG.md</a> and
+     <a class="file" href="QUEUE.md">keep-going/QUEUE.md</a>. Nothing is ever deleted from
+     <b>LOG.md</b> — items only disappear from <em>this page</em>.</p>
+</section>
+
+<!-- ============ 7. LEGEND — fixed, never edit ============ -->
+<section id="legend">
+  <h2>What the words mean</h2>
+  <p class="sub">Five labels, and the rule for each. If something doesn't match one of these
+     rules it doesn't go at the top of the page.</p>
+  <div class="legend">
+    <dl>
+      <dt><span class="tag decide">DECIDE</span></dt>
+      <dd>Work has <strong>stopped</strong> and can't continue until you answer. Something
+          destructive, a new library, or a genuine fork in the road.</dd>
+      <dt><span class="tag blocked">BLOCKED</span></dt>
+      <dd>One task got stuck, so it was parked and the rest of the run carried on around it.</dd>
+      <dt><span class="tag assumed">ASSUMED</span></dt>
+      <dd>I made a call without asking, because it was cheap and reversible. Each one says how
+          easily it can be undone.</dd>
+      <dt><span class="tag unchecked">UNCHECKED</span></dt>
+      <dd>Built, but something wasn't verified — and why. <strong>A check that didn't run is
+          never reported as passed.</strong></dd>
+      <dt><span class="tag idea">IDEA</span></dt>
+      <dd>Noticed and deliberately not done, so the run doesn't drift and the changes stay
+          reviewable.</dd>
+    </dl>
+  </div>
+</section>
+
+<footer>
+  Written by the <b>keep-going</b> skill at the end of a run, and overwritten each time.
+  It shows only what is still outstanding — anything dealt with is removed from the page rather
+  than ticked off, so the length of this page is how much is left to do. The permanent record
+  stays in <code>keep-going/LOG.md</code> (append-only) and <code>keep-going/QUEUE.md</code>,
+  plus the project's save history.
+</footer>
+
+</div>
+
+<script>
+function promptFor(btn){
+  return btn.closest('.item').querySelector('pre.prompt[data-id="' + btn.dataset.for + '"]');
+}
+function togglePrompt(btn){
+  var open = promptFor(btn).classList.toggle('open');
+  btn.textContent = open ? 'hide prompt' : 'show prompt';
+}
+function legacyCopy(text){
+  try{
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText = 'position:absolute;left:-9999px;top:0';
+    document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0, text.length);
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+function flash(btn, msg, cls){
+  if(!btn.dataset.label) btn.dataset.label = btn.textContent;
+  btn.textContent = msg; btn.classList.add(cls);
+  setTimeout(function(){ btn.textContent = btn.dataset.label; btn.classList.remove(cls); }, 2600);
+}
+function revealForManualCopy(btn){
+  var pre = promptFor(btn);
+  var peek = btn.closest('.copyrow').querySelector('.peek[data-for="' + btn.dataset.for + '"]');
+  pre.classList.add('open');
+  if(peek) peek.textContent = 'hide prompt';
+  var r = document.createRange(); r.selectNodeContents(pre);
+  var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  pre.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+function copyPrompt(btn){
+  var text = promptFor(btn).textContent;
+  var ok = function(){ flash(btn, 'Copied ✓', 'ok'); };
+  var no = function(){
+    flash(btn, 'Press Ctrl+C', 'fail');
+    revealForManualCopy(btn);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(function(){
+      legacyCopy(text) ? ok() : no();
+    });
+  } else {
+    legacyCopy(text) ? ok() : no();
+  }
+}
+</script>
+
+<!-- ===================================================================================
+     SNIPPET LIBRARY — copy a block out of this comment, paste it into the right
+     section, fill it in. This whole comment stays in the file; it renders nothing.
+
+     Every prompt in a <pre class="prompt"> must stand ALONE. The chat it is pasted into
+     has never seen this run. Always include: the absolute project path, the branch, and an
+     instruction to read keep-going/QUEUE.md and keep-going/LOG.md first.
+
+
+  ---- THE DISCUSS-FIRST BLOCK — goes at the END of EVERY prompt, verbatim -----------
+
+     No exceptions, including the ones that only ask a question. A prompt that starts
+     work on paste gives the user no chance to redirect it, which is the whole reason
+     these buttons exist. Paste this in unchanged:
+
+--- 8< ---
+Before doing any of it, stop and tell me:
+  1. what you understand the job to be, in one line
+  2. exactly what you would change - every file, and what happens to each
+  3. anything in the queue or the log you think is WRONG - check it, don't take it
+     on trust, it was written by a previous session that made mistakes
+  4. what could go wrong, and what the undo is
+
+Then WAIT. Do not edit, delete, build, install or commit until I reply "go".
+If I reply "go" with conditions attached, those conditions win over anything above.
+--- >8 ---
+
+     Why point 3 earns its place: the receiving session is the only independent reader
+     this run gets. Several items in a typical report ARE corrections of the previous
+     session's own mistakes, so inviting the next one to disagree is free review.
+
+     Honest limit, and say it plainly if the user asks: this is a disposition, not a
+     lock. A session can still barrel past it. The thing that actually stops an edit is
+     the user's own approval settings, not a sentence in a prompt.
+
+
+  ---- THE TWO BUTTONS — which items get which -------------------------------------
+
+     Every actionable item carries a DISCUSS button. Some also carry an ACT button.
+
+       DISCUSS   primary, dark, always first, always present.
+                 Its prompt talks the item through and CHANGES NOTHING. It ends with
+                 "do not edit, delete, build, install or commit anything in this reply."
+
+       ACT       secondary, grey, second. Its prompt does the job, and still ends with
+                 the discuss-first block. Label it with the actual VERB — "Change it",
+                 "Check it", "Run task 4" — never a generic "Copy prompt". A generic
+                 label is how the wrong button gets clicked.
+
+     ACT is only added where there IS one unambiguous action:
+
+       DECIDE      DISCUSS ONLY. The decision has not been made, so no action can be
+                   pre-written. This is deliberate: the item that deletes the most is
+                   the item with no button that deletes anything.
+       BLOCKED     DISCUSS ONLY, unless the fix is already known and agreed.
+       ASSUMED     both — ACT = "Change it", written as if the user disagrees, because
+                   that is the only reason they will click it.
+       UNCHECKED   both — ACT = "Check it", a walk-me-through-it prompt that waits after
+                   each step and refuses to claim a pass the user has not reported.
+       NEXT        both — ACT = "Run task N", the resume prompt.
+
+     Each button gets  data-for="discuss"  or  data-for="act"  and its <pre> gets the
+     matching  data-id . Every button carries its own "show prompt" link and its own
+     one-line hint saying what it does. The hint is the real mis-click protection.
+
+
+  ---- DECIDE (red) — work has stopped, top of Needs you. DISCUSS ONLY. -------------
+
+  <div class="item decide">
+    <span class="tag decide">DECIDE</span>
+    <h3>ONE LINE: the decision, phrased as what it costs the user</h3>
+    <div class="body">
+      What is at stake, in plain English. What disappears or changes. What the undo is,
+      honestly — "recoverable from git history but not from the running app" is a real
+      answer; "reversible" alone is not.
+    </div>
+    <div class="meta">
+      <span>Blocks: <code>task N</code></span>
+      <span>Undo: HOW</span>
+    </div>
+    <div class="copyrow">
+      <button class="copy" data-for="discuss" onclick="copyPrompt(this)">Discuss it</button>
+      <span class="hint">lays out the options, changes nothing</span>
+      <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="discuss">DISCUSS PROMPT — self-contained, then the discuss-first block.
+No ACT button on a DECIDE: nothing has been decided yet, so there is nothing to act on.</pre>
+  </div>
+
+
+  ---- BLOCKED (red) — task parked, run carried on. DISCUSS ONLY as a rule. ---------
+
+  <div class="item blocked">
+    <span class="tag blocked">BLOCKED</span>
+    <h3>Task N stopped: ONE LINE on what stopped it</h3>
+    <div class="body">What was being attempted, what stopped it, and what is needed to unblock
+      it. Say which later tasks this holds up, and which carried on regardless.</div>
+    <div class="meta"><span>Parked at: task N</span><span>Holds up: task M</span></div>
+    <div class="copyrow">
+      <button class="copy" data-for="discuss" onclick="copyPrompt(this)">Discuss it</button>
+      <span class="hint">explains what's stuck and the ways out</span>
+      <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="discuss">DISCUSS PROMPT, then the discuss-first block.</pre>
+  </div>
+
+
+  ---- ASSUMED (amber) — both buttons ----------------------------------------------
+
+  <div class="item assumed">
+    <span class="tag assumed">ASSUMED</span>
+    <h3>ONE LINE: what I decided without asking</h3>
+    <div class="body">What was assumed, why it seemed right at the time, and what the user
+      should do if it was wrong. Name the cost of changing it now versus later.</div>
+    <div class="meta"><span>Made at: WHERE</span><span>Undo: cheap / expensive — HOW</span></div>
+    <div class="copyrow">
+      <button class="copy" data-for="discuss" onclick="copyPrompt(this)">Discuss it</button>
+      <span class="hint">what it would cost to undo, changes nothing</span>
+      <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="discuss">DISCUSS PROMPT, then the discuss-first block.</pre>
+    <div class="copyrow">
+      <button class="copy secondary" data-for="act" onclick="copyPrompt(this)">Change it</button>
+      <span class="hint">…and this one undoes the assumption</span>
+      <button class="peek" data-for="act" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="act">ACT PROMPT — written as if the user disagrees with the assumption,
+because that is the only reason they will click it. Then the discuss-first block.</pre>
+  </div>
+
+
+  ---- UNCHECKED (amber) — both buttons where a human CAN run the check -------------
+
+  <div class="item unchecked">
+    <span class="tag unchecked">UNCHECKED</span>
+    <h3>"THE CLAIM THAT HAS NOT BEEN PROVEN" — in the user's words, in quotes</h3>
+    <div class="body">What IS proven, precisely. Then what is <strong>not</strong>, and why it
+      could not be proven automatically.</div>
+    <div class="meta"><span>From: task N</span><span>Needs: THE HUMAN ACTION</span></div>
+    <div class="copyrow">
+      <button class="copy" data-for="discuss" onclick="copyPrompt(this)">Discuss it</button>
+      <span class="hint">what is and isn't proven, changes nothing</span>
+      <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="discuss">DISCUSS PROMPT, then the discuss-first block.</pre>
+    <div class="copyrow">
+      <button class="copy secondary" data-for="act" onclick="copyPrompt(this)">Check it</button>
+      <span class="hint">…and this one walks you through checking it</span>
+      <button class="peek" data-for="act" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="act">ACT PROMPT — one step at a time, waiting after each, saying what to
+look at and what "wrong" looks like, and refusing to claim any step passed until the user
+reports what they saw. Then the discuss-first block.</pre>
+  </div>
+
+  (If nothing a human can do would settle it yet — "needs task 4 first" — drop both
+   buttons and leave the item as a statement, and SAY SO in the meta line:
+     <span><b>No button</b> — nothing you could do today would settle it</span>
+   A button that cannot help is noise; a missing button with no explanation looks like
+   an oversight.)
+
+  (If ONE session would settle several items — three UNCHECKED items all fixed by the same
+   half hour in the DAW — put the ACT button on ONE of them and cross-reference from the
+   others in their meta line:
+     <span>Settled by: <b>Check it</b> on the DAW card above, step 3</span>
+   Three near-identical prompts is not three times the help. It is noise that makes the
+   user read the same thing three times to find the one difference.)
+
+
+  ---- NEXT — a queued task, both buttons -------------------------------------------
+
+  <div class="item">
+    <span class="tag next">TASK N</span>
+    <h3>TASK TITLE <span class="amber-txt">— in progress</span></h3>
+    <div class="body">
+      What it involves, in plain English.
+      <strong>Done when:</strong> the queue's done-when, verbatim.
+    </div>
+    <div class="meta">
+      <span>Depends on: tasks A–B <b class="green-txt">&#10003; all done</b></span>
+      <span>Must NOT touch: <code>THING</code></span>
+    </div>
+    <div class="copyrow">
+      <button class="copy" data-for="discuss" onclick="copyPrompt(this)">Discuss it</button>
+      <span class="hint">talks through the plan, changes nothing</span>
+      <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="discuss">DISCUSS PROMPT — read the queue and the log, explain what this task
+involves and what it will touch, flag anything in the plan that looks wrong. Then the
+discuss-first block.</pre>
+    <div class="copyrow">
+      <button class="copy secondary" data-for="act" onclick="copyPrompt(this)">Run task N</button>
+      <span class="hint">…and this one starts the work</span>
+      <button class="peek" data-for="act" onclick="togglePrompt(this)">show prompt</button>
+    </div>
+    <pre class="prompt" data-id="act">ACT PROMPT — a resume prompt. Must carry forward every hard-won rule
+already in LOG.md for this task: what must not be deleted, the mistake already made twice,
+the gate that decides done. That is what stops the next session repeating them.
+Then the discuss-first block. This is the one people are most tempted to leave off, because
+the task is "already agreed" — leave it on. The plan is what needs agreeing, not the task.</pre>
+  </div>
+
+  Status spans:  <span class="amber-txt">— in progress</span>
+                 <span class="grey-txt">— waiting</span>
+
+
+  ---- DONE — collapsed row --------------------------------------------------------
+
+  <details class="task">
+    <summary><span class="pill done">Done</span><span class="tnum">N</span>
+      <span class="tname">WHAT IT ACHIEVED, in the user's terms</span></summary>
+    <div class="inner">
+      <h4>What changed</h4>
+      <p>Plain English.</p>
+      <h4>Rules it was built against</h4>
+      <p><code>skill-name</code> (changed DATE) — read in full at the start of this task,
+         not from memory.</p>
+      <h4>Commands run, and what they actually printed</h4>
+      <pre class="out">COMMAND    -> REAL OUTPUT
+suite      -> <span class="pass">ALL PASS</span></pre>
+      <h4>One thing went wrong</h4>
+      <p>Only if something did. What broke, why, and the rule adopted so it does not recur.</p>
+      <h4>Not checked</h4>
+      <p>Repeat the UNCHECKED item here so the evidence and its caveat travel together.</p>
+    </div>
+  </details>
+
+  Pills:  <span class="pill done">Done</span>
+          <span class="pill prog">In progress</span>
+          <span class="pill pend">Setup</span>
+
+  Output colouring:  <span class="pass">ALL PASS</span>   <span class="fail">FAIL</span>
+
+
+  ---- IDEA (grey) -----------------------------------------------------------------
+
+  <div class="item idea">
+    <span class="tag idea">IDEA</span>
+    <h3>ONE LINE</h3>
+    <div class="body">What was noticed and why it was left alone.</div>
+  </div>
+
+
+  ---- EMPTY STATES — one per section, never omit the section -----------------------
+
+  Needs you:    <div class="empty">Nothing needs you. Say <b>keep going</b> to continue.</div>
+  Not checked:  <div class="empty">Everything built so far has been checked and seen to pass.</div>
+  What's next:  <div class="empty">The queue is empty — this run is finished.</div>
+  Done:         <div class="empty neutral">Nothing finished yet.</div>
+  Noticed:      <div class="empty neutral">Nothing noticed in passing.</div>
+
+=================================================================================== -->
+</body>
+</html>

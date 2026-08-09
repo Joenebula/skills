@@ -27,6 +27,7 @@ The spine and cross-cutting craft apply to **every** build. The domain guides ar
 | **[reviewing-code](reviewing-code/SKILL.md)** | reviewing a diff/PR or your own change before "done" — what to look for in priority order, refute before you trust, and feedback that lands. |
 | **[debugging](debugging/SKILL.md)** | investigating any bug or failure — reproduce first, read the real evidence, isolate one variable at a time, fix the cause not the symptom, and ship the regression test that would have caught it. |
 | **[refactoring](refactoring/SKILL.md)** | restructuring code or delivering a large change — keep behaviour identical, move in small reversible steps, ship incrementally behind flags. |
+| **[keep-going](keep-going/SKILL.md)** | "keep going" / "carry on" / a long unattended run — work a queue on disk without stopping to ask what's next, resume cleanly in a fresh session, stop at the right places. Maintains `keep-going/QUEUE.md`, `LOG.md`, and a readable `REPORT.html` built from `report-template.html`. |
 
 ## Cross-cutting craft — the quality concerns every feature touches
 
