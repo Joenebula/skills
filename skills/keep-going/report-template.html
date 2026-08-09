@@ -64,6 +64,12 @@
   h1{font-size:34px;line-height:1.15;margin:0 0 8px;letter-spacing:-.02em}
   .stamp{color:var(--ink-2);font-size:14px;margin:0;max-width:70ch}
   .stamp b{color:var(--ink);font-weight:600}
+  .verdict{margin:22px 0 0;padding:18px 22px;border-radius:var(--radius);
+           background:var(--amber-bg);font-size:17px;line-height:1.5;color:var(--ink);
+           max-width:none;font-weight:500}
+  .verdict b{font-weight:680}
+  .verdict.clean{background:var(--green-bg)}
+  .verdict.stopped{background:var(--red-bg)}
 
   .scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));
               gap:10px;margin:28px 0 4px}
@@ -185,13 +191,35 @@
   <p class="kicker">Keep-going run report</p>
   <!--== FILL: h1 = what this run is doing, in the user's words, not the branch name ==-->
   <h1>PROJECT — WHAT THIS RUN IS DOING</h1>
-  <!--== FILL: stamp. The date is this file's date. Keep the second line verbatim. ==-->
+  <!--== FILL: stamp. The date is this file's date. Keep the last line verbatim. ==-->
   <p class="stamp">Last updated <b>DAY DATE, TIME</b> · run resumed <b>N</b> times ·
      branch <b>BRANCH</b> · started from save point <b>COMMIT</b><br>
      This page shows <b>what is still outstanding</b>. Anything dealt with is removed from it.</p>
 
-  <!--== FILL: scoreboard. Six tiles max. Last tile is the run's own headline number
-        (tests passing, pages built, records migrated) — drop it if the run has none. ==-->
+  <!--== FILL: THE VERDICT — required, and the hardest line on the page to write.
+        ONE sentence. What this run did, and the single biggest thing that is not proven.
+        It exists because the most important fact about a run is otherwise spread across
+        five cards and never stated once. If you cannot say it in one sentence you do not
+        yet understand the state of the run.
+
+        Pick the background by what is actually true, not by mood:
+          class="verdict"          something is unproven or unconfirmed   (amber, the default)
+          class="verdict clean"    everything built was checked and seen to pass (green)
+          class="verdict stopped"  work has HALTED and needs the user     (red)
+
+        Good:  "The rack is gone — 5,075 lines and 48 automation settings — and
+                nothing in this run has been opened, listened to, or loaded by a host."
+        Bad:   "Good progress was made on the strip-down." (says nothing, proves nothing)
+  ==-->
+  <p class="verdict"><b>ONE SENTENCE:</b> what the run did, and the biggest thing not proven.</p>
+
+  <!--== FILL: scoreboard. Four to six tiles. Rules:
+        - "Needs you" and "Not checked" are ALWAYS present, even at 0.
+        - DROP any tile whose number is meaningless in the current state. "In progress: 0"
+          on a finished run is a dead tile that teaches the reader to skim the row.
+        - The last tile is the run's own headline number (tests passing, lines removed,
+          pages built, records migrated). Drop it if the run genuinely has none.
+  ==-->
   <div class="scoreboard">
     <div class="score green"><span class="n">0</span><span class="l">Done</span></div>
     <div class="score amber"><span class="n">0</span><span class="l">In progress</span></div>
@@ -379,6 +407,26 @@ function copyPrompt(btn){
      instruction to read keep-going/QUEUE.md and keep-going/LOG.md first.
 
 
+  ---- THE FRESHNESS STAMP — goes at the START of EVERY prompt, verbatim -------------
+
+     A report overwrites itself. A clipboard does not. Someone copies a prompt while a
+     task is in progress, pastes it an hour later when the task is finished, and sends a
+     fresh session off to re-decide something already decided. This has already happened
+     once, in real use, on the largest item in the report.
+
+     So every prompt opens by dating itself and telling the receiving session to check.
+     Substitute the real timestamp — the SAME one in the masthead:
+
+--- 8< ---
+[Copied from a keep-going report written DAY DATE, TIME. If time has passed, this may
+already be out of date: read keep-going/QUEUE.md and keep-going/LOG.md FIRST and tell me
+if this has already been done or overtaken. Do not act on a stale instruction.]
+--- >8 ---
+
+     It has to be first. A warning underneath the instruction is read after the reader has
+     already decided what they are doing.
+
+
   ---- THE DISCUSS-FIRST BLOCK — goes at the END of EVERY prompt, verbatim -----------
 
      No exceptions, including the ones that only ask a question. A prompt that starts
@@ -455,8 +503,10 @@ If I reply "go" with conditions attached, those conditions win over anything abo
       <span class="hint">lays out the options, changes nothing</span>
       <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="discuss">DISCUSS PROMPT — self-contained, then the discuss-first block.
-No ACT button on a DECIDE: nothing has been decided yet, so there is nothing to act on.</pre>
+    <pre class="prompt" data-id="discuss">FRESHNESS STAMP, then a self-contained DISCUSS PROMPT, then the
+discuss-first block. No ACT button on a DECIDE: nothing has been decided yet, so there is
+nothing to act on. The freshness stamp matters most here — a DECIDE is exactly the item
+someone copies, sits on for an hour, and pastes after the decision has been made.</pre>
   </div>
 
 
@@ -473,7 +523,7 @@ No ACT button on a DECIDE: nothing has been decided yet, so there is nothing to 
       <span class="hint">explains what's stuck and the ways out</span>
       <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="discuss">DISCUSS PROMPT, then the discuss-first block.</pre>
+    <pre class="prompt" data-id="discuss">FRESHNESS STAMP, then the DISCUSS PROMPT, then the discuss-first block.</pre>
   </div>
 
 
@@ -490,14 +540,15 @@ No ACT button on a DECIDE: nothing has been decided yet, so there is nothing to 
       <span class="hint">what it would cost to undo, changes nothing</span>
       <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="discuss">DISCUSS PROMPT, then the discuss-first block.</pre>
+    <pre class="prompt" data-id="discuss">FRESHNESS STAMP, then the DISCUSS PROMPT, then the discuss-first block.</pre>
     <div class="copyrow">
       <button class="copy secondary" data-for="act" onclick="copyPrompt(this)">Change it</button>
       <span class="hint">…and this one undoes the assumption</span>
       <button class="peek" data-for="act" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="act">ACT PROMPT — written as if the user disagrees with the assumption,
-because that is the only reason they will click it. Then the discuss-first block.</pre>
+    <pre class="prompt" data-id="act">FRESHNESS STAMP, then an ACT PROMPT written as if the user disagrees
+with the assumption, because that is the only reason they will click it. Then the
+discuss-first block.</pre>
   </div>
 
 
@@ -514,15 +565,15 @@ because that is the only reason they will click it. Then the discuss-first block
       <span class="hint">what is and isn't proven, changes nothing</span>
       <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="discuss">DISCUSS PROMPT, then the discuss-first block.</pre>
+    <pre class="prompt" data-id="discuss">FRESHNESS STAMP, then the DISCUSS PROMPT, then the discuss-first block.</pre>
     <div class="copyrow">
       <button class="copy secondary" data-for="act" onclick="copyPrompt(this)">Check it</button>
       <span class="hint">…and this one walks you through checking it</span>
       <button class="peek" data-for="act" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="act">ACT PROMPT — one step at a time, waiting after each, saying what to
-look at and what "wrong" looks like, and refusing to claim any step passed until the user
-reports what they saw. Then the discuss-first block.</pre>
+    <pre class="prompt" data-id="act">FRESHNESS STAMP, then an ACT PROMPT — one step at a time, waiting
+after each, saying what to look at and what "wrong" looks like, and refusing to claim any
+step passed until the user reports what they saw. Then the discuss-first block.</pre>
   </div>
 
   (If nothing a human can do would settle it yet — "needs task 4 first" — drop both
@@ -557,15 +608,15 @@ reports what they saw. Then the discuss-first block.</pre>
       <span class="hint">talks through the plan, changes nothing</span>
       <button class="peek" data-for="discuss" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="discuss">DISCUSS PROMPT — read the queue and the log, explain what this task
-involves and what it will touch, flag anything in the plan that looks wrong. Then the
-discuss-first block.</pre>
+    <pre class="prompt" data-id="discuss">FRESHNESS STAMP, then a DISCUSS PROMPT — read the queue and the log,
+explain what this task involves and what it will touch, flag anything in the plan that
+looks wrong. Then the discuss-first block.</pre>
     <div class="copyrow">
       <button class="copy secondary" data-for="act" onclick="copyPrompt(this)">Run task N</button>
       <span class="hint">…and this one starts the work</span>
       <button class="peek" data-for="act" onclick="togglePrompt(this)">show prompt</button>
     </div>
-    <pre class="prompt" data-id="act">ACT PROMPT — a resume prompt. Must carry forward every hard-won rule
+    <pre class="prompt" data-id="act">FRESHNESS STAMP, then an ACT PROMPT — a resume prompt. Must carry forward every hard-won rule
 already in LOG.md for this task: what must not be deleted, the mistake already made twice,
 the gate that decides done. That is what stops the next session repeating them.
 Then the discuss-first block. This is the one people are most tempted to leave off, because

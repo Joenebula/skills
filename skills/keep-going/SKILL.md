@@ -255,6 +255,19 @@ next → Done → Noticed → Full log → What the words mean. Every section st
 empty, with its one-line empty state; a missing section reads as an oversight, an explicit
 *Nothing needs you* reads as an answer.
 
+**Write the verdict first — one sentence, at the top.** What the run did, and the single
+biggest thing that is not proven. It is the hardest line on the page and the one most worth
+getting right: without it the most important fact about a run is spread across five cards
+and never stated once. *"The rack is gone — 5,075 lines and 48 automation settings — and
+nothing in this run has been opened, listened to, or loaded by a host."* If you cannot say
+it in one sentence, you do not yet understand the state of the run. Colour it by what is
+true, not by mood: amber for anything unproven, green only when everything built was checked
+and seen to pass, red when work has halted.
+
+**Drop dead tiles from the scoreboard.** *In progress: 0* on a finished run is a number that
+teaches the reader to skim the row. Four to six tiles; *Needs you* and *Not checked* always
+present even at zero; the last one is the run's own headline number.
+
 **It is a worklist, not a record.** It shows only what is still outstanding. When an item
 is dealt with, **delete it from the file** — no tick, no strikethrough, no "resolved"
 pile. The length of the page is how much is left. Two rules keep that honest, and without
@@ -291,6 +304,15 @@ That table is not fussiness — it means **the item that deletes the most has no
 deletes anything**. Label the act button with the real verb, never a generic "Copy prompt";
 a generic label is how the wrong button gets clicked. Give every button its own one-line
 hint saying what it does.
+
+**Every prompt opens with the freshness stamp** — the verbatim text is in the template. A
+report overwrites itself; a clipboard does not. Someone copies a prompt while a task is in
+progress and pastes it an hour later when the task is finished, sending a fresh session off
+to re-decide something already decided. That has already happened once in real use, on the
+largest item in the report. So every prompt dates itself and tells the receiving session to
+read `QUEUE.md` and `LOG.md` **before acting** and say if it has been overtaken. It has to
+be the first line — a warning underneath the instruction is read after the reader has
+already decided what they are doing.
 
 **Every prompt ends with the discuss-first block** — the verbatim text is in the template.
 It makes the receiving session state the job, list every file it would change, say what it
