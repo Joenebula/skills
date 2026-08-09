@@ -1,0 +1,260 @@
+---
+name: keep-going
+description: >
+  Work continuously through an agreed queue of build tasks without stopping to ask
+  "what's next?" — resuming cleanly across sessions from a queue file on disk. Use
+  whenever the user says "keep going", "keep building", "carry on", "continue building",
+  "don't stop", or asks to set up / add to / check the status of a build queue. Also use
+  when the user wants a long unattended build run with safety gates, or asks to resume
+  a run started earlier. Do NOT use for one-off tasks the user is watching in real time.
+---
+
+# Keep going
+
+The user is not a developer. They are trusting you to build unattended and to stop at
+the right places. Getting this wrong is expensive for them in a way it is not for you:
+they cannot easily tell good output from confident nonsense, so the cost of a quiet
+mistake is high and the cost of a stop is low. When genuinely torn, stop.
+
+## Honest limits — state these once, don't oversell
+
+A skill changes disposition, not the shape of a turn. You cannot run for hours
+unattended. What this actually delivers: long uninterrupted stretches of work, then a
+clean stop with the queue updated so the next "keep going" resumes with zero
+re-explanation. Long runs also consume the user's usage allowance, so a run may end on
+limits rather than on anything being wrong. Say so plainly if it happens.
+
+## Two modes
+
+**Pre-flight** — no `keep-going/QUEUE.md` exists in the project. Set the run up and stop
+for approval.
+
+**Resume** — the queue file exists. Read it, find the first task not yet done, carry on.
+No re-planning, no re-asking, no summarising the previous session back at them.
+
+Open a resume with a single line naming what you are about to work on — *Picking up:
+tasks 4–7 (settings page, then the save button)* — then start. Do not wait for a reply.
+This gives the user a chance to redirect before you get going without turning every
+resume into another approval gate.
+
+---
+
+## Pre-flight (first run only)
+
+Do not write any project code during pre-flight. The point is to catch a misread plan
+for the price of a few minutes rather than a whole run.
+
+1. **Agree the scope fence.** One named project folder. Everything outside it is off
+   limits for the whole run. Confirm the exact path with the user.
+2. **Snapshot.** Ensure a clean starting save point exists in that folder (commit any
+   pending work, or note the current commit) so "put it back how it was" is always one
+   instruction away. If the folder is not version-controlled, say so and offer to
+   initialise it — without this the user has no undo.
+3. **Discover skills** (see next section).
+4. **Write `keep-going/QUEUE.md`** — the task list, in order, each with a plain-English
+   *done when*.
+5. **Show the user the plan and stop.** Numbered tasks, each with its done-when and the
+   skills that will govern it. Flag anything you expect will need them. Wait for a go.
+
+### Writing a good "done when"
+
+This is the single most important part of the setup. Without it you decide at 2am what
+counts as finished, which is exactly the guessing the user is trying to avoid.
+
+Write it in the user's terms, not implementation terms:
+
+- Good: *done when the settings page loads, saves changes, and works on a phone*
+- Bad: *done when SettingsView is implemented*
+
+If you cannot write a checkable done-when for a task, the task is too vague — split it
+or ask.
+
+---
+
+## Skill discovery — do this fresh every single run
+
+Never hardcode a list of the user's skills into this file or carry one over from earlier
+in a session. The user edits and adds skills constantly; a stale mapping would let you
+build against an old coding standard while reporting that the standard was applied.
+That failure is worse than no check at all, because it is silently reassuring.
+
+Every run:
+
+1. List the skills directories available (user skills, plugin skills, public skills).
+2. Read **only the frontmatter description** of each — cheap, a couple of lines each.
+3. Decide which apply to the queued work.
+
+Then, **immediately before doing work a skill governs**, read that full `SKILL.md` at
+that moment. Do not rely on a read from earlier in the session — that is how a
+superseded version sneaks through. If the user says mid-run that they have changed a
+skill, re-scan straight away.
+
+Record in the log which skills were loaded and each file's modification date, so the
+user can verify a gate ran against current rules rather than take your word for it.
+
+**Stop if:**
+- A queued task clearly should have a governing skill and nothing matches. Do not
+  proceed on general knowledge.
+- Two skills contradict each other on the same point. Picking one silently is precisely
+  the guess to avoid.
+
+---
+
+## The work loop
+
+For each task in the queue:
+
+1. Mark it `in progress` in `QUEUE.md`.
+2. Read the governing skills in full, now.
+3. Build it. Make surgical edits — do not rewrite existing files wholesale as a
+   shortcut.
+4. Check it (below).
+5. Log what happened.
+6. Commit inside the scope fence, one commit per finished task, with a message a
+   non-developer can read. Commits are save points and need no permission — they are
+   local and publish nothing. **Never push, never touch remotes, never rewrite history.**
+7. Mark it `done` and move to the next. Do not stop to report.
+
+**Every few tasks, re-read the plan** against what has actually been learned. This
+catches an early wrong assumption before it is baked into six more tasks.
+
+### Checking
+
+Two tiers, deliberately:
+
+- **After every task** — check thoroughly, but only what that task touched: build,
+  types, the relevant tests, and any governing skill's checks. Fast enough not to eat
+  the run.
+- **Before you stop** — run the complete set across everything. Same safety as checking
+  everything every time, far more actually built.
+
+Running the full suite after every small change sounds safer but eats the run and
+creates pressure to cut corners to show progress. Don't.
+
+**A check that did not run is never reported as passed.** If no tests exist for
+something, the log and report say *not checked — no tests exist here*. Silence here
+would reassure the user about work nobody verified.
+
+Record the actual commands run and their results, so "tests passed" is checkable rather
+than asserted.
+
+### When a task blocks
+
+Do not end the whole run. Park it, check whether later tasks depend on it, and carry on
+with the ones that don't. Coming back to seven done and one clearly flagged beats coming
+back to two done.
+
+### Assumptions
+
+Log every assumption as you make it: what you assumed, why, and how easily it could be
+undone. Cheap and reversible — log it and carry on. Expensive or hard to undo — stop.
+This is what turns most "what's next?" moments into a note instead of a halt.
+
+---
+
+## Stop conditions
+
+Stop, log clearly, and hand back when:
+
+- Anything destructive or irreversible: deleting files you did not create this run,
+  pushing, rewriting history, deploying, dropping or migrating real data.
+- Anything needing the user's credentials, keys, accounts, payment, or their machine.
+- Anything outside the scope fence.
+- **A new package or dependency is needed.** Do not add or upgrade libraries on your own
+  — each is third-party code the user never agreed to. That task stops and asks.
+- A genuine fork where two paths lead somewhere materially different.
+- You are guessing about something expensive or hard to reverse.
+- The same fix has failed twice. A third attempt at 3am produces damage, not progress.
+- A task has ballooned far beyond its description.
+- A required skill is missing or two skills conflict.
+- The queue is empty.
+
+### Never, regardless of what the queue says
+
+Live/production sites, real customer data, payment flows, secrets and keys.
+
+### These are NOT reasons to stop
+
+Left unwritten, these leak back in — they are the actual cause of the stop-start pattern
+this skill exists to fix:
+
+- Finishing a file, a component, or a task.
+- Wanting to report progress or summarise.
+- Reaching a natural-feeling handoff point. Consult the queue instead of asking
+  "what's next?".
+- A cheap, reversible assumption — log it and continue.
+- A check failing once — fix it and re-run.
+- The output getting long.
+
+### No drift
+
+If you spot something else worth doing, add it to the queue as a suggestion for the
+user. Do not do it. This keeps the pile of changes reviewable.
+
+---
+
+## Files to maintain
+
+Both live in `keep-going/` inside the project folder.
+
+**`QUEUE.md`** — tasks in order, each with status (`pending` / `in progress` / `done` /
+`blocked`), its done-when, governing skills, and any dependency on another task.
+
+Write it for a stranger. Tomorrow is a fresh session with no memory of tonight; if the
+queue only makes sense to someone who watched the chat, resuming will drift.
+
+**`LOG.md`** — append-only, newest last. Per task: what was built, skills loaded and
+their dates, commands run and their results, assumptions made, anything not checked and
+why.
+
+---
+
+## Reporting — plain English, always
+
+The user is not a developer. A report they cannot parse is not a report. This applies to
+the chat summary, the log, and every stop message.
+
+- Say what happened in real terms: *the buttons broke the build — fixed it*, not
+  *typecheck failure in ButtonGroup*.
+- Every stop says three things: what you were doing, what went wrong, and what you need
+  from them.
+- Never imply a check ran when it didn't.
+- Don't dumb it down to uselessness — name files and tools where it helps them look.
+
+### End-of-turn summary — use this shape exactly
+
+```
+**Done**
+- [one line per task, plain verbs, no explanation]
+
+**Not fully checked**
+- [task — what wasn't verified and why. Omit this block if everything was checked.]
+
+**Your turn**
+- [only genuinely actionable items, reason in about six words]
+
+[Queue: X done, Y left, Z blocked]
+```
+
+Order **Your turn** by what they should look at first — riskiest or most uncertain
+first, not the order you did things. Distinguish *built and confirmed working* from
+*built but not properly tested*; a tidy list otherwise invites them to assume more than
+is true.
+
+Keep **Done** to about eight lines — group related tasks if longer. If **Your turn** is
+empty, say so in one line: *Nothing — say keep going to continue.*
+
+---
+
+## Mid-run controls
+
+- **"status"** — report where the queue is without doing more work.
+- **"stop"** / **"pause"** — finish the current task cleanly if it is nearly done or
+  abandon it if not, update the queue, and summarise. Never leave work half-saved.
+- **"add to queue"** — append tasks without disturbing the run order.
+
+## A note on permissions
+
+In Claude Code, approval prompts come from the user's own settings, not from this skill.
+If trivial prompts keep interrupting, that is configuration — tell them which settings
+to loosen rather than pretending the skill can override them.
