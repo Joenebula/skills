@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nebula2 — UI Redesign Preview v2 (non-functional mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   NEBULA OS v2 — depth pass.
+   Every raised thing casts a shadow; every recessed thing
+   catches one. Knobs are machined: dotted tick ring, glowing
+   value arc, bevelled cap with a specular, pointer with a halo.
+   ============================================================ */
+:root{
+  --bg:#080b13;
+  --card:#131a2e;
+  --card2:#0f1526;
+  --well:#05070d;
+  --line:rgba(255,255,255,.075);
+  --hiline:rgba(255,255,255,.11);
+  --ink:#eef1f9;
+  --sub:#9aa3bd;
+  --faint:#5d6580;
+
+  --colour:#ff6a4d;  --colour-hi:#ffa38f;
+  --space:#3fe0d4;   --space-hi:#9ff2ec;
+  --morph:#a37dff;   --morph-hi:#cdb6ff;
+  --rack:#31e3a1;    --rack-hi:#a4f8d6;
+
+  --r:14px;
+  --card-sh:0 16px 40px rgba(0,0,0,.5), 0 3px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07);
+  --well-sh:inset 0 3px 14px rgba(0,0,0,.8), inset 0 1px 2px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.05);
+  --btn-sh:0 3px 7px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.09);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{
+  font-family:"Chakra Petch",sans-serif;color:var(--ink);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  padding:32px 18px 64px;
+  background:
+    radial-gradient(1300px 700px at 50% -12%, #14204188 0%, transparent 60%),
+    radial-gradient(1000px 600px at 88% 112%, #0f1c3466 0%, transparent 55%),
+    var(--bg);
+}
+.mono{font-family:"IBM Plex Mono",monospace}
+
+/* ---- preview chrome ---- */
+.pv-head{width:1280px;max-width:100%;display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.pv-head h1{font-size:15px;font-weight:600;letter-spacing:.2em;color:var(--sub)}
+.pv-head em{font-style:normal;font-size:11px;color:var(--faint)}
+.pv-tabs{display:flex;gap:7px;margin-left:auto}
+.pv-tabs button{
+  font:600 11.5px "Chakra Petch";letter-spacing:.14em;text-transform:uppercase;color:var(--sub);
+  background:linear-gradient(180deg,#1b2340,#121830);border:1px solid var(--line);
+  border-radius:22px;padding:9px 20px;cursor:pointer;transition:.18s;box-shadow:var(--btn-sh);
+}
+.pv-tabs button:hover{color:var(--ink)}
+.pv-tabs button.on{color:#06121a;background:linear-gradient(180deg,var(--space-hi),var(--space));
+  border-color:var(--space);box-shadow:0 0 22px rgba(63,224,212,.45), 0 3px 8px rgba(0,0,0,.5)}
+
+/* ============ CHASSIS ============ */
+.chassis{
+  width:1280px;max-width:100%;
+  background:linear-gradient(180deg,#131a30 0%, #0d1222 55%, #0a0e1c 100%);
+  border:1px solid var(--line);border-top-color:rgba(255,255,255,.14);
+  border-radius:20px;
+  box-shadow:0 30px 80px rgba(0,0,0,.65), 0 6px 18px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  padding:16px 18px 18px;display:none;position:relative;
+}
+.chassis::after{ /* fine grain so the surface reads as material, not vector */
+  content:"";position:absolute;inset:0;border-radius:20px;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.chassis.on{display:block;animation:rise .5s cubic-bezier(.2,.9,.25,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* ============ SHARED HEADER ============ */
+.hd{display:flex;align-items:center;gap:10px;padding:4px 4px 16px;position:relative;z-index:2}
+.logo{display:flex;align-items:baseline;gap:9px;margin-right:8px}
+.logo b{font-size:17px;font-weight:700;letter-spacing:.22em;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.logo b i{font-style:normal;color:var(--space);text-shadow:0 0 14px rgba(63,224,212,.7)}
+.logo span{font-size:9.5px;letter-spacing:.32em;color:var(--faint);text-transform:uppercase}
+.presetbar{
+  display:flex;align-items:center;gap:2px;background:var(--well);
+  border:1px solid rgba(0,0,0,.6);border-radius:10px;box-shadow:var(--well-sh);
+  padding:5px 6px;min-width:300px;
+}
+.presetbar .arrow{color:var(--faint);background:none;border:0;font-size:15px;cursor:pointer;padding:4px 10px}
+.presetbar .arrow:hover{color:var(--ink)}
+.presetbar .pname{flex:1;text-align:center;font:500 13.5px "IBM Plex Mono";color:var(--space);
+  letter-spacing:.02em;text-shadow:0 0 10px rgba(63,224,212,.35)}
+.presetbar .pname small{display:block;font-size:8.5px;color:var(--faint);letter-spacing:.22em;text-transform:uppercase;text-shadow:none}
+.hbtn{
+  font:600 11px "Chakra Petch";letter-spacing:.1em;color:var(--sub);
+  background:linear-gradient(180deg,#232c4c,#151b32);
+  border:1px solid var(--line);border-radius:9px;padding:9px 13px;cursor:pointer;transition:.15s;
+  box-shadow:var(--btn-sh);
+}
+.hbtn:hover{color:var(--ink);border-color:var(--hiline)}
+.hbtn:active{transform:translateY(1px);box-shadow:0 1px 3px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.05)}
+.hbtn.on{color:#06121a;background:linear-gradient(180deg,var(--space-hi),var(--space));border-color:var(--space);
+  box-shadow:0 0 18px rgba(63,224,212,.5), 0 3px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.5)}
+.hbtn.warn.on{background:linear-gradient(180deg,var(--colour-hi),var(--colour));border-color:var(--colour);
+  box-shadow:0 0 18px rgba(255,106,77,.45), 0 3px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.45)}
+.hgroup{display:flex;gap:5px;align-items:center}
+.hsep{width:1px;height:28px;background:linear-gradient(180deg,transparent,var(--line),transparent);margin:0 6px}
+.tempo{display:flex;align-items:center;gap:9px;background:var(--well);border:1px solid rgba(0,0,0,.6);
+  border-radius:10px;box-shadow:var(--well-sh);padding:7px 13px}
+.tempo b{font:600 17px "IBM Plex Mono";color:var(--space);text-shadow:0 0 12px rgba(63,224,212,.5)}
+.tempo span{font-size:9px;letter-spacing:.22em;color:var(--faint)}
+.spacer{flex:1}
+
+/* ============ CARDS ============ */
+.card{
+  background:linear-gradient(180deg,#182038 0%, var(--card) 40%, var(--card2) 100%);
+  border:1px solid var(--line);border-top-color:var(--hiline);
+  border-radius:var(--r);padding:14px 16px;position:relative;box-shadow:var(--card-sh);
+}
+.chead{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+.chead .tt{font:700 11px "Chakra Petch";letter-spacing:.26em;text-transform:uppercase}
+.chead .hint{font-size:10px;color:var(--faint);letter-spacing:.05em}
+.chead .mini{margin-left:auto;display:flex;gap:5px}
+.mini button{font:600 9.5px "Chakra Petch";letter-spacing:.08em;color:var(--sub);
+  background:linear-gradient(180deg,#1e2645,#141a30);border:1px solid var(--line);border-radius:7px;
+  padding:6px 10px;cursor:pointer;box-shadow:var(--btn-sh)}
+.mini button:hover{color:var(--ink)}
+.pow{width:11px;height:11px;border-radius:50%;flex:0 0 auto;cursor:pointer;position:relative}
+.pow::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(255,255,255,.08)}
+.card.colour .tt{color:var(--colour);text-shadow:0 0 12px rgba(255,106,77,.5)}
+.card.colour .pow{background:var(--colour);box-shadow:0 0 12px var(--colour), inset 0 -2px 3px rgba(0,0,0,.4)}
+.card.space .tt{color:var(--space);text-shadow:0 0 12px rgba(63,224,212,.5)}
+.card.space .pow{background:var(--space);box-shadow:0 0 12px var(--space), inset 0 -2px 3px rgba(0,0,0,.4)}
+.card.morph .tt{color:var(--morph);text-shadow:0 0 12px rgba(163,125,255,.5)}
+.card.morph .pow{background:var(--morph);box-shadow:0 0 12px var(--morph), inset 0 -2px 3px rgba(0,0,0,.4)}
+.card.rackc .tt{color:var(--rack);text-shadow:0 0 12px rgba(49,227,161,.5)}
+.card.rackc .pow{background:var(--rack);box-shadow:0 0 12px var(--rack), inset 0 -2px 3px rgba(0,0,0,.4)}
+.card.plain .tt{color:var(--sub)} .card.plain .pow{background:var(--sub);box-shadow:inset 0 -2px 3px rgba(0,0,0,.4)}
+
+/* ============ KNOBS ============ */
+.knob{display:flex;flex-direction:column;align-items:center;gap:6px;width:76px;position:relative;z-index:1}
+.knob svg{overflow:visible;display:block}
+.knob .klabel{font:600 10px "Chakra Petch";letter-spacing:.16em;text-transform:uppercase;color:var(--sub)}
+.knob .kval{font:600 12.5px "IBM Plex Mono";color:var(--ink)}
+.knob.big{width:150px}
+.knob.big .klabel{font-size:11px}
+.knob.big .kval{font-size:17px;letter-spacing:.03em}
+.knob.sm{width:56px}
+.knob.sm .klabel{font-size:8.5px;letter-spacing:.12em}
+.knob.sm .kval{font-size:10.5px}
+
+/* ============ SEGMENTED ============ */
+.seg{display:inline-flex;background:var(--well);border:1px solid rgba(0,0,0,.65);border-radius:9px;
+  box-shadow:var(--well-sh);padding:3px;gap:2px}
+.seg button{font:600 10px "Chakra Petch";letter-spacing:.1em;color:var(--faint);background:none;border:0;
+  border-radius:7px;padding:7px 14px;cursor:pointer;transition:.15s}
+.seg button:hover{color:var(--sub)}
+.seg button.sel{color:#0a0e18;background:linear-gradient(180deg,#f4f6fc,#c9cfdd);
+  box-shadow:0 2px 6px rgba(0,0,0,.55), inset 0 1px 0 #fff}
+.seg.colour button.sel{background:linear-gradient(180deg,var(--colour-hi),var(--colour));box-shadow:0 0 14px rgba(255,106,77,.4),0 2px 6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.5)}
+.seg.space button.sel{background:linear-gradient(180deg,var(--space-hi),var(--space));box-shadow:0 0 14px rgba(63,224,212,.4),0 2px 6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.5)}
+
+/* ============ STEP GRID ============ */
+.gridwrap{display:flex;gap:12px}
+.glabels{display:flex;flex-direction:column;gap:4px;width:132px;flex:0 0 auto}
+.glabels .grow{display:flex;align-items:center;gap:8px;height:24px;padding:0 9px;border-radius:6px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
+  border:1px solid rgba(255,255,255,.045);box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.glabels .dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 8px currentColor}
+.glabels .nm{font:600 10px "Chakra Petch";letter-spacing:.1em;text-transform:uppercase;color:var(--sub);white-space:nowrap;overflow:hidden}
+.glabels .grow.starved{opacity:.66}
+.glabels .z{margin-left:auto;font:700 9px "IBM Plex Mono";color:var(--rack);display:none}
+.glabels .grow.starved .z{display:block}
+.gcanvas{flex:1;display:flex;flex-direction:column;gap:4px;background:var(--well);border-radius:10px;
+  box-shadow:var(--well-sh);padding:6px;border:1px solid rgba(0,0,0,.6)}
+.grow-cells{display:flex;gap:3px;height:24px;flex:0 0 auto}
+.cell{flex:1;border-radius:4px;background:rgba(255,255,255,.045);box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+.cell.q{background:rgba(255,255,255,.075)}
+.cell.on1{opacity:.4}.cell.on2{opacity:.7}.cell.on3{opacity:1}
+.cell.onx{box-shadow:inset 0 1px 0 rgba(255,255,255,.55), 0 0 6px currentColor, 0 2px 4px rgba(0,0,0,.4)}
+.cell.hit{box-shadow:inset 0 1px 0 rgba(255,255,255,.75), 0 0 16px currentColor, 0 0 4px #fff}
+.gsec{height:9px;flex:0 0 auto}
+.gsec.lab{background:none;box-shadow:none;border:0}
+
+/* ============ PADS ============ */
+.pads{display:flex;gap:8px}
+.pad{
+  flex:1;aspect-ratio:1.5;border-radius:10px;
+  background:linear-gradient(180deg,#222b4c 0%, #161d38 30%, #101527 100%);
+  border:1px solid var(--line);border-top-color:var(--hiline);position:relative;cursor:pointer;
+  box-shadow:0 5px 12px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.09);
+  display:flex;align-items:flex-end;justify-content:space-between;padding:6px 8px;transition:.15s;
+}
+.pad:hover{border-color:var(--hiline)}
+.pad .n{font:700 10px "IBM Plex Mono";color:var(--faint)}
+.pad .w{position:absolute;inset:7px 7px 20px;opacity:.55}
+.pad.lit{border-color:var(--space);
+  box-shadow:0 0 22px rgba(63,224,212,.4), inset 0 0 18px rgba(63,224,212,.15), 0 5px 12px rgba(0,0,0,.5)}
+.pad.lit .n{color:var(--space);text-shadow:0 0 8px rgba(63,224,212,.7)}
+.pad.rev::after{content:"◄ REV";position:absolute;top:6px;right:8px;font:700 7.5px "IBM Plex Mono";color:var(--morph);text-shadow:0 0 6px var(--morph)}
+
+/* ============ VOICE RAIL ============ */
+.voices{display:flex;flex-direction:column;gap:8px}
+.vtile{display:flex;align-items:center;gap:11px;
+  background:linear-gradient(180deg,#1c2440,#131931);
+  border:1px solid var(--line);border-top-color:var(--hiline);border-radius:11px;padding:8px 11px;cursor:pointer;
+  box-shadow:0 4px 10px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07);transition:.15s}
+.vtile:hover{border-color:var(--hiline)}
+.vring{width:30px;height:30px;border-radius:50%;border:3px solid currentColor;
+  box-shadow:0 0 14px currentColor, inset 0 2px 6px rgba(0,0,0,.8);
+  background:radial-gradient(circle at 38% 30%, #1d2542, #0b0f1e 70%);
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.vring i{width:9px;height:9px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.vtile .vn{font:600 10.5px "Chakra Petch";letter-spacing:.09em;text-transform:uppercase;color:var(--ink)}
+.vtile .ve{font:400 9px "IBM Plex Mono";color:var(--faint);display:block;letter-spacing:.06em;margin-top:1px}
+.vtile .ms{margin-left:auto;display:flex;gap:4px}
+.ms b{font:700 9px "IBM Plex Mono";color:var(--faint);border:1px solid var(--line);border-radius:6px;
+  padding:4px 7px;cursor:pointer;background:linear-gradient(180deg,#1b2340,#12172c);box-shadow:var(--btn-sh)}
+.ms b.m.on{color:#140803;background:linear-gradient(180deg,var(--colour-hi),var(--colour));border-color:var(--colour);box-shadow:0 0 10px rgba(255,106,77,.5)}
+
+/* ============ OUTPUT RAIL ============ */
+.orail{display:flex;flex-direction:column;gap:12px;width:148px;flex:0 0 auto}
+.meterbox{flex:1;display:flex;flex-direction:column;align-items:center;padding:14px 12px}
+.tt2{font:700 10px "Chakra Petch";letter-spacing:.28em;color:var(--sub);margin-bottom:12px}
+.vmeters{flex:1;display:flex;gap:8px;align-items:stretch;min-height:210px;background:var(--well);
+  border-radius:9px;box-shadow:var(--well-sh);border:1px solid rgba(0,0,0,.65);padding:8px 9px}
+.vm{width:11px;border-radius:4px;background:
+  repeating-linear-gradient(180deg, rgba(255,255,255,.06) 0 1px, transparent 1px 14px), #04060b;
+  position:relative;overflow:hidden}
+.vm i{position:absolute;left:1px;right:1px;bottom:1px;border-radius:3px;
+  background:linear-gradient(180deg,var(--colour) 0%, #ffd27a 10%, var(--space) 26%, #1ba39a 100%);
+  box-shadow:0 0 10px rgba(63,224,212,.55)}
+.vm u{position:absolute;left:0;right:0;height:2px;background:#fff;box-shadow:0 0 6px #fff;opacity:.9}
+.vscale{display:flex;flex-direction:column;justify-content:space-between;font:500 8.5px "IBM Plex Mono";color:var(--faint);padding:2px 0}
+.dbout{font:700 16px "IBM Plex Mono";color:var(--ink);margin-top:12px;text-shadow:0 0 10px rgba(63,224,212,.3)}
+.dbout small{display:block;font-size:8px;color:var(--faint);letter-spacing:.24em;text-align:center;margin-top:3px;font-weight:500}
+
+/* ============ XY MORPH ============ */
+.xy{position:relative;aspect-ratio:1.12;border-radius:11px;background:
+  radial-gradient(circle at 62% 42%, rgba(163,125,255,.08), transparent 45%), var(--well);
+  box-shadow:var(--well-sh);border:1px solid rgba(0,0,0,.65);overflow:hidden}
+.xy .gl{position:absolute;background:rgba(255,255,255,.05)}
+.xy .corner{position:absolute;font:700 9px "Chakra Petch";letter-spacing:.16em;color:var(--faint);
+  text-transform:uppercase;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);
+  border-radius:5px;padding:3px 7px}
+.xy .c1{top:8px;left:8px}.xy .c2{top:8px;right:8px}.xy .c3{bottom:8px;left:8px}.xy .c4{bottom:8px;right:8px}
+.xy .glow{position:absolute;width:150px;height:150px;border-radius:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(163,125,255,.4) 0%, rgba(163,125,255,.12) 40%, transparent 68%)}
+.xy .dotp{position:absolute;width:17px;height:17px;border-radius:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 35% 30%, #e7dcff, var(--morph) 60%);
+  box-shadow:0 0 22px var(--morph), 0 0 5px var(--morph), 0 3px 6px rgba(0,0,0,.6)}
+.xy .trail{position:absolute;border-radius:50%;background:var(--morph);transform:translate(-50%,-50%)}
+
+/* ============ RACK ============ */
+.rackrow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.module{padding:11px 13px 13px}
+.module .chead{margin-bottom:9px}
+.module .jacks{display:flex;justify-content:space-between;margin-top:11px}
+.jack{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 40% 32%, #10162c, #04060c 70%);
+  border:2px solid #3a415c;box-shadow:inset 0 2px 4px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.07)}
+.jack.hot{border-color:var(--rack);box-shadow:0 0 12px rgba(49,227,161,.55), inset 0 2px 4px rgba(0,0,0,.9)}
+.module.live{border-color:rgba(49,227,161,.5);
+  box-shadow:0 0 26px rgba(49,227,161,.13), var(--card-sh)}
+.module.off .knob,.module.off .eqbars{opacity:.32;filter:saturate(.15)}
+.module.off .tt{text-decoration:line-through;text-decoration-thickness:1.5px}
+.module.dangling{border-color:rgba(255,106,77,.55);box-shadow:0 0 22px rgba(255,106,77,.12), var(--card-sh)}
+.badge{font:700 8px "IBM Plex Mono";letter-spacing:.12em;border-radius:5px;padding:3px 6px;margin-left:auto}
+.badge.live{color:#03120b;background:linear-gradient(180deg,var(--rack-hi),var(--rack));box-shadow:0 0 10px rgba(49,227,161,.45)}
+.badge.dang{color:#fff;background:linear-gradient(180deg,#ff8a70,var(--colour));box-shadow:0 0 10px rgba(255,106,77,.45)}
+.badge.idle{color:var(--faint);border:1px solid var(--line)}
+#cables{position:absolute;inset:0;pointer-events:none;z-index:6}
+.eqbars{display:flex;gap:3px;align-items:flex-end;height:48px;padding:0 4px}
+.eqbars i{flex:1;border-radius:2px 2px 0 0;background:linear-gradient(180deg,var(--rack-hi),var(--rack));
+  box-shadow:0 0 6px rgba(49,227,161,.35);opacity:.85}
+
+/* layout */
+.row{display:flex;gap:12px;margin-bottom:12px}
+.col{display:flex;flex-direction:column;gap:12px}
+.grow1{flex:1;min-width:0}
+.footer{display:flex;align-items:center;gap:10px;padding:12px 4px 0}
+.footer .kf{font:500 10px "IBM Plex Mono";color:var(--faint);letter-spacing:.03em}
+.viewseg{margin-left:auto}
+
+/* wave screen */
+.wavescreen{height:158px;border-radius:11px;background:var(--well);box-shadow:var(--well-sh);
+  border:1px solid rgba(0,0,0,.65);position:relative;overflow:hidden}
+.wavescreen canvas{position:absolute;inset:0;width:100%;height:100%}
+.wavemeta{display:flex;gap:18px;margin-top:9px;font:500 10px "IBM Plex Mono";color:var(--faint)}
+.wavemeta b{color:var(--space);font-weight:600;text-shadow:0 0 8px rgba(63,224,212,.4)}
+
+.note{width:1280px;max-width:100%;margin-top:18px;font:400 11px "IBM Plex Mono";color:var(--faint);line-height:1.8}
+.note b{color:var(--sub);font-weight:600}
+
+/* recessed visual screens (drive curve, echo taps, transient scope) */
+.screen{position:relative;border-radius:9px;background:var(--well);box-shadow:var(--well-sh);
+  border:1px solid rgba(0,0,0,.65);overflow:hidden}
+.screen canvas{position:absolute;inset:0;width:100%;height:100%}
+.scap{position:absolute;right:9px;top:7px;font:600 8px "IBM Plex Mono";letter-spacing:.14em;
+  color:var(--faint);text-transform:uppercase}
+
+/* ============ PASS 3 — kaos pad, spacing scale, emerald rack ============ */
+.row{gap:14px;margin-bottom:14px}
+.card{padding:16px 18px}
+.chead{margin-bottom:14px}
+.knob{flex:0 0 auto}
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:18px 6px;justify-items:center;align-items:start}
+.krow.tight{gap:14px 4px}
+.kval{font-variant-numeric:tabular-nums}
+/* a hairline of the block's hue along each card's top edge — quiet wayfinding */
+.card.colour::before,.card.space::before,.card.morph::before,.card.rackc::before{
+  content:"";position:absolute;top:0;left:16px;right:16px;height:2px;pointer-events:none;opacity:.5;
+  border-radius:0 0 3px 3px}
+.card.colour::before{background:linear-gradient(90deg,transparent,var(--colour) 25%,var(--colour) 75%,transparent)}
+.card.space::before{background:linear-gradient(90deg,transparent,var(--space) 25%,var(--space) 75%,transparent)}
+.card.morph::before{background:linear-gradient(90deg,transparent,var(--morph) 25%,var(--morph) 75%,transparent)}
+.card.rackc::before{background:linear-gradient(90deg,transparent,var(--rack) 25%,var(--rack) 75%,transparent)}
+/* the kaos pad, grown up: square, dotted field, breathing dot */
+.xy{aspect-ratio:1;background:
+    radial-gradient(rgba(255,255,255,.07) 1px, transparent 1.4px),
+    var(--well);
+  background-size:33px 33px, auto;background-position:center}
+.xy .dotp{animation:kaos 2.8s ease-in-out infinite}
+@keyframes kaos{
+  0%,100%{box-shadow:0 0 22px var(--morph), 0 0 5px var(--morph), 0 3px 6px rgba(0,0,0,.6)}
+  50%{box-shadow:0 0 36px var(--morph), 0 0 10px var(--morph), 0 3px 6px rgba(0,0,0,.6)}
+}
+.vmeters{min-height:238px}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <radialGradient id="capGrad" cx="36%" cy="27%" r="80%">
+      <stop offset="0%" stop-color="#39456e"/>
+      <stop offset="45%" stop-color="#1d2440"/>
+      <stop offset="100%" stop-color="#0e1326"/>
+    </radialGradient>
+    <linearGradient id="rimGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,.30)"/>
+      <stop offset="45%" stop-color="rgba(255,255,255,.04)"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,.55)"/>
+    </linearGradient>
+    <filter id="capSh" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000" flood-opacity=".6"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="pv-head">
+  <h1>NEBULA2 — UI REDESIGN · PASS 2</h1><em>static mockup · nothing is wired</em>
+  <div class="pv-tabs">
+    <button class="on" data-view="sampler">Sampler</button>
+    <button data-view="drums">Drums</button>
+    <button data-view="rack">Rack — shared</button>
+  </div>
+</div>
+
+<!-- ==================== SAMPLER ==================== -->
+<div class="chassis on" id="view-sampler">
+  <div class="hd">
+    <div class="logo"><b>NEBULA<i>2</i></b><span>splice</span></div>
+    <div class="presetbar">
+      <button class="arrow">‹</button>
+      <div class="pname">Acid Ghost 04<small>factory · techno</small></div>
+      <button class="arrow">›</button>
+    </div>
+    <div class="hgroup"><button class="hbtn on">A</button><button class="hbtn">B</button><button class="hbtn">⇄</button></div>
+    <span class="hsep"></span>
+    <div class="hgroup"><button class="hbtn">↩</button><button class="hbtn">↪</button></div>
+    <div class="spacer"></div>
+    <div class="tempo"><span>BPM</span><b>140.0</b><button class="hbtn" style="padding:6px 10px">TAP</button></div>
+    <span class="hsep"></span>
+    <button class="hbtn">FILE</button><button class="hbtn">▶ PLAY</button><button class="hbtn warn on">PANIC</button>
+  </div>
+
+  <div class="row">
+    <div class="col grow1">
+      <div class="card plain">
+        <div class="chead"><span class="tt">Sample</span><span class="hint">VEC1 Loops BB140 077.wav · 140 BPM · 4 bars · 16 slices</span>
+          <div class="mini"><button>REPLACE</button><button>SLICES ▾</button><button>?</button></div>
+        </div>
+        <div class="wavescreen"><canvas id="wave"></canvas></div>
+        <div class="wavemeta"><span>loop <b>1–16</b></span><span>fit <b>gate</b></span><span>fade <b>3.0 ms</b></span><span>detected from <b>loop length</b></span></div>
+      </div>
+
+      <div class="card plain">
+        <div class="chead"><span class="tt">Sequence</span><span class="hint">q w e r t y … audition · drag to reorder</span>
+          <div class="mini"><button>SHUFFLE</button><button>RESET</button><button>?</button></div>
+        </div>
+        <div class="pads" id="pads"></div>
+      </div>
+
+      <div class="card colour">
+        <div class="chead"><span class="pow"></span><span class="tt">FX Grid</span><span class="hint">a cell is a gate · the knob is the amount · drag rows to reorder the chain</span>
+          <div class="mini"><button>DICE</button><button>CLEAR</button><button>?</button></div>
+        </div>
+        <div class="gridwrap" id="grid-sampler"></div>
+      </div>
+    </div>
+
+    <div class="orail">
+      <div class="card plain meterbox">
+        <span class="tt2">OUTPUT</span>
+        <div class="vmeters">
+          <div class="vscale"><span>0</span><span>-6</span><span>-12</span><span>-24</span><span>-48</span></div>
+          <div class="vm"><i style="height:64%"></i><u style="bottom:74%"></u></div>
+          <div class="vm"><i style="height:58%"></i><u style="bottom:70%"></u></div>
+        </div>
+        <div class="dbout">-1.5 dB<small>PEAK · LIMITED</small></div>
+        <button class="hbtn on" style="width:100%;margin-top:12px">LIM</button>
+        <div class="mono" style="font-size:8.5px;color:var(--faint);margin-top:9px">latency 12 ms</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:0">
+    <div class="card colour grow1">
+      <div class="chead"><span class="pow"></span><span class="tt">Colour</span><span class="hint">saturation, crush, pump &amp; resonance</span>
+        <div class="mini"><button>PRESETS ▾</button><button>MUTE</button><button>DICE</button><button>?</button></div>
+      </div>
+      <div class="krow" style="grid-template-columns:repeat(4,1fr)">
+        <div class="knob" data-l="Drive" data-v="32%" data-n=".32" data-a="colour"></div>
+        <div class="knob" data-l="Crush" data-v="0%" data-n="0" data-a="colour"></div>
+        <div class="knob" data-l="Squeeze" data-v="55%" data-n=".55" data-a="colour"></div>
+        <div class="knob" data-l="Tone" data-v="82%" data-n=".82" data-a="colour"></div>
+        <div class="knob" data-l="Pump" data-v="40%" data-n=".4" data-a="colour"></div>
+        <div class="knob" data-l="Width" data-v="118%" data-n=".59" data-a="colour"></div>
+        <div class="knob" data-l="Reso" data-v="26%" data-n=".26" data-a="colour"></div>
+        <div class="knob" data-l="Shatter" data-v="0%" data-n="0" data-a="colour"></div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:center;margin-top:16px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="seg colour"><button class="sel">TUBE</button><button>FUZZ</button><button>FOLD</button></div>
+          <div class="seg colour"><button>MAJ</button><button class="sel">MIN</button><button>PHRY</button><button>5THS</button></div>
+        </div>
+        <div class="screen" style="flex:1;height:88px"><canvas id="curve-s"></canvas><span class="scap">tube &#183; drive 32%</span></div>
+      </div>
+    </div>
+
+    <div class="card space" style="width:448px;flex:0 0 auto">
+      <div class="chead"><span class="pow"></span><span class="tt">Space</span><span class="hint">reverb · delay · haunt</span>
+        <div class="mini"><button>PRESETS ▾</button><button>DICE</button><button>?</button></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <div class="knob big" data-l="Delay" data-v="1/8 · dot" data-n=".62" data-a="space"></div>
+        <div style="flex:1">
+          <div class="krow tight" style="grid-template-columns:repeat(4,1fr)">
+            <div class="knob sm" data-l="Reverb" data-v="24%" data-n=".24" data-a="space"></div>
+            <div class="knob sm" data-l="Size" data-v="61%" data-n=".61" data-a="space"></div>
+            <div class="knob sm" data-l="Fdbk" data-v="46%" data-n=".46" data-a="space"></div>
+            <div class="knob sm" data-l="Haunt" data-v="0%" data-n="0" data-a="space"></div>
+          </div>
+          <div style="display:flex;justify-content:center;margin-top:14px">
+            <div class="seg space"><button>ST</button><button class="sel">PONG</button><button>DUB</button><button>WARP</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="screen" style="height:92px;margin-top:16px"><canvas id="taps-s"></canvas><span class="scap">1/8 &#183; dot &#8212; fdbk 46%</span></div>
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px">
+        <div class="seg space"><button class="sel">HALL</button><button>PLATE</button><button>REV</button></div>
+        <div class="seg space"><button class="sel">ALL</button><button>KICK</button><button>SNR</button><button>HAT</button></div>
+      </div>
+    </div>
+    <div class="card morph" style="width:300px;flex:0 0 auto">
+      <div class="chead"><span class="pow"></span><span class="tt">Morph</span><span class="hint">kaos pad</span>
+        <div class="mini"><button>SEED &#9662;</button><button>?</button></div>
+      </div>
+      <div class="xy">
+        <span class="gl" style="left:50%;top:0;bottom:0;width:1px"></span>
+        <span class="gl" style="top:50%;left:0;right:0;height:1px"></span>
+        <span class="corner c1">CLEAN</span><span class="corner c2">DIRT</span>
+        <span class="corner c3">SPACE</span><span class="corner c4">BROKEN</span>
+        <span class="trail" style="left:44%;top:62%;width:8px;height:8px;opacity:.14"></span>
+        <span class="trail" style="left:51%;top:54%;width:10px;height:10px;opacity:.24"></span>
+        <span class="trail" style="left:57%;top:47%;width:12px;height:12px;opacity:.36"></span>
+        <span class="glow" style="left:63%;top:41%"></span>
+        <span class="dotp" style="left:63%;top:41%"></span>
+      </div>
+      <div class="krow" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
+        <div class="knob sm" data-l="Glide" data-v="35%" data-n=".35" data-a="morph"></div>
+        <div class="knob sm" data-l="Drift" data-v="12%" data-n=".12" data-a="morph"></div>
+        <div class="knob sm" data-l="Depth" data-v="100%" data-n="1" data-a="morph"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kf">space play · ⌘Z undo · [ ] loop · right-click = MIDI learn · ? help</span>
+    <div class="seg viewseg"><button class="sel">MAIN</button><button>RACK</button></div>
+  </div>
+</div>
+
+<!-- ==================== DRUMS ==================== -->
+<div class="chassis" id="view-drums">
+  <div class="hd">
+    <div class="logo"><b>NEBULA<i>2</i></b><span>drumz</span></div>
+    <div class="presetbar">
+      <button class="arrow">‹</button>
+      <div class="pname">Warehouse 130<small>factory · techno</small></div>
+      <button class="arrow">›</button>
+    </div>
+    <div class="hgroup"><button class="hbtn on">A</button><button class="hbtn">B</button><button class="hbtn">⇄</button></div>
+    <span class="hsep"></span>
+    <div class="hgroup"><button class="hbtn">↩</button><button class="hbtn">↪</button></div>
+    <div class="spacer"></div>
+    <div class="tempo"><span>BPM</span><b>132.0</b><button class="hbtn" style="padding:6px 10px">TAP</button></div>
+    <span class="hsep"></span>
+    <button class="hbtn">FILE</button><button class="hbtn">▶ PLAY</button><button class="hbtn warn on">PANIC</button>
+  </div>
+
+  <div class="row">
+    <div class="card plain" style="width:262px;flex:0 0 auto">
+      <div class="chead"><span class="tt">Voices</span>
+        <div class="mini"><button>KIT ▾</button><button>DICE</button></div>
+      </div>
+      <div class="voices" id="voices"></div>
+    </div>
+
+    <div class="col grow1">
+      <div class="card colour">
+        <div class="chead"><span class="pow"></span><span class="tt">Pattern</span><span class="hint">64 steps · 1/16 · click full → half → off</span>
+          <div class="mini"><button>PATTERNS ▾</button><button>STYLE: TECHNO ▾</button><button>CLEAR</button><button>?</button></div>
+        </div>
+        <div class="gridwrap" id="grid-drums"></div>
+      </div>
+
+      </div>
+
+    <div class="orail">
+      <div class="card plain meterbox">
+        <span class="tt2">OUTPUT</span>
+        <div class="vmeters">
+          <div class="vscale"><span>0</span><span>-6</span><span>-12</span><span>-24</span><span>-48</span></div>
+          <div class="vm"><i style="height:71%"></i><u style="bottom:80%"></u></div>
+          <div class="vm"><i style="height:66%"></i><u style="bottom:76%"></u></div>
+        </div>
+        <div class="dbout">-0.8 dB<small>PEAK · LIMITED</small></div>
+        <button class="hbtn on" style="width:100%;margin-top:12px">LIM</button>
+        <div class="mono" style="font-size:8.5px;color:var(--faint);margin-top:9px">latency 12 ms</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:0">
+    <div class="card colour grow1">
+      <div class="chead"><span class="pow"></span><span class="tt">Voice &#8212; Hard Techno Kick</span><span class="hint">click a voice on the rail to edit it here</span>
+        <div class="mini"><button>ENGINE: ANALOG &#9662;</button><button>DICE</button><button>?</button></div>
+      </div>
+      <div style="display:flex;gap:18px">
+        <div class="krow" style="grid-template-columns:repeat(3,1fr);flex:1">
+          <div class="knob" data-l="Tune" data-v="-4 st" data-n=".38" data-a="colour"></div>
+          <div class="knob" data-l="Decay" data-v="62%" data-n=".62" data-a="colour"></div>
+          <div class="knob" data-l="Punch" data-v="80%" data-n=".8" data-a="colour"></div>
+          <div class="knob" data-l="Drive" data-v="45%" data-n=".45" data-a="colour"></div>
+          <div class="knob" data-l="Tone" data-v="58%" data-n=".58" data-a="colour"></div>
+          <div class="knob" data-l="Level" data-v="92%" data-n=".92" data-a="colour"></div>
+        </div>
+        <div style="width:152px;display:flex;flex-direction:column;gap:10px">
+          <div class="screen" style="flex:1;min-height:150px"><canvas id="scope-d"></canvas><span class="scap">transient</span></div>
+          <div class="seg colour" style="align-self:center"><button class="sel">SOFT</button><button>HARD</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="card space" style="width:448px;flex:0 0 auto">
+      <div class="chead"><span class="pow"></span><span class="tt">Space</span><span class="hint">same card, both plugins</span>
+        <div class="mini"><button>PRESETS &#9662;</button><button>DICE</button><button>?</button></div>
+      </div>
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <div class="knob big" data-l="Delay" data-v="1/4" data-n=".5" data-a="space"></div>
+        <div style="flex:1">
+          <div class="krow tight" style="grid-template-columns:repeat(4,1fr)">
+            <div class="knob sm" data-l="Reverb" data-v="31%" data-n=".31" data-a="space"></div>
+            <div class="knob sm" data-l="Size" data-v="48%" data-n=".48" data-a="space"></div>
+            <div class="knob sm" data-l="Fdbk" data-v="52%" data-n=".52" data-a="space"></div>
+            <div class="knob sm" data-l="Duck" data-v="35%" data-n=".35" data-a="space"></div>
+          </div>
+          <div style="display:flex;justify-content:center;margin-top:14px">
+            <div class="seg space"><button class="sel">ST</button><button>PONG</button><button>DUB</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="screen" style="height:92px;margin-top:16px"><canvas id="taps-d"></canvas><span class="scap">1/4 &#8212; fdbk 52%</span></div>
+      <div style="display:flex;gap:8px;justify-content:space-between;margin-top:14px">
+        <div class="seg space"><button class="sel">HALL</button><button>PLATE</button><button>REV</button></div>
+        <div class="seg space"><button class="sel">ALL</button><button>KICK</button><button>SNR</button><button>HAT</button></div>
+      </div>
+    </div>
+    <div class="card morph" style="width:300px;flex:0 0 auto">
+      <div class="chead"><span class="pow"></span><span class="tt">Morph</span><span class="hint">kaos pad</span>
+        <div class="mini"><button>SEED &#9662;</button><button>?</button></div>
+      </div>
+      <div class="xy">
+        <span class="gl" style="left:50%;top:0;bottom:0;width:1px"></span>
+        <span class="gl" style="top:50%;left:0;right:0;height:1px"></span>
+        <span class="corner c1">DRY</span><span class="corner c2">PUMP</span>
+        <span class="corner c3">TAPE</span><span class="corner c4">WRECK</span>
+        <span class="trail" style="left:52%;top:44%;width:8px;height:8px;opacity:.14"></span>
+        <span class="trail" style="left:45%;top:52%;width:10px;height:10px;opacity:.24"></span>
+        <span class="trail" style="left:38%;top:60%;width:12px;height:12px;opacity:.36"></span>
+        <span class="glow" style="left:31%;top:68%"></span>
+        <span class="dotp" style="left:31%;top:68%"></span>
+      </div>
+      <div class="krow" style="grid-template-columns:repeat(3,1fr);margin-top:14px">
+        <div class="knob sm" data-l="Glide" data-v="35%" data-n=".35" data-a="morph"></div>
+        <div class="knob sm" data-l="Drift" data-v="12%" data-n=".12" data-a="morph"></div>
+        <div class="knob sm" data-l="Depth" data-v="100%" data-n="1" data-a="morph"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kf">space play · ⌘Z undo · voices on C1+ · right-click = MIDI learn · ? help</span>
+    <div class="seg viewseg"><button class="sel">MAIN</button><button>RACK</button></div>
+  </div>
+</div>
+
+<!-- ==================== RACK ==================== -->
+<div class="chassis" id="view-rack">
+  <div class="hd">
+    <div class="logo"><b>NEBULA<i>2</i></b><span>rack</span></div>
+    <div class="presetbar">
+      <button class="arrow">‹</button>
+      <div class="pname">Acid Line<small>rack patch</small></div>
+      <button class="arrow">›</button>
+    </div>
+    <div class="hgroup"><button class="hbtn on">A</button><button class="hbtn">B</button><button class="hbtn">⇄</button></div>
+    <span class="hsep"></span>
+    <div class="hgroup"><button class="hbtn">↩</button><button class="hbtn">↪</button></div>
+    <div class="spacer"></div>
+    <div class="tempo"><span>BPM</span><b>140.0</b><button class="hbtn" style="padding:6px 10px">TAP</button></div>
+    <span class="hsep"></span>
+    <button class="hbtn on">MUTE RACK</button><button class="hbtn">UNPATCH</button><button class="hbtn warn on">PANIC</button>
+  </div>
+
+  <div style="position:relative">
+    <svg id="cables"></svg>
+    <div class="rackrow" style="margin-bottom:12px">
+      <div class="card rackc module live">
+        <div class="chead"><span class="pow"></span><span class="tt">Beat In</span><span class="badge live">LIVE</span></div>
+        <div style="display:flex;justify-content:center"><div class="knob sm" data-l="Level" data-v="100" data-n=".67" data-a="rack"></div></div>
+        <div class="jacks"><span></span><span class="jack hot" id="j-src-out"></span></div>
+      </div>
+      <div class="card rackc module live">
+        <div class="chead"><span class="pow"></span><span class="tt">Filter</span><span class="badge live">LIVE</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Cutoff" data-v="2.4k" data-n=".55" data-a="rack"></div>
+          <div class="knob sm" data-l="Reso" data-v="12" data-n=".5" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span class="jack hot" id="j-flt-in"></span><span class="jack hot" id="j-flt-out"></span></div>
+      </div>
+      <div class="card rackc module live">
+        <div class="chead"><span class="pow"></span><span class="tt">Space Echo</span><span class="badge live">LIVE</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Time" data-v="1/8·" data-n=".62" data-a="rack"></div>
+          <div class="knob sm" data-l="Fdbk" data-v="55%" data-n=".55" data-a="rack"></div>
+          <div class="knob sm" data-l="Mix" data-v="45%" data-n=".45" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span class="jack hot" id="j-ech-in"></span><span class="jack hot" id="j-ech-out"></span></div>
+      </div>
+      <div class="card rackc module dangling">
+        <div class="chead"><span class="pow"></span><span class="tt">Phaser</span><span class="badge dang">NO PATH OUT</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Rate" data-v="0.5" data-n=".3" data-a="rack"></div>
+          <div class="knob sm" data-l="Depth" data-v="70%" data-n=".7" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span class="jack hot" id="j-phs-in"></span><span class="jack" id="j-phs-out"></span></div>
+      </div>
+      <div class="card rackc module live">
+        <div class="chead"><span class="pow"></span><span class="tt">Main Out</span><span class="badge live">LIVE</span></div>
+        <div style="display:flex;justify-content:center"><div class="knob sm" data-l="Level" data-v="100" data-n=".67" data-a="rack"></div></div>
+        <div class="jacks"><span class="jack hot" id="j-out-in"></span><span></span></div>
+      </div>
+    </div>
+    <div class="rackrow">
+      <div class="card rackc module off">
+        <div class="chead"><span class="pow" style="background:var(--faint);box-shadow:none"></span><span class="tt">Wavefolder</span><span class="badge idle">OFF</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Fold" data-v="35%" data-n=".35" data-a="rack"></div>
+          <div class="knob sm" data-l="Bias" data-v="0" data-n=".5" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span class="jack"></span><span class="jack"></span></div>
+      </div>
+      <div class="card rackc module">
+        <div class="chead"><span class="pow"></span><span class="tt">LFO</span><span class="badge live">LIVE · CV</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Rate" data-v="1/4" data-n=".4" data-a="rack"></div>
+          <div class="knob sm" data-l="Depth" data-v="50%" data-n=".5" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span></span><span class="jack hot" id="j-lfo-out"></span></div>
+      </div>
+      <div class="card rackc module">
+        <div class="chead"><span class="pow"></span><span class="tt">EQ-10</span><span class="badge idle">IDLE</span></div>
+        <div class="eqbars"><i style="height:40%"></i><i style="height:55%"></i><i style="height:70%"></i><i style="height:52%"></i><i style="height:38%"></i><i style="height:46%"></i><i style="height:64%"></i><i style="height:44%"></i><i style="height:30%"></i><i style="height:24%"></i></div>
+        <div class="jacks"><span class="jack"></span><span class="jack"></span></div>
+      </div>
+      <div class="card rackc module">
+        <div class="chead"><span class="pow"></span><span class="tt">Comb</span><span class="badge idle">IDLE</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Tune" data-v="180" data-n=".4" data-a="rack"></div>
+          <div class="knob sm" data-l="Decay" data-v="80%" data-n=".8" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span class="jack"></span><span class="jack"></span></div>
+      </div>
+      <div class="card rackc module">
+        <div class="chead"><span class="pow"></span><span class="tt">Vowel</span><span class="badge idle">IDLE</span></div>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <div class="knob sm" data-l="Vowel" data-v="A" data-n=".1" data-a="rack"></div>
+          <div class="knob sm" data-l="Sharp" data-v="9" data-n=".35" data-a="rack"></div>
+        </div>
+        <div class="jacks"><span class="jack"></span><span class="jack"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="kf">click a jack, click another = cable · dangling modules say why · CV lanes dashed</span>
+    <div class="seg viewseg"><button>MAIN</button><button class="sel">RACK</button></div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Pass 4:</b> spare room now carries real instrument readouts &#8212; a saturation-curve screen in Colour, an echo-tap decay display in Space (both plugins), a transient scope beside the drum voice knobs; drum voice knobs sit 3&#215;2 so nothing bleeds into the next card; small knobs sized to their cells. <b>Pass 3 was:</b> the kaos pad is now a full card on both instruments (same size, same corners pattern, glide/drift/depth under it); every knob row sits on a fixed grid so nothing can squeeze or collide; the rack went teal&#8594;green per your swatch, cables included. <b>Pass 2 was:</b> machined knobs (dotted tick ring · recessed track · glowing value arc · bevelled cap with specular · drop shadow),
+  every surface either raised or recessed — nothing flat; grids sit in a dark well; type up a full step everywhere;
+  waveform rebuilt (gradient body, glowing crest line, slice handles, bracketed loop region, glowing playhead).
+  Colour still means block: coral / cyan / violet / amber. Same header, Space card, morph pad, meters and rack on both instruments.
+</div>
+
+<script>
+/* preview wiring only: tabs, stamped knobs, fake data */
+document.querySelectorAll(".pv-tabs button").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".pv-tabs button").forEach(x=>x.classList.toggle("on",x===b));
+  document.querySelectorAll(".chassis").forEach(c=>c.classList.remove("on"));
+  document.getElementById("view-"+b.dataset.view).classList.add("on");
+  requestAnimationFrame(drawAll);
+});
+
+const HUES={colour:"#ff6a4d",space:"#3fe0d4",morph:"#a37dff",rack:"#31e3a1"};
+const HUES_HI={colour:"#ffa38f",space:"#9ff2ec",morph:"#cdb6ff",rack:"#a4f8d6"};
+
+/* ---- machined knobs ---- */
+function polar(c,r,deg){ const a=(deg-90)*Math.PI/180; return [c+r*Math.cos(a), c+r*Math.sin(a)]; }
+function arcPath(c,r,a0,a1){
+  const [x0,y0]=polar(c,r,a0),[x1,y1]=polar(c,r,a1);
+  return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${(a1-a0)>180?1:0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+}
+function stampKnobs(){
+  document.querySelectorAll(".knob").forEach(k=>{
+    if(k.dataset.done) return; k.dataset.done=1;
+    const big=k.classList.contains("big"), sm=k.classList.contains("sm");
+    const R=big?52:sm?19:27;          /* arc radius   */
+    const W=big?7:sm?4.5:5.5;         /* arc width    */
+    const pad=big?14:sm?9:11;
+    const size=(R+pad)*2, c=size/2;
+    const hue=HUES[k.dataset.a]||"#9aa3bd", hi=HUES_HI[k.dataset.a]||"#dfe4f2";
+    const n=Math.max(0,Math.min(1,+k.dataset.n||0));
+    const A0=-140, A1=140, Av=A0+(A1-A0)*n;
+    const capR=R-W-4;
+    /* tick dots */
+    const NT=big?13:sm?7:11; let ticks="";
+    for(let i=0;i<NT;i++){
+      const a=A0+(A1-A0)*i/(NT-1), passed=(a<=Av&&n>0);
+      const [tx,ty]=polar(c,R+ (big?9:6),a);
+      ticks+=`<circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="${big?1.6:1.2}"
+        fill="${passed?hue:"rgba(255,255,255,.16)"}" ${passed?`style="filter:drop-shadow(0 0 3px ${hue})"`:""}/>`;
+    }
+    k.innerHTML=`
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        ${ticks}
+        <path d="${arcPath(c,R,A0,A1)}" fill="none" stroke="rgba(0,0,0,.65)" stroke-width="${W+2.5}" stroke-linecap="round"/>
+        <path d="${arcPath(c,R,A0,A1)}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="${W}" stroke-linecap="round"/>
+        ${n>0?`<path d="${arcPath(c,R,A0,Av)}" fill="none" stroke="${hue}" stroke-width="${W}" stroke-linecap="round"
+          style="filter:drop-shadow(0 0 ${big?9:5}px ${hue})"/>
+        <path d="${arcPath(c,R,Math.max(A0,Av-14),Av)}" fill="none" stroke="${hi}" stroke-width="${W*.55}" stroke-linecap="round" opacity=".9"/>`:""}
+        <g filter="url(#capSh)">
+          <circle cx="${c}" cy="${c}" r="${capR}" fill="url(#capGrad)"/>
+          <circle cx="${c}" cy="${c}" r="${capR}" fill="none" stroke="url(#rimGrad)" stroke-width="1.4"/>
+        </g>
+        <ellipse cx="${c-capR*.28}" cy="${c-capR*.42}" rx="${capR*.42}" ry="${capR*.26}" fill="rgba(255,255,255,.10)"/>
+        <g transform="rotate(${Av} ${c} ${c})">
+          <line x1="${c}" y1="${c-capR*.30}" x2="${c}" y2="${c-capR*.86}"
+            stroke="${n>0?hue:"#5d6580"}" stroke-width="${big?3.4:2.6}" stroke-linecap="round"
+            ${n>0?`style="filter:drop-shadow(0 0 4px ${hue})"`:""}/>
+        </g>
+      </svg>
+      <span class="klabel">${k.dataset.l}</span>
+      <span class="kval mono" style="color:${n>0?(big?hi:"var(--ink)"):"var(--faint)"}">${k.dataset.v}</span>`;
+  });
+}
+
+/* ---- pads ---- */
+const padsHost=document.getElementById("pads");
+if(padsHost){
+  let h="";
+  for(let i=0;i<16;i++){
+    const lit=i===5, rev=(i===3||i===11);
+    h+=`<div class="pad ${lit?"lit":""} ${rev?"rev":""}"><svg class="w" viewBox="0 0 40 14" preserveAspectRatio="none">${padWave(i)}</svg><span class="n">${String(i+1).padStart(2,"0")}</span></div>`;
+  }
+  padsHost.innerHTML=h;
+}
+function padWave(seed){
+  let r=seed*7+3, p="M0 7";
+  for(let x=0;x<=40;x+=2){ r=(r*16807)%2147483647; const a=(r%100)/100*6; p+=` L${x} ${7-a+((x%4)?a*2:0)/2}`; }
+  return `<path d="${p}" fill="none" stroke="#3fe0d4" stroke-width="1.1" opacity=".85" style="filter:drop-shadow(0 0 2px #3fe0d4)"/>`;
+}
+
+/* ---- grids ---- */
+function buildGrid(host, rows, steps, seed){
+  let r=seed;
+  const rnd=()=>{ r=(r*16807)%2147483647; return r/2147483647; };
+  const lab=document.createElement("div"); lab.className="glabels";
+  const cv=document.createElement("div"); cv.className="gcanvas";
+  const playCol=Math.floor(steps*0.42);
+  rows.forEach(row=>{
+    if(row.gap){ const s1=document.createElement("div"); s1.className="gsec lab"; lab.appendChild(s1);
+                 const s2=document.createElement("div"); s2.className="gsec"; cv.appendChild(s2); return; }
+    const l=document.createElement("div"); l.className="grow"+(row.starved?" starved":"");
+    l.innerHTML=`<span class="dot" style="background:${HUES[row.b]};color:${HUES[row.b]}"></span><span class="nm">${row.n}</span><span class="z">0%</span>`;
+    lab.appendChild(l);
+    const rc=document.createElement("div"); rc.className="grow-cells"; rc.style.color=HUES[row.b];
+    for(let i=0;i<steps;i++){
+      const cel=document.createElement("div");
+      const on=rnd()<row.d;
+      cel.className="cell"+(i%4===0?" q":"")+(on?(" onx on"+(1+Math.floor(rnd()*3))):"");
+      if(on){ cel.style.background=`linear-gradient(180deg,${HUES_HI[row.b]},${HUES[row.b]})`;
+              if(i===playCol) cel.classList.add("hit"); }
+      rc.appendChild(cel);
+    }
+    cv.appendChild(rc);
+  });
+  host.appendChild(lab); host.appendChild(cv);
+}
+const gs=document.getElementById("grid-sampler");
+if(gs) buildGrid(gs,[
+  {n:"Filter",b:"colour",d:.18},{n:"Drive",b:"colour",d:.12},{n:"Stutter",b:"colour",d:.1},
+  {n:"Shatter",b:"colour",d:0,starved:true},{n:"Gate",b:"colour",d:.14},
+  {gap:1},
+  {n:"Reverb",b:"space",d:.1},{n:"Delay",b:"space",d:.12},{n:"Haunt",b:"space",d:0,starved:true},
+],16,777);
+const gd=document.getElementById("grid-drums");
+if(gd) buildGrid(gd,[
+  {n:"Kick",b:"colour",d:.24},{n:"Snare",b:"colour",d:.14},{n:"Clap",b:"colour",d:.1},
+  {n:"CL Hat",b:"colour",d:.55},{n:"OP Hat",b:"colour",d:.12},{n:"Low Tom",b:"colour",d:.06},
+  {gap:1},
+  {n:"Filter",b:"space",d:.1},{n:"Reverb",b:"space",d:.08},{n:"Stutter",b:"morph",d:.06},
+],32,4242);
+
+/* ---- voices ---- */
+const vh=document.getElementById("voices");
+if(vh){
+  const vs=[["Hard Techno Kick","analog"],["Fat Snare","noise+body"],["Room Clap","bursts"],
+            ["909 CL Hat","metallic"],["Ticky Hat","fm"],["Low Tom","analog"],
+            ["White Noise","noise"],["Noise Snap","snap"],["Dusty Hat","lofi"]];
+  const ring=["#ff6a4d","#ffb454","#ffd27a","#3fe0d4","#5ad1c4","#a37dff","#c3a6ff","#ff8fa8","#9aa3bd"];
+  vh.innerHTML=vs.map((v,i)=>`
+    <div class="vtile"><span class="vring" style="color:${ring[i]}"><i></i></span>
+      <span><span class="vn">${v[0]}</span><span class="ve">${v[1]}</span></span>
+      <span class="ms"><b class="m${i===6?" on":""}">M</b><b class="s">S</b></span>
+    </div>`).join("");
+}
+
+/* ---- the waveform: drawn like it matters ---- */
+function drawWave(){
+  const cv=document.getElementById("wave"); if(!cv||!cv.clientWidth) return;
+  const w=cv.clientWidth, h=cv.clientHeight, dpr=window.devicePixelRatio||1;
+  cv.width=w*dpr; cv.height=h*dpr;
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  const mid=h*0.52, top=10;
+
+  g.strokeStyle="rgba(255,255,255,.045)"; g.lineWidth=1;
+  [0.25,0.5,0.75].forEach(f=>{ const dy=(h/2-top)*f;
+    g.beginPath(); g.moveTo(0,mid-dy); g.lineTo(w,mid-dy); g.moveTo(0,mid+dy); g.lineTo(w,mid+dy); g.stroke(); });
+  g.strokeStyle="rgba(255,255,255,.09)";
+  g.beginPath(); g.moveTo(0,mid); g.lineTo(w,mid); g.stroke();
+
+  let r=987; const rnd=()=>{ r=(r*16807)%2147483647; return r/2147483647; };
+  const N=Math.floor(w/2), env=[];
+  for(let i=0;i<N;i++){
+    const x=i/N*16, beat=Math.pow(1-(x%1),2.6), sub=Math.pow(1-((x*2)%1),3)*0.35;
+    env.push(Math.min(1,(rnd()*0.18+beat*0.82+sub))*(0.35+0.65*Math.abs(Math.sin(x*0.7+1))));
+  }
+  const grad=g.createLinearGradient(0,top,0,h);
+  grad.addColorStop(0,"rgba(63,224,212,.85)");
+  grad.addColorStop(0.5,"rgba(63,224,212,.22)");
+  grad.addColorStop(1,"rgba(63,224,212,.55)");
+  g.beginPath(); g.moveTo(0,mid);
+  env.forEach((a,i)=>g.lineTo(i*2, mid-a*(mid-top)));
+  g.lineTo(w,mid);
+  for(let i=N-1;i>=0;i--) g.lineTo(i*2, mid+env[i]*(h-mid-6)*0.92);
+  g.closePath(); g.fillStyle=grad; g.fill();
+
+  g.beginPath();
+  env.forEach((a,i)=>{ const x=i*2,y=mid-a*(mid-top); i?g.lineTo(x,y):g.moveTo(x,y); });
+  g.strokeStyle="#bff7f2"; g.lineWidth=1.4; g.shadowColor="#3fe0d4"; g.shadowBlur=9; g.stroke();
+  g.shadowBlur=0;
+
+  const lx0=w*0.25, lx1=w*0.75;
+  g.fillStyle="rgba(63,224,212,.08)"; g.fillRect(lx0,0,lx1-lx0,h);
+  g.strokeStyle="rgba(63,224,212,.8)"; g.lineWidth=2;
+  [[lx0,1],[lx1,-1]].forEach(([x,d])=>{
+    g.beginPath(); g.moveTo(x+d*7,3); g.lineTo(x,3); g.lineTo(x,h-3); g.lineTo(x+d*7,h-3); g.stroke();
+  });
+
+  for(let i=0;i<=16;i++){
+    const x=Math.round(i/16*w)+.5;
+    g.strokeStyle= i%4?"rgba(255,255,255,.10)":"rgba(255,255,255,.24)";
+    g.lineWidth=1; g.beginPath(); g.moveTo(x,0); g.lineTo(x,h); g.stroke();
+    if(i<16){ g.fillStyle= i%4?"rgba(255,255,255,.35)":"rgba(255,255,255,.7)";
+      g.beginPath(); g.moveTo(x-4,0); g.lineTo(x+4,0); g.lineTo(x,6); g.closePath(); g.fill(); }
+  }
+
+  const px=w*0.415;
+  const pg=g.createLinearGradient(px-14,0,px+14,0);
+  pg.addColorStop(0,"rgba(255,255,255,0)"); pg.addColorStop(.5,"rgba(255,255,255,.14)"); pg.addColorStop(1,"rgba(255,255,255,0)");
+  g.fillStyle=pg; g.fillRect(px-14,0,28,h);
+  g.strokeStyle="#fff"; g.lineWidth=1.6; g.shadowColor="#fff"; g.shadowBlur=7;
+  g.beginPath(); g.moveTo(px,0); g.lineTo(px,h); g.stroke(); g.shadowBlur=0;
+  g.fillStyle="#fff"; g.beginPath(); g.moveTo(px-5,0); g.lineTo(px+5,0); g.lineTo(px,7); g.closePath(); g.fill();
+}
+
+/* ---- rack cables ---- */
+function drawCables(){
+  const svg=document.getElementById("cables"); if(!svg) return;
+  const wrap=svg.parentElement, wr=wrap.getBoundingClientRect();
+  if(wr.width<10) return;
+  svg.setAttribute("width",wr.width); svg.setAttribute("height",wr.height);
+  const P=id=>{ const e=document.getElementById(id); if(!e) return null;
+    const r=e.getBoundingClientRect(); return [r.left-wr.left+r.width/2, r.top-wr.top+r.height/2]; };
+  let gi=0;
+  const link=(a,b,dash)=>{
+    const A=P(a),B=P(b); if(!A||!B) return "";
+    const mx=(A[0]+B[0])/2, sag=40+Math.abs(A[0]-B[0])*.07;
+    const d=`M${A[0]} ${A[1]} Q ${mx} ${Math.max(A[1],B[1])+sag} ${B[0]} ${B[1]}`;
+    const id="cg"+(gi++);
+    return `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}">
+        <stop offset="0" stop-color="#3fe0d4"/><stop offset="1" stop-color="#35d17e"/></linearGradient></defs>
+      <path d="${d}" fill="none" stroke="rgba(0,0,0,.5)" stroke-width="5" transform="translate(0,2)"/>
+      <path d="${d}" fill="none" stroke="url(#${id})" stroke-width="2.6" ${dash?'stroke-dasharray="6 6" opacity=".6"':'opacity=".95"'}
+      style="filter:drop-shadow(0 0 6px rgba(49,227,161,.65))"/>`;
+  };
+  svg.innerHTML =
+    link("j-src-out","j-flt-in") + link("j-flt-out","j-ech-in") + link("j-ech-out","j-out-in") +
+    link("j-ech-out","j-phs-in") + link("j-lfo-out","j-flt-in",true);
+}
+function fitCv(cv){ const w=cv.clientWidth,h=cv.clientHeight; if(!w) return null;
+  const dpr=window.devicePixelRatio||1; cv.width=w*dpr; cv.height=h*dpr;
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); return {g,w,h}; }
+function drawCurve(id,drive){
+  const cv=document.getElementById(id); if(!cv) return; const f=fitCv(cv); if(!f) return;
+  const {g,w,h}=f; g.clearRect(0,0,w,h);
+  g.strokeStyle="rgba(255,255,255,.05)"; g.lineWidth=1;
+  [.25,.5,.75].forEach(q=>{ g.beginPath(); g.moveTo(w*q,0); g.lineTo(w*q,h);
+    g.moveTo(0,h*q); g.lineTo(w,h*q); g.stroke(); });
+  g.setLineDash([3,4]); g.strokeStyle="rgba(255,255,255,.12)";
+  g.beginPath(); g.moveTo(6,h-6); g.lineTo(w-6,6); g.stroke(); g.setLineDash([]);
+  const k=1+drive*6, T=Math.tanh(k);
+  g.beginPath();
+  for(let x=0;x<=w;x+=2){ const t=(x/w)*2-1, y=Math.tanh(t*k)/T;
+    const py=h/2-y*(h/2-9); x?g.lineTo(x,py):g.moveTo(x,py); }
+  g.strokeStyle="#ffa38f"; g.lineWidth=1.8; g.shadowColor="#ff6a4d"; g.shadowBlur=8; g.stroke(); g.shadowBlur=0;
+}
+function drawTaps(id,fb){
+  const cv=document.getElementById(id); if(!cv) return; const f=fitCv(cv); if(!f) return;
+  const {g,w,h}=f; g.clearRect(0,0,w,h);
+  const base=h-12, n=8, x0=18, sp=(w-2*x0)/(n-1);
+  g.strokeStyle="rgba(255,255,255,.06)"; g.lineWidth=1;
+  for(let i=0;i<n;i++){ g.beginPath(); g.moveTo(x0+i*sp,8); g.lineTo(x0+i*sp,base); g.stroke(); }
+  g.strokeStyle="rgba(255,255,255,.12)";
+  g.beginPath(); g.moveTo(8,base+.5); g.lineTo(w-8,base+.5); g.stroke();
+  for(let i=0;i<n;i++){
+    const amp=Math.pow(fb+.42,i)*(base-16); if(amp<2) break;
+    const x=x0+i*sp;
+    const gr=g.createLinearGradient(0,base-amp,0,base);
+    gr.addColorStop(0, i?"#3fe0d4":"#9ff2ec"); gr.addColorStop(1,"rgba(63,224,212,.15)");
+    g.fillStyle=gr; g.shadowColor="#3fe0d4"; g.shadowBlur=i?6:12;
+    g.beginPath(); g.roundRect ? g.roundRect(x-3,base-amp,6,amp,3) : g.rect(x-3,base-amp,6,amp); g.fill();
+    g.shadowBlur=0;
+  }
+}
+function drawScope(id){
+  const cv=document.getElementById(id); if(!cv) return; const f=fitCv(cv); if(!f) return;
+  const {g,w,h}=f; g.clearRect(0,0,w,h);
+  g.strokeStyle="rgba(255,255,255,.05)"; g.lineWidth=1;
+  [.25,.5,.75].forEach(q=>{ g.beginPath(); g.moveTo(0,h*q); g.lineTo(w,h*q); g.stroke(); });
+  g.beginPath();
+  for(let x=0;x<=w;x++){ const t=x/w;
+    const env=Math.exp(-t*4.6), ph=2*Math.PI*(11*t-6.5*t*t);
+    const y=h/2 - Math.sin(ph)*env*(h/2-10);
+    x?g.lineTo(x,y):g.moveTo(x,y); }
+  g.strokeStyle="#ffa38f"; g.lineWidth=1.7; g.shadowColor="#ff6a4d"; g.shadowBlur=9; g.stroke(); g.shadowBlur=0;
+}
+function drawScreens(){ drawCurve("curve-s",.32); drawTaps("taps-s",.46); drawTaps("taps-d",.52); drawScope("scope-d"); }
+function drawAll(){ stampKnobs(); drawWave(); drawCables(); drawScreens(); }
+window.addEventListener("resize",drawAll);
+drawAll();
+</script>
+</body>
+</html>

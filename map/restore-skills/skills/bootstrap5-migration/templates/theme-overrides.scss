@@ -1,0 +1,72 @@
+// =============================================================
+//  theme-overrides.scss — make Bootstrap carry the brand
+//  Import order matters: variable overrides BEFORE bootstrap.
+//  See references/bootstrap5-theming.md
+// =============================================================
+
+// 1) Brand tokens (migrate the existing site's :root tokens here)
+$brand-bg:        #0E0E0E;
+$brand-bg-card:   #161616;
+$brand-gold:      #C6A75E;
+$brand-text:      #F5F0E8;
+$brand-text-muted:#9A8A72;
+$brand-serif:     "Cormorant Garamond", Georgia, serif;
+$brand-sans:      "Inter", system-ui, sans-serif;
+
+// 2) Map brand tokens onto Bootstrap variables (override before import)
+$primary:                 $brand-gold;
+$body-bg:                 $brand-bg;
+$body-color:              $brand-text;
+$secondary-color:         $brand-text-muted;
+$font-family-sans-serif:  $brand-sans;
+$headings-font-family:    $brand-serif;
+$border-radius:           .75rem;
+$border-radius-lg:        1.125rem;
+
+// Enforce WCAG AA on Bootstrap's auto-contrast colour pairing
+$min-contrast-ratio:      4.5;
+
+// Toggle Bootstrap features to match the brand
+$enable-rounded:          true;
+$enable-shadows:          false;
+$enable-negative-margins: true;
+
+// Extend the spacing scale if the brand needs finer/coarser steps
+// $spacers: map-merge($spacers, (6: 4rem, 7: 6rem));
+
+// 3) Import Bootstrap (full, or cherry-pick partials to keep it lean)
+@import "bootstrap/scss/bootstrap";
+// Lean alternative:
+// @import "bootstrap/scss/functions";
+// @import "bootstrap/scss/variables";
+// @import "bootstrap/scss/mixins";
+// @import "bootstrap/scss/root";
+// @import "bootstrap/scss/reboot";
+// @import "bootstrap/scss/grid";
+// @import "bootstrap/scss/buttons";
+// @import "bootstrap/scss/navbar";
+// @import "bootstrap/scss/card";
+// @import "bootstrap/scss/forms";
+// @import "bootstrap/scss/modal";
+
+// 4) Keep original semantic tokens alive for any bespoke components
+//    still in use during a phased migration.
+:root {
+  --brand-gold: #{$brand-gold};
+  --brand-bg-card: #{$brand-bg-card};
+}
+
+// 5) Minimal bespoke overrides Bootstrap variables can't reach
+//    (strong focus indicator — WCAG 2.2 SC 2.4.7 / 2.4.13)
+:focus-visible {
+  outline: 3px solid $brand-gold;
+  outline-offset: 2px;
+}
+
+// Sticky-header focus fix (WCAG 2.2 SC 2.4.11 Focus Not Obscured)
+:target, [id] { scroll-margin-top: 5rem; }
+
+// Respect reduced motion (WCAG 2.2 SC 2.3.3)
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

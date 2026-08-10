@@ -1,0 +1,3330 @@
+<title>Meridian — Copilot Enterprise map (demo)</title>
+<style>
+  :root{
+    --void:#05070E; --void2:#0B0F1C;
+    --ink:#E8EDF8; --ink2:#9AA6C4; --ink3:#5C6788;
+    --amber:#F2A03C; --present:#6EE7A8; --missing:#FF6B5E; --never:#5E6B8C;
+    --overlap:#E879C7; --bind:#F2A03C; --phase:#7A6FD8;
+    --r1:#F2A03C; --r2:#A78BFA; --r3:#5EC8F0; --r4:#4E7BE8; --r5:#3E9C8F;
+    --edge:rgba(140,170,235,.30); --edge2:rgba(140,170,235,.16);
+    --ease:cubic-bezier(.32,.72,.28,1);
+    --font:'Roboto','Roboto Flex','Helvetica Neue',system-ui,-apple-system,sans-serif;
+    --mono:'Roboto Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--void)}
+  body{color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55;
+       -webkit-font-smoothing:antialiased}
+  #viz{display:block;width:100vw;height:100vh}
+  /* trails live on a canvas behind the map: decorative, non-interactive, and far too many
+     shapes a second for SVG to carry */
+  #bgviz{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+  #trailcv{position:fixed;inset:0;width:100vw;height:100vh;z-index:1;pointer-events:none;
+    transition:opacity .62s var(--ease)}
+  #viz{position:relative;z-index:2;background:transparent}
+
+  #tip{position:fixed;z-index:60;max-width:330px;padding:12px 14px;font-size:13px;
+    line-height:1.55;color:var(--ink2);opacity:0;pointer-events:none;
+    transform:translateX(6px);transition:opacity .14s,transform .14s}
+  #tip.on{opacity:1;transform:none}
+  #tip b{color:var(--ink);font-weight:600}
+  #tip br{content:"";display:block;margin-bottom:4px}
+  #tip code{font-family:var(--mono);font-size:12px;color:var(--r3)}
+  @media(max-width:820px){#tip{display:none}}
+
+  /* ---------- right column: search → key → detail ---------- */
+  #panel{position:fixed;top:18px;right:18px;width:450px;z-index:10;
+    max-height:calc(100vh - 36px);display:flex;flex-direction:column;gap:10px}
+  @media(max-width:820px){#panel{left:12px;right:12px;top:12px;width:auto}}
+  .card{background:rgba(8,12,24,.80);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border-radius:13px;box-shadow:0 0 0 1px var(--edge2),0 16px 46px rgba(0,0,0,.6)}
+
+  /* backdrop-filter on .sbox makes it a stacking context, so #results was trapped inside
+     it however high its own z-index went, and the cards below painted over the suggestions.
+     The box itself has to outrank its siblings. */
+  /* No outline round either control at rest. The search box carried a 1.4px ring at --edge
+     while every card beside it had 1px at --edge2 — nearly twice the weight at twice the
+     opacity, so the one thing on the panel that should sit quietly was the loudest. Both it
+     and the capability filter now separate by ground rather than by line, which is the rule
+     Joe's own design skill states: no outline borders on containers.
+
+     Focus is a different question and still shows: the edge lights from the inside, which
+     says "this has the keyboard" without drawing a box round it. */
+  .sbox{position:relative;z-index:40;flex:none;
+    box-shadow:0 16px 46px rgba(0,0,0,.6);
+    background:rgba(140,170,235,.05);transition:box-shadow .18s,background .18s}
+  .sbox:focus-within{box-shadow:inset 0 0 0 1px rgba(94,200,240,.42),
+    0 16px 46px rgba(0,0,0,.6);background:rgba(94,200,240,.07)}
+  .sbox>svg{position:absolute;left:15px;top:15px;width:15px;height:15px;
+    stroke:var(--ink3);fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none;
+    transition:stroke .18s}
+  .sbox:focus-within>svg{stroke:var(--r3)}
+  #q{width:100%;border:0;outline:0;font-family:inherit;font-size:15px;color:var(--ink);
+     background:transparent;padding:13px 66px 13px 41px;border-radius:13px;letter-spacing:.01em}
+  #q::placeholder{color:var(--ink3)}
+  #q::-webkit-search-cancel-button{display:none}
+  .kbd{position:absolute;right:14px;top:15px;font-family:var(--mono);font-size:13px;
+    color:var(--ink3);background:rgba(140,170,235,.10);padding:3px 6px;border-radius:5px;
+    pointer-events:none}
+  #q:not(:placeholder-shown)~.kbd{display:none}
+  /* A tag clicked inside a description could only be un-clicked from that same
+     description, so closing the panel stranded the filter with no way out. This is
+     always reachable while a filter is on. */
+  #qclear{display:none;position:absolute;right:10px;top:9px;appearance:none;border:0;
+    cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;padding:6px 10px;
+    border-radius:8px;background:rgba(94,200,240,.16);color:var(--r3);
+    transition:background .16s var(--ease),color .16s var(--ease)}
+  #qclear:hover{background:var(--r3);color:var(--void)}
+  #q:not(:placeholder-shown)~#qclear{display:block}
+
+  /* results overlay the column so nothing below jumps */
+  /* opaque, not translucent: it now floats over the key cards, and blurring them behind
+     it does not happen — they sit in their own stacking contexts, so they showed through
+     the glass sharp enough to read the suggestions through */
+  #results{background:#0A0E1A;box-shadow:0 0 0 1px var(--edge2),0 20px 54px rgba(0,0,0,.75);
+    position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:30;display:none;
+    max-height:min(52vh,430px);overflow-y:auto;padding:5px}
+  #results.on{display:block;animation:drop .24s var(--ease)}
+  @keyframes drop{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .res{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+    cursor:pointer;transition:background .12s}
+  .res:hover,.res.cur{background:rgba(140,170,235,.14)}
+  .res i{width:7px;height:7px;border-radius:50%;flex:none}
+  .res i.hollow{background:transparent!important;box-shadow:inset 0 0 0 1.5px var(--missing)}
+  .res .n{font-size:14px;font-weight:500;flex:1;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .res .n mark{background:transparent;color:var(--amber);font-weight:700}
+  .res .p{font-size:13px;color:var(--ink3);white-space:nowrap;font-weight:500;
+    letter-spacing:.01em}
+  .res.none{color:var(--ink3);font-size:13px;padding:13px 11px;cursor:default}
+  .res.none:hover{background:transparent}
+
+  /* ---------- key ---------- */
+  #capsel{flex:none;appearance:none;border:0;outline:0;cursor:pointer;width:100%;
+    font-family:inherit;font-size:13px;color:var(--ink2);padding:11px 14px;border-radius:13px;
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink3) 50%),
+      linear-gradient(135deg,var(--ink3) 50%,transparent 50%);
+    background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  /* A full cyan ring stayed drawn around the control after every click and read as an error
+     state on something that was working. :focus-visible does not help here — a <select> is
+     keyboard-operable, so Chromium matches it on a mouse click too, which is correct and not
+     what was wanted. So the ring goes and the affordance moves inward: the control lifts and
+     its edge picks up the accent, which says "this one has the keyboard" without drawing a
+     halo round it. */
+  #capsel{box-shadow:0 16px 46px rgba(0,0,0,.6);background-color:rgba(140,170,235,.05);
+    transition:box-shadow .18s,background-color .18s}
+  #capsel:focus{box-shadow:inset 0 0 0 1px rgba(94,200,240,.42),0 16px 46px rgba(0,0,0,.6);
+    background-color:rgba(94,200,240,.07);color:var(--ink)}
+  .selrow{display:flex;align-items:center;gap:8px;flex:none}
+  /* The selects set flex:none and width:100% under an ID selector, which outranks any class
+     rule — so the row stayed 450 wide and pushed the help button past the edge of the panel.
+     Matched by ID here so it actually wins. */
+  .selrow #capsel{flex:1 1 0;width:auto;min-width:0}
+  .selq{flex:none}
+  #capsel option{background:#0B0F1C;color:var(--ink2)}
+  /* the key is three cards, not one: what a node's state is, what its ring is,
+     and what still needs doing. They read as separate questions, so they sit apart. */
+  #key,#key2,#key3{flex:none;padding:16px 18px}
+  /* none of the key is prose — it is all controls, and dragging across it used to
+     leave a smear of highlighted text. The map labels go the same way, because a
+     node drag starts on top of them. The detail panel stays selectable: that is
+     where the text you might actually want to copy lives. */
+  #key,#key2,#key3,.ringkey,.krow,.krow2,.chip,.kbd,#hint,#capsel{
+    -webkit-user-select:none;user-select:none}
+  svg text{-webkit-user-select:none;user-select:none}
+  #key h3{font-size:13px;letter-spacing:.16em;color:var(--ink3);
+    font-weight:700;margin:0 0 10px}
+  .krow{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink2);
+    padding:3.5px 6px;margin:0 -6px;border-radius:6px}
+  .krow.tog{cursor:pointer;transition:background .16s var(--ease),color .16s var(--ease)}
+  .krow.tog:hover{background:rgba(140,170,235,.14);color:var(--ink)}
+  .krow.off{color:var(--ink3);opacity:.4}
+  .krow i{width:8px;height:8px;border-radius:50%;flex:none}
+  .krow i.hollow{background:transparent!important;box-shadow:inset 0 0 0 1.6px var(--missing)}
+  .krow i.solidh{background:transparent!important;box-shadow:inset 0 0 0 1.6px var(--never)}
+  .krow i.ln{width:18px;height:2px;border-radius:0}
+  .krow b{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--ink3);font-weight:400}
+  .klab{font-size:13px;letter-spacing:.01em;color:var(--ink3);font-weight:600;
+    margin-bottom:9px;display:flex;align-items:center}
+  .q{appearance:none;border:0;cursor:help;flex:none;margin-left:auto;
+    width:18px;height:18px;border-radius:50%;padding:0;text-align:center;
+    font-family:inherit;font-size:13px;font-weight:700;line-height:18px;
+    background:rgba(140,170,235,.12);color:var(--ink3);
+    transition:background .16s var(--ease),color .16s var(--ease)}
+  .krow .q{margin-left:9px}
+  .q:hover,.q:focus-visible{background:var(--r3);color:var(--void);outline:none}
+  .cap{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
+    font-weight:500;padding:5px 10px;border-radius:6px;background:rgba(140,170,235,.10);
+    color:var(--ink2);transition:background .16s var(--ease),color .16s var(--ease)}
+  .cap:hover,.cap.on{background:rgba(94,200,240,.22);color:var(--r3)}
+  .cap i{font-style:normal;color:var(--ink3);margin-left:5px}
+  .cap:hover i,.cap.on i{color:var(--r3);opacity:.7}
+  /* Location: the path is the readable part, the URL is not. Show the path, copy the URL,
+     and only unfold the URL once someone has asked for it by pressing the button. */
+  .d-loc{margin-top:14px}
+  .d-loc .lbl{font-size:13px;letter-spacing:.12em;color:var(--ink3);
+    font-weight:700;margin-bottom:7px}
+  .locrow{display:flex;align-items:flex-start;gap:9px}
+  .locpath{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:13px;line-height:1.5;
+    color:var(--ink2);background:rgba(140,170,235,.07);padding:8px 10px;border-radius:7px;
+    overflow-wrap:anywhere}
+  .locpath b{color:var(--r3);font-weight:600}
+  .loccopy{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
+    font-weight:600;padding:8px 11px;border-radius:7px;flex:none;white-space:nowrap;
+    background:rgba(94,200,240,.16);color:var(--r3);transition:background .16s var(--ease),color .16s var(--ease)}
+  .loccopy:hover,.loccopy:focus-visible{background:var(--r3);color:var(--void);outline:none}
+  .loccopy.ok{background:var(--present);color:var(--void)}
+  .locfull{margin-top:8px;font-family:var(--mono);font-size:13px;line-height:1.5;
+    color:var(--ink3);background:rgba(4,6,12,.5);padding:8px 10px;border-radius:7px;
+    overflow-wrap:anywhere;box-shadow:inset 0 0 0 1px var(--edge2)}
+  .locfull[hidden]{display:none}
+  .locnote{margin-top:7px;font-size:13px;color:var(--ink3);line-height:1.5}
+  .d-tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:7px}
+  .d-tags .lbl{flex:0 0 100%}
+  .krow2{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .krow2+.krow2{margin-top:10px}
+  .chip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink2);
+    padding:5px 9px;border-radius:7px;background:rgba(140,170,235,.08);white-space:nowrap}
+  .chip.tog{cursor:pointer;transition:background .16s var(--ease),color .16s var(--ease)}
+  .chip.tog:hover{background:rgba(140,170,235,.2);color:var(--ink)}
+  .chip.off{opacity:.35}
+  .chip i{width:8px;height:8px;border-radius:50%;flex:none}
+  .chip i.hollow{background:transparent!important;box-shadow:inset 0 0 0 1.6px var(--missing)}
+  .chip i.solidh{background:transparent!important;box-shadow:inset 0 0 0 1.6px var(--never)}
+  .chip i.ln{width:16px;height:2px;border-radius:0}
+  .chip b{font-family:var(--mono);font-size:13px;color:var(--ink3);font-weight:400}
+  .krow2 .q{margin-left:auto}
+  /* One gap value, no negative margins. The pills used to pull -3px vertically, which
+     ate most of the row gap and left the space under row one visibly tighter than the
+     space under row two — two different bottom margins from one rule. */
+  .ringkey{display:flex;flex-wrap:wrap;gap:8px;margin:0;font-size:13px;
+    color:var(--ink2)}
+  .ringkey span{display:flex;align-items:center;gap:7px}
+  .ringkey i{width:8px;height:8px;border-radius:50%;flex:none}
+  .ringkey .bycap{display:none}
+  .ringkey .q{margin-left:0}
+  .ringkey i.dot-agent{background:transparent;box-shadow:none;
+    width:12px;height:12px;border:1.5px dotted var(--r3)}
+  .ringkey i.dot-done{background:transparent;box-shadow:inset 0 0 0 1.5px var(--present)}
+  .ringkey.capmode .byring{display:none}
+  .ringkey.capmode .bycap{display:flex}
+  /* every ring/kind entry selects a group, so it has to look pressable */
+  .ringkey .tog{cursor:pointer;user-select:none;border-radius:7px;padding:5px 9px;margin:0;
+    background:rgba(140,170,235,.06);transition:background .16s var(--ease),color .16s var(--ease),box-shadow .16s var(--ease)}
+  .ringkey .tog:hover{background:rgba(140,170,235,.2);color:var(--ink)}
+  /* Picked reads as lit, because picking lights the map. The old state said the opposite —
+     a dimmed chip for the one group you had just asked to look at. */
+  .pick{background:rgba(94,200,240,.20)!important;color:var(--r3)!important;
+    box-shadow:inset 0 0 0 1.2px rgba(94,200,240,.45)}
+  .pick b{color:var(--r3)!important}
+  /* one press clears every pick and the search, so there is always a way back to all of it */
+  #pickclear{display:none;appearance:none;border:0;cursor:pointer;font-family:inherit;
+    font-size:13px;font-weight:600;padding:6px 11px;border-radius:8px;width:100%;
+    background:rgba(242,160,60,.16);color:var(--amber);
+    transition:background .16s var(--ease),color .16s var(--ease)}
+  #pickclear:hover{background:var(--amber);color:var(--void)}
+  #pickclear.on{display:block}
+  .kdiv{height:1px;background:var(--edge2);margin:11px -18px}
+  .demoflag{margin-top:11px;font-size:13px;line-height:1.45;color:var(--amber);
+    background:rgba(242,160,60,.10);border-radius:8px;padding:8px 10px;text-align:center}
+  .khint{font-size:13px;color:var(--ink3);line-height:1.5;margin-top:2px}
+
+  /* ---------- detail ---------- */
+  #detail{flex:0 1 auto;min-height:0;overflow-y:auto;padding:20px 22px;display:none;
+    position:relative}
+  #detail.on{display:block;animation:drop .3s var(--ease)}
+  /* With room for it, a skill gets its own column rather than the bottom of a stack it
+     shares with three cards and a session trail. Below that width it goes back to
+     stacking, because two 450px columns and a map do not fit. */
+  @media(min-width:1400px){
+    /* Solid, and only as tall as what is in it. Translucent over a chart that is still
+       there — which it now is — leaves the columns reading through the description. */
+    #detail{position:fixed;top:18px;right:478px;width:450px;
+      max-height:calc(100vh - 36px);height:fit-content;flex:none;
+      background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
+      box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
+  }
+  /* ---------- findings ----------
+     Every finding in one place, open and settled alike, in the same slot and the same shape
+     as a skill's own panel — because it is the same kind of thing to read. Copying one, or
+     all of them, is a button rather than a hunt.
+
+     It takes the detail panel's position on a wide screen and stacks with it below that. Two
+     450px columns and a map is the ceiling; a third would not fit. */
+  /* Same shape as a layout button: a name, a hint under it, and here a count on the right.
+     Set as flex on one line first, which squeezed the hint into three words a line. */
+  #findbtn{appearance:none;border:0;cursor:pointer;font-family:inherit;text-align:left;
+    padding:9px 11px;width:100%;display:grid;grid-template-columns:1fr auto;
+    align-items:baseline;column-gap:8px;
+    transition:background .16s var(--ease),color .16s var(--ease)}
+  #findbtn:hover,#findbtn.on{background:rgba(94,200,240,.10)}
+  #findbtn span{font-size:13.5px;font-weight:600;color:var(--ink2)}
+  #findbtn:hover span,#findbtn.on span{color:var(--r3)}
+  #findbtn b{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--ink3)}
+  #findbtn:hover b,#findbtn.on b{color:var(--r3)}
+  #findbtn i{grid-column:1/-1;font-style:normal;font-size:13px;font-weight:400;
+    color:var(--ink3);margin-top:1px}
+  #findings{flex:0 1 auto;min-height:0;overflow-y:auto;padding:18px 20px;position:relative;
+    scrollbar-width:thin;scrollbar-color:rgba(140,170,235,.26) transparent}
+  #findings[hidden]{display:none}
+  #findings::-webkit-scrollbar{width:9px;background:transparent}
+  #findings::-webkit-scrollbar-thumb{background:rgba(140,170,235,.22);border-radius:6px;
+    border:2px solid transparent;background-clip:padding-box}
+  #findings::-webkit-scrollbar-button{display:none;width:0;height:0}
+  @media(min-width:1400px){
+    #findings{position:fixed;top:18px;right:478px;width:450px;
+      max-height:calc(100vh - 36px);height:fit-content;flex:none;
+      background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
+      box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
+  }
+  .f-head{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;padding-right:24px}
+  .f-head h3{margin:0;font-size:16px;font-weight:700;letter-spacing:-.02em}
+  .f-head span{font-family:var(--mono);font-size:13px;color:var(--ink3)}
+  .f-intro{font-size:13px;color:var(--ink3);line-height:1.55;margin:6px 0 12px}
+  .f-tabs{display:flex;gap:6px;margin-bottom:11px}
+  .f-tabs button{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
+    font-weight:600;padding:6px 12px;border-radius:7px;background:rgba(140,170,235,.10);
+    color:var(--ink3);transition:background .16s var(--ease),color .16s var(--ease)}
+  .f-tabs button:hover{background:rgba(140,170,235,.20);color:var(--ink)}
+  .f-tabs button.on{background:rgba(242,160,60,.18);color:var(--amber)}
+  .f-all{width:100%;margin-bottom:14px}
+  .f-item{padding:13px 0;border-top:1px solid var(--edge2)}
+  .f-item:first-of-type{border-top:0}
+  .f-top{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+  .f-top .n{font-family:var(--mono);font-size:13.5px;font-weight:700;color:var(--ink);
+    overflow-wrap:anywhere}
+  .f-state{font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 7px;
+    border-radius:5px;white-space:nowrap}
+  .f-state.done{background:rgba(88,214,141,.16);color:var(--present)}
+  .f-state.open{background:rgba(242,160,60,.16);color:var(--amber)}
+  .f-copy{margin-left:auto;flex:none}
+  .f-body{font-size:13.5px;color:var(--ink2);line-height:1.6;white-space:pre-wrap;
+    overflow-wrap:anywhere}
+  .f-body b{color:var(--ink);font-weight:600}
+  .f-body code{font-family:var(--mono);font-size:12.5px;color:var(--r3)}
+  /* the method strip: how this one was reached, each chip a way in to the rule behind it */
+  .f-via{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px}
+  .f-via span{font-size:12px;letter-spacing:.06em;color:var(--ink3);font-weight:700;
+    margin-right:1px}
+  .mchip{appearance:none;border:0;outline:0;cursor:pointer;font-family:inherit;font-size:12px;
+    font-weight:600;padding:4px 9px;border-radius:6px;background:rgba(140,170,235,.12);
+    color:var(--ink3);transition:background .16s var(--ease),color .16s var(--ease)}
+  .mchip:hover,.mchip:focus-visible{background:rgba(94,200,240,.20);color:var(--r3)}
+  /* the one that got things wrong twice reads differently at rest, not only when hovered */
+  .mchip.weak{background:rgba(242,160,60,.14);color:var(--amber)}
+  .mchip.weak:hover,.mchip.weak:focus-visible{background:rgba(242,160,60,.26);color:var(--amber)}
+  .f-blind{margin-top:9px;padding:9px 11px;border-radius:8px;font-size:13px;line-height:1.55;
+    color:var(--ink3);background:rgba(140,170,235,.06)}
+  .f-blind b{color:var(--ink2)}
+  .f-knob{margin-top:7px;padding:9px 11px;border-radius:8px;font-size:13px;line-height:1.55;
+    color:var(--r3);background:rgba(94,200,240,.07)}
+  .f-knob b{color:var(--r3)}
+  .f-knob code,.f-blind code{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+  .f-item.flash{animation:flashrow 1.4s var(--ease)}
+  @keyframes flashrow{0%,60%{background:rgba(94,200,240,.10)}100%{background:transparent}}
+  .f-go{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:12.5px;
+    font-weight:600;color:var(--r3);background:transparent;padding:6px 0 0;text-align:left}
+  .f-go:hover{text-decoration:underline}
+  .d-name{font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.2;
+    margin-bottom:5px;padding-right:24px;word-break:break-word}
+  .d-stamp{font-size:13px;color:var(--ink3);margin-bottom:11px;line-height:1.4}
+  .d-stamp b{font-family:var(--mono);font-weight:700;color:var(--ink2)}
+  .d-stamp .dot{margin:0 7px;opacity:.55}
+  .d-stamp i{font-style:normal;opacity:.8}
+  .d-meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px}
+  .tag{font-size:13px;font-weight:600;letter-spacing:.01em;
+    padding:5px 10px;border-radius:5px;background:rgba(140,170,235,.14);color:var(--ink2)}
+  .tag.st{color:var(--void)}
+  /* The skill's own frontmatter, quoted. It had no rule of its own, so the label ran straight
+     into the sentence — "Its own descriptionUse this skill whenever…". It is also the one
+     block on the panel that is not mine, so it is set apart rather than merely labelled. */
+  .d-own{margin:14px 0 0;padding:11px 13px;border-radius:8px;
+    background:rgba(140,170,235,.06);
+    font-size:14px;color:var(--ink2);line-height:1.58}
+  .d-own .lbl{display:block;font-size:13px;letter-spacing:.12em;color:var(--ink3);
+    font-weight:700;margin-bottom:6px}
+  .d-placed{margin:2px 0 12px;padding:9px 11px;border-radius:8px;font-size:13px;
+    line-height:1.5;color:var(--r3);background:rgba(94,200,240,.09)}
+  .d-placed b{color:var(--r3)}
+  .d-placed code{font-family:var(--mono);font-size:12px}
+  .d-noclock{margin:2px 0 12px;padding:9px 11px;border-radius:8px;font-size:13px;
+    line-height:1.5;color:var(--amber);background:rgba(242,160,60,.10)}
+  .d-noclock b{color:var(--amber)}
+  .d-noclock code{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+  .d-desc{font-size:14.5px;color:var(--ink2);line-height:1.62}
+  .d-desc b{color:var(--ink);font-weight:600}
+  .d-rel{margin-top:13px}
+  .d-rel .lbl{font-size:13px;letter-spacing:.12em;color:var(--ink3);
+    font-weight:700;margin-bottom:7px}
+  .relbtn{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
+    font-weight:500;padding:6px 11px;border-radius:6px;background:rgba(232,121,199,.14);
+    color:var(--overlap);margin:0 4px 4px 0;transition:background .16s var(--ease),color .16s var(--ease)}
+  .relbtn:hover{background:var(--overlap);color:var(--void)}
+  /* An open finding is a warning, and it was reading as a footnote — same greys as the
+     description above it, with the only colour on a Copy button. It now carries the amber
+     the map already uses for an open item, so the panel tells you there is something wrong
+     here before you read a word of it. */
+  .d-fix{margin-top:16px;padding:12px 13px 13px;border-radius:10px;
+    background:rgba(242,160,60,.07);
+    box-shadow:0 0 0 1px rgba(242,160,60,.24)}
+  .d-fix .lbl{display:flex;align-items:center;gap:8px;margin-bottom:9px;
+    font-size:13px;letter-spacing:.12em;font-weight:700;
+    color:var(--amber)}
+  .d-fix .warn{width:15px;height:15px;flex:none;display:block}
+  .d-fix .basisrow{margin-bottom:9px}
+  .d-fix pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.62;
+    color:var(--ink2);background:rgba(4,6,12,.55);padding:11px 12px;border-radius:8px;
+    box-shadow:inset 0 0 0 1px rgba(242,160,60,.13);
+    white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow-y:auto}
+  /* the finding's code block keeps its amber thumb — it is inside an amber panel */
+  .d-fix pre{scrollbar-width:thin;scrollbar-color:rgba(242,160,60,.30) transparent}
+  .d-fix pre::-webkit-scrollbar{width:9px;background:transparent}
+  .d-fix pre::-webkit-scrollbar-thumb{background:rgba(242,160,60,.22);border-radius:5px}
+  .d-fix pre::-webkit-scrollbar-button{display:none;width:0;height:0}
+
+  /* Every scrolling area, not just the one code block that happened to have a rule. The
+     panel's own bar was the browser default — a full-width white slab with arrow buttons,
+     stood next to a dark translucent card, and the brightest object on the page.
+
+     Both syntaxes on purpose, and they are written to agree. scrollbar-width/-color are the
+     standard properties; ::-webkit-scrollbar is the older WebKit way and is what a Safari or
+     an older Chrome will read. Chrome 121 and later support both and give the standard ones
+     precedence — setting scrollbar-color makes it ignore the ::-webkit rules for that
+     scroller entirely — so the two must describe the same bar or the result depends on the
+     browser. Same colour, same weight, no arrow buttons either way. */
+  #panel,#detail,#results{scrollbar-width:thin;
+    scrollbar-color:rgba(140,170,235,.26) transparent}
+  #panel::-webkit-scrollbar,#detail::-webkit-scrollbar,#results::-webkit-scrollbar{
+    width:9px;height:9px;background:transparent}
+  #panel::-webkit-scrollbar-track,#detail::-webkit-scrollbar-track,
+  #results::-webkit-scrollbar-track{background:transparent}
+  #panel::-webkit-scrollbar-thumb,#detail::-webkit-scrollbar-thumb,
+  #results::-webkit-scrollbar-thumb{
+    background:rgba(140,170,235,.22);border-radius:6px;
+    /* the border is the inset: a transparent one lets the track show through either side, so
+       the thumb reads as a 5px bar in a 9px gutter without needing a second element */
+    border:2px solid transparent;background-clip:padding-box}
+  #panel::-webkit-scrollbar-thumb:hover,#detail::-webkit-scrollbar-thumb:hover,
+  #results::-webkit-scrollbar-thumb:hover{background:rgba(94,200,240,.42);
+    background-clip:padding-box}
+  #panel::-webkit-scrollbar-button,#detail::-webkit-scrollbar-button,
+  #results::-webkit-scrollbar-button{display:none;width:0;height:0}
+  #panel::-webkit-scrollbar-corner,#detail::-webkit-scrollbar-corner{background:transparent}
+  .copy,.fixall{appearance:none;border:0;outline:0;cursor:pointer;font-family:inherit;
+    font-weight:600;border-radius:5px;
+    background:rgba(110,231,168,.16);color:var(--present);transition:background .16s var(--ease),color .16s var(--ease)}
+  /* The browser's own ring is a hard light outline and it stayed after a mouse click. Lit
+     from the inside instead, like the search box and the filter. */
+  .copy:focus-visible,.fixall:focus-visible{box-shadow:inset 0 0 0 1.4px var(--present)}
+  .copy{font-size:13px;padding:5px 10px;margin-left:auto;letter-spacing:0;
+    text-transform:none}
+  .basis{font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;
+    padding:4px 9px;border-radius:5px}
+  .basis.confirmed{background:rgba(110,231,168,.15);color:var(--present)}
+  .basis.unverified{background:rgba(242,160,60,.16);color:var(--amber)}
+  .basis.precaution{background:rgba(140,170,235,.14);color:var(--ink3)}
+  .basis.corrected{background:rgba(255,107,94,.16);color:var(--missing)}
+  .basis.done{background:rgba(110,231,168,.15);color:var(--present)}
+  .basis.prepared{background:rgba(94,200,240,.16);color:var(--r3)}
+  .basis.scripted{background:rgba(94,200,240,.22);color:var(--r3)}
+  .copy:hover,.fixall:hover{background:var(--present);color:var(--void)}
+  .copy.ok,.fixall.ok{background:var(--present);color:var(--void)}
+  .fixall{width:100%;margin-top:10px;font-size:13px;padding:9px 12px}
+  .fixall b{font-family:var(--mono);font-weight:700}
+  .close{position:absolute;top:14px;right:14px;appearance:none;border:0;background:transparent;
+    color:var(--ink3);cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;border-radius:6px}
+  .close:hover{color:var(--ink);background:rgba(140,170,235,.14)}
+
+  /* ---------- graph ---------- */
+  .node{cursor:pointer;outline:none}
+  .nohit{pointer-events:none}
+  /* Node names are 13px on screen at every window width. They are drawn in map units,
+     which the viewBox scales, so a fixed 8.5 here meant 10.9px at 1280 and 16.3px at
+     1920 — resize() sets --lbl to whatever number of units renders as 13px. */
+  .lg .lbl{font-family:var(--font);font-size:var(--lbl,8.5px);font-weight:600;fill:var(--ink);
+    pointer-events:none;paint-order:stroke;stroke:var(--void);stroke-width:var(--lblhalo,2.9px);
+    stroke-linejoin:round;opacity:0;transition:opacity .26s var(--ease),fill .22s var(--ease)}
+  /* Every stroke in the graph is measured in screen pixels, not map units. Without this
+     a wide monitor scales the whole viewBox up and thickens every line with it — the same
+     1.4 that drew a hairline at 1280 was drawing 3.6px at 2560. Nothing here exceeds 2px.
+
+     .edge is deliberately NOT in this list: it draws itself in with pathLength=1 and a
+     one-unit dash, and non-scaling-stroke reinterprets that dash in screen pixels, so the
+     line rendered a 1px stub and stopped. Its width is kept under 2px by its map-unit
+     value instead — 0.75 at the widest realistic scale is 1.9px. */
+  #viz .dot,#viz .flag,#viz .tick,
+  #viz g > circle,#viz .lead{vector-effect:non-scaling-stroke}
+  /* the ring scaffolding is meaningless while the map is grouped, so it recedes */
+  /* The backdrop is the shape the map settles into, so showing it while the map is still
+     travelling draws that shape twice — a smudge in the corner with nothing on it yet. It
+     stays off until the field is at rest, then fades up under the finished picture. */
+  #viz .deco{transition:opacity .62s var(--ease)}
+  #viz.orbiting .deco,#viz.settling .deco{opacity:0}
+  /* The core's halo and glow are the destination, and showing them while the field is still
+     arriving puts a large amber disc in the middle of an opening that is about the nodes
+     travelling. They fade up once the map is at rest — which is also when the core becomes
+     clickable, so the light arriving and the thing becoming usable are the same moment. */
+  #viz .corehalo,#viz .badge.dot,#viz .badge.ring,#viz .badge.flag{
+    transition:opacity .55s var(--ease)}
+  /* animation:none matters — .flag runs a keyframe animation on opacity, and a running
+     animation outranks a plain declaration, so the amber ring stayed lit through an
+     opening that had hidden everything else about the core. */
+  #viz.orbiting .badge,#viz.settling .badge{opacity:0;animation:none}
+  /* Something still has to travel, or the opening loses the centre that drags everything
+     else. The plain core — the one the flat views use — stands in: a small amber dot with
+     no glow, no rings and no name, which is the same thing the badge is, minus the arrival. */
+  #viz.orbiting .plaincore,#viz.settling .plaincore{display:block}
+  #viz.orbiting .corelbl,#viz.settling .corelbl{opacity:0}
+  /* The rings are the answer, not the question. Nothing names them until the map is
+     asked to sort itself out. */
+  #viz .scaffold{transition:opacity .72s var(--ease)}
+  #viz.orbiting .scaffold,#viz.settling .scaffold{opacity:0}
+  /* The line has a job now that the names stand well off their dots: at 0.8px in the
+     dimmest ink it was being drawn but not seen, which is the worst of both. */
+  .lg .lead{stroke:var(--ink2);stroke-width:1.1;opacity:0;pointer-events:none;
+    stroke-linecap:round;transition:opacity .26s var(--ease)}
+  .node .dot,.node .ring,.node .flag{transform-box:fill-box;transform-origin:center;
+    transition:opacity .34s var(--ease)}
+  .node .dot,.node .ring{animation:pop .55s cubic-bezier(.2,.9,.3,1) backwards}
+  @keyframes pop{from{opacity:0;transform:scale(.15)}to{opacity:1;transform:scale(1)}}
+  /* Faded means "not what you asked for", not "not there". At .08 the rest of the map went
+     black and you lost the shape you were reading it against — which is the whole reason
+     these views fade rather than hide. */
+  .node.faded .dot,.node.faded .ring{opacity:.34}
+  .node.faded .flag{animation:none;opacity:.18}
+  .lg.faded .lead{opacity:0!important}
+  .lg.show .lbl{opacity:1}
+  /* A name 500px from its dot is worse than no name: it reads as a label for whatever it
+     happens to be next to. Past the displacement cap the label is withdrawn instead. */
+  .lg.toofar .lbl{opacity:0}
+  /* "Withdrawn" only ever hid the leader line. The name itself stayed on, snapped back
+     against its own dot — so a label that could not be placed did not go away, it piled up
+     on the node instead, which is exactly the crowding it was meant to prevent. The code
+     has always said two names touching is worse than one name missing; now that is what
+     happens. */
+  .lg.toofar .lbl,.lg.toofar .lead{opacity:0!important}
+  .lg.hit .lbl,.lg.sel .lbl{fill:var(--ink)}
+  .lg.sel .lbl{font-weight:700}
+  .edge{fill:none;pointer-events:none;stroke-dasharray:1;
+    transition:stroke-opacity .32s var(--ease),stroke-dashoffset .6s var(--ease)}
+  @keyframes pulse{0%,100%{opacity:.2}50%{opacity:.72}}
+  .flag{animation:pulse 2.8s ease-in-out infinite}
+  .tick{opacity:.85}
+  .node.faded .tick{opacity:.26}
+  @keyframes breathe{0%,100%{opacity:.05;transform:scale(1)}50%{opacity:.13;transform:scale(1.09)}}
+  @keyframes twinkle{0%,100%{opacity:.08}50%{opacity:.4}}
+  .corehalo{transform-box:fill-box;transform-origin:center;animation:breathe 5.5s ease-in-out infinite}
+  .tw{animation:twinkle ease-in-out infinite}
+  /* set back into the scene: nodes pass in front, and it never competes with a name */
+  .ringlbl{font-family:var(--font);font-size:9.5px;font-weight:600;letter-spacing:.14em;
+    text-anchor:middle;pointer-events:none}
+  /* ---------- left column: which layout ---------- */
+  #leftcol{position:fixed;left:18px;top:18px;z-index:10;width:186px;
+    display:flex;flex-direction:column;gap:10px;
+    max-height:calc(100vh - 36px);-webkit-user-select:none;user-select:none}
+  #viewmenu{flex:none;width:100%;padding:9px;
+    display:flex;flex-direction:column;gap:3px}
+  #stamp{flex:none;font-family:var(--mono);font-size:10.5px;line-height:1.5;
+    color:var(--ink3);padding:0 4px}
+  #stamp b{color:var(--ink2);font-weight:700}
+  #stamp .warn{color:var(--amber)}
+  #viewmenu h3{font-size:13px;letter-spacing:.14em;color:var(--ink3);
+    font-weight:700;margin:3px 0 6px 7px}
+  #viewmenu button{appearance:none;border:0;cursor:pointer;text-align:left;width:100%;
+    font-family:inherit;font-size:13px;font-weight:600;color:var(--ink2);
+    padding:8px 11px;border-radius:8px;background:transparent;
+    transition:background .16s var(--ease),color .16s var(--ease),box-shadow .16s var(--ease)}
+  #viewmenu button:hover{background:rgba(140,170,235,.16);color:var(--ink)}
+  #viewmenu button.on{background:rgba(94,200,240,.18);color:var(--r3);
+    box-shadow:inset 0 0 0 1.2px rgba(94,200,240,.40)}
+  #viewmenu button i{display:block;font-style:normal;font-weight:400;font-size:13px;
+    color:var(--ink3);margin-top:1px}
+  #viewmenu button.on i{color:var(--r3);opacity:.72}
+  @media(max-width:980px){#leftcol{display:none}}
+  /* the board's column headings are two facts, so they get two lines and a tally */
+  /* Chart text is sized in screen pixels like the node names, not in map units — a unit is
+     a different number of pixels at every window width, which is how the headings ended up
+     bigger than anything else on the page. Nothing here, or anywhere in the app, goes over
+     16px; these sit well under it because there are seventeen of them side by side. */
+  .hubn{font-family:var(--mono);font-size:var(--hubn,15px);font-weight:700;letter-spacing:.02em}
+  .hublbl{font-family:var(--font);font-size:var(--hubl,10px);font-weight:700;letter-spacing:.03em}
+  .lanelbl{font-family:var(--font);font-size:var(--lane,12.5px);font-weight:700;
+    letter-spacing:.02em;paint-order:stroke;stroke:var(--void);stroke-width:2.4px;
+    stroke-linejoin:round}
+  .hdhit{cursor:pointer}
+  .hdhit:focus-visible{outline:none;stroke:var(--r3);stroke-opacity:.55;stroke-width:1px}
+  #flow{pointer-events:none}
+  .collbl{font-family:var(--font);font-size:var(--col,11px);font-weight:600;
+    letter-spacing:.01em;text-anchor:middle;pointer-events:none}
+  /* A column heading names the pile and explains nothing, and the numbered ones name a step
+     of a plan the reader may not have open. Pressing one says what the column is for. */
+  .hdhit{cursor:pointer;outline:none}
+  .collbl.hd{pointer-events:none;
+    transition:fill .16s var(--ease),text-decoration-color .16s var(--ease);
+    text-decoration:underline;text-decoration-thickness:.6px;text-underline-offset:2.5px;
+    text-decoration-color:rgba(232,237,248,.22)}
+  .collbl.hd.hot{fill:var(--r3);text-decoration-color:var(--r3)}
+  .ringsub{font-family:var(--font);font-size:var(--colsub,10px);font-weight:400;
+    letter-spacing:.01em;text-anchor:middle;pointer-events:none}
+  .ringcount{font-family:var(--mono);font-size:var(--colsub,10px);font-weight:600;
+    text-anchor:middle;pointer-events:none}
+  /* the core in a flat view: a node like the others, named beside itself rather than inside */
+  #viz.flatcore .badge{display:none}
+  #viz:not(.flatcore):not(.orbiting):not(.settling) .plaincore{display:none}
+  .corelbl{font-family:var(--font);font-size:var(--lbl,11px);font-weight:600;
+    paint-order:stroke;stroke:var(--void);stroke-width:var(--lblhalo,2.9px);
+    stroke-linejoin:round;pointer-events:none}
+  #hint{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);font-family:var(--mono);
+    font-size:10.5px;color:var(--ink3);pointer-events:none;transition:opacity .4s;
+    white-space:nowrap;z-index:10}
+  @media(max-width:820px){#hint{display:none}}
+  #hint.gone{opacity:0}
+  /* at this scale the view has to be steerable, so it needs a visible readout */
+  /* ---------- left column: where you have been ----------
+     Newest at the top, joined by a line running down into the session, because the order
+     is the information: the route you took through the map is the thing worth being able
+     to walk back up. */
+  #pathpanel{flex:0 1 auto;min-height:0;padding:13px 15px;display:flex;flex-direction:column;
+    -webkit-user-select:none;user-select:none}
+  #pathpanel[hidden]{display:none}
+  .pptitle{display:flex;align-items:center;gap:8px;font-size:13px;letter-spacing:.14em;color:var(--ink3);font-weight:700;margin-bottom:11px;flex:none}
+  .ppcount{font-family:var(--mono);font-size:13px;font-weight:400;color:var(--ink3);
+    margin-left:auto;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums}
+  .ppclear{appearance:none;border:0;background:transparent;color:var(--ink3);cursor:pointer;
+    font-family:inherit;font-size:13px;padding:2px 6px;border-radius:5px;letter-spacing:0;
+    text-transform:none;font-weight:500;transition:background .16s var(--ease),color .16s var(--ease)}
+  .ppclear:hover,.ppclear:focus-visible{background:rgba(140,170,235,.20);color:var(--ink);
+    outline:none}
+  .pplist{position:relative;padding-left:19px;display:flex;flex-direction:column;gap:2px;
+    flex:0 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+  .pplist::before{content:"";position:absolute;left:5px;top:11px;bottom:11px;width:1px;
+    background:linear-gradient(rgba(140,170,235,.55),rgba(140,170,235,.14))}
+  .ppstep{position:relative;display:flex;align-items:center;gap:8px;font-size:13px;
+    color:var(--ink2);padding:4px 7px;margin:0;border-radius:6px;flex:none;
+    background:none;border:0;font-family:inherit;text-align:left;cursor:pointer;
+    transition:background .16s var(--ease),color .16s var(--ease)}
+  .ppstep:hover,.ppstep:focus-visible{background:rgba(140,170,235,.20);color:var(--ink);
+    outline:none}
+  .ppstep i{position:absolute;left:-17px;width:7px;height:7px;border-radius:50%;
+    box-shadow:0 0 0 3px var(--void2)}
+  .ppstep span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ppstep.now{color:var(--ink);font-weight:600}
+  .ppstep.now i{width:9px;height:9px;left:-18px;
+    box-shadow:0 0 0 3px var(--void2),0 0 10px currentColor}
+  .pphere{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--r3);flex:none}
+  @media(max-width:820px){#pathpanel{display:none}}
+  #panel{overflow-y:auto;overscroll-behavior:contain}
+  #zoomctl{position:fixed;left:18px;bottom:16px;z-index:10;display:flex;align-items:center;
+    gap:4px;padding:5px;border-radius:11px;background:rgba(8,12,24,.80);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    box-shadow:0 0 0 1px var(--edge2),0 16px 46px rgba(0,0,0,.6);
+    -webkit-user-select:none;user-select:none}
+  #zoomctl button{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
+    font-weight:600;min-width:30px;height:28px;padding:0 9px;border-radius:7px;
+    background:rgba(140,170,235,.10);color:var(--ink2);transition:background .16s var(--ease),color .16s var(--ease)}
+  #zoomctl button:hover{background:var(--r3);color:var(--void)}
+  #zlabel{font-family:var(--mono);font-size:13px;color:var(--ink3);min-width:46px;
+    text-align:center}
+  @media(max-width:820px){#zoomctl{display:none}}
+  @media(prefers-reduced-motion:reduce){
+    .node .dot,.node .ring,.flag,.corehalo,.tw,#results.on,#detail.on{
+      animation:none!important}
+  }
+</style>
+
+<svg id="viz" role="img" aria-label="Radial map of every skill available to me"></svg>
+<div id="tip" class="card" role="tooltip"></div>
+<div id="zoomctl">
+  <button id="zout" type="button" aria-label="Zoom out">−</button>
+  <span id="zlabel">100%</span>
+  <button id="zin" type="button" aria-label="Zoom in">+</button>
+  <button id="zreset" type="button">Reset</button>
+</div>
+<!-- The left column. #viewmenu positioned itself and the two things under it did not, so
+     they sat in normal flow at the bottom of a body with overflow:hidden — off the screen.
+     The build stamp has been invisible since it was written, which is a poor showing for the
+     element whose whole job is to say how old the page is. One fixed column, three children,
+     nothing positioning itself. -->
+<div id="leftcol">
+  <div id="viewmenu" class="card"><h3>Layout</h3></div>
+  <!-- reachable whatever is selected and whatever the open count is. The findings outlive
+       being open: a settled one still records what was found and why, and that was only
+       readable by hunting down the node it belonged to. -->
+  <button id="findbtn" class="card" type="button"></button>
+  <div id="stamp"></div>
+</div>
+<div id="hint">scroll to zoom · drag to pan · click a node for its links · esc to clear · / to search</div>
+
+<div id="panel">
+  <div class="sbox card">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" type="search" placeholder="Search skills…" autocomplete="off"
+           role="combobox" aria-expanded="false" aria-controls="results">
+    <span class="kbd">/</span>
+    <button id="qclear" type="button" aria-label="Clear the filter">Clear ✕</button>
+    <div id="results" class="card" role="listbox"></div>
+  </div>
+  <!-- Two controls that look identical and do opposite things: one removes nodes, the other
+       repaints them. Neither said so, and a dropdown you have to try in order to find out
+       what it does is a dropdown people leave alone. -->
+  <div class="selrow">
+    <select id="capsel" class="card" aria-label="Filter by capability"></select>
+    <button class="q selq" data-tip="<b>Shows only the skills that do a particular kind of work</b> — accessibility, data, security, testing and so on. Everything else disappears until you set it back to <i>All capabilities</i>.<br><br>The tags come from this map's own index, not from the skills: what actually decides whether a skill fires is its description. Treat this as a way of browsing, not as a statement about what Claude will load.">?</button>
+  </div>
+  <!-- The colour-by control is gone at Joe's request. It only ever repainted the nodes, and
+       its default — colour by ring — is the one the key below describes, so the map reads the
+       same without it and the panel is one control shorter. colourMode stays in the code at
+       its default; restoring the select is the only thing needed to bring the other mode
+       back. -->
+
+  <div id="key" class="card">
+    <div class="krow2">
+      <span class="chip tog" data-f="present"><i style="background:var(--present)"></i>available<b id="k-p"></b></span>
+      <span class="chip tog" data-f="missing"><i class="hollow"></i>missing<b id="k-m"></b></span>
+      <span class="chip tog" data-f="never"><i class="solidh"></i>excluded<b id="k-n"></b></span>
+      <button class="q" data-tip="<b>Available</b> — the file exists and Copilot can load it. <b>Missing</b> — referenced by another file, or by an <code>applyTo</code> glob, with nothing of that name in the repository. <b>Retired</b> — still present but marked do-not-use; it keeps loading until someone deletes it, which is the point of showing it.<br><br>Click any of the three to filter.">?</button>
+    </div>
+    <div class="krow2">
+      <span class="chip"><i class="ln" style="background:var(--bind)"></i>always-on</span>
+      <span class="chip"><i class="ln" style="background:var(--phase)"></i>conditional</span>
+      <span class="chip"><i class="ln" style="background:var(--overlap)"></i>overlap</span>
+      <button class="q" data-tip="<b>Always-on</b> — the file loads on every request in its scope, before the prompt is read. Organisation and repository surfaces are always-on.<br><br><b>Conditional</b> — it loads only when something matches: an <code>applyTo</code> glob, or a deliberate invocation.<br><br><b>Overlap</b> — two files claiming the same ground. Both load, their advice is merged with no precedence, and which one wins is not predictable. <b>At this scale it is the only failure mode that matters.</b>">?</button>
+    </div>
+  </div>
+
+  <div id="key2" class="card">
+    <div class="ringkey">
+      <span class="byring tog" data-r="org"><i style="background:var(--r1)"></i>organisation</span>
+      <span class="byring tog" data-r="repo"><i style="background:var(--r2)"></i>repository</span>
+      <span class="byring tog" data-r="scoped"><i style="background:var(--r3)"></i>path-scoped</span>
+      <span class="byring tog" data-r="ondemand"><i style="background:var(--r4)"></i>on demand</span>
+      <span class="byring tog" data-r="ext"><i style="background:var(--r5)"></i>extensions</span>
+      <span class="bycap"><i style="background:#5EC8F0"></i>UI</span>
+      <span class="bycap"><i style="background:#A78BFA"></i>data</span>
+      <span class="bycap"><i style="background:#6EE7A8"></i>quality</span>
+      <span class="bycap"><i style="background:#FF6B5E"></i>security</span>
+      <span class="bycap"><i style="background:#F2A03C"></i>ops</span>
+      <span class="bycap"><i style="background:#E879C7"></i>content</span>
+      <span class="always tog" data-k="agent"><i class="dot-agent"></i>custom agent</span>
+      <span class="always tog" data-k="settled"><i class="dot-done"></i>settled</span>
+    </div>
+    <button id="pickclear" type="button">Show everything again</button>
+  </div>
+
+  <div id="key3" class="card">
+    <div class="krow tog" id="k-flag"><i style="background:var(--amber);box-shadow:0 0 0 3px rgba(242,160,60,.3)"></i>open items<b id="k-f"></b><button class="q" data-tip="">?</button></div>
+    <button id="fixall" class="fixall">Copy all <b id="k-f2"></b> fixes, in order</button>
+    <div class="demoflag" id="demoflag"></div>
+  </div>
+
+  <div id="pathpanel" class="card" hidden>
+    <div class="pptitle">Your path <span class="ppcount" id="pp-n">0</span>
+      <button class="ppclear" id="pp-clear" type="button">Clear</button></div>
+    <div class="pplist" id="pp-list"></div>
+  </div>
+  <div id="detail" class="card"></div>
+  <div id="findings" class="card" hidden></div>
+</div>
+
+<script>
+/* ------------------------------------------------------------------ data
+   Replaced at build time by docs/skills-map/skills-data.js — see scripts/build-map.mjs. */
+/* ------------------------------------------------------------------ setup */
+const cv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COL={present:'--present',missing:'--missing',never:'--never',anchor:'--amber'};
+// Every skill resolves now, so status is one colour and tells you nothing. Colour carries the
+// ring instead — which library a skill is in and what asks for it.
+const RINGCOL={org:'--r1',repo:'--r2',scoped:'--r3',ondemand:'--r4',ext:'--r5'};
+// Colouring by all 16 tags is unreadable. These six families are, and every tag lands in one.
+const FAMILY={frontend:'ui',design:'ui',accessibility:'ui',performance:'ui',
+ data:'data',api:'data',documents:'data',
+ testing:'quality',review:'quality',
+ security:'security',
+ infrastructure:'ops',config:'ops',
+ content:'content',seo:'content',planning:'content',audio:'content'};
+const FAMCOL={ui:'#5EC8F0',data:'#A78BFA',quality:'#6EE7A8',security:'#FF6B5E',
+ ops:'#F2A03C',content:'#E879C7',none:'#5E6B8C'};
+const famOf=n=>FAMILY[(n.tags||[])[0]]||'none';
+let colourMode='ring';
+const colourOf=n=>statusOf(n)==='never'?'--never'
+  :statusOf(n)==='missing'?'--missing':(RINGCOL[n.ring]||'--present');
+const paintOf=n=>colourMode==='cap'&&n.ring?FAMCOL[famOf(n)]:cv(colourOf(n));
+const statusOf=s=>s.phase==='never'?'never':s.status;
+const NS='http://www.w3.org/2000/svg';
+const mk=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const $=i=>document.getElementById(i), svg=$('viz');
+const P=(cx,cy,r,a)=>[cx+Math.cos(a)*r, cy+Math.sin(a)*r];
+const arc=(cx,cy,r,a0,a1)=>{const s=P(cx,cy,r,a0),e=P(cx,cy,r,a1);
+  return `M${s[0].toFixed(1)},${s[1].toFixed(1)}A${r.toFixed(1)},${r.toFixed(1)} 0 ${(a1-a0)>Math.PI?1:0} 1 ${e[0].toFixed(1)},${e[1].toFixed(1)}`;};
+const SLOW=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let W=1000,H=740,CX=500,CY=370,MAXR=340,SAFE_L=10,SAFE_R=990;
+// What the key does now lives in PICKS, further down with the handlers that drive it.
+let query='', sel=null, hover=null, cur=-1, res=[], hits=null;
+
+let seed=20260806; const rnd=()=>((seed=(seed*1103515245+12345)&0x7fffffff)/0x7fffffff);
+const home={}, sectors=[];
+RINGS.forEach(R=>{
+  const list=SKILLS.filter(s=>ringOf(s)===R.key);
+  if(R.key==='scoped'||R.key==='ondemand'){
+    const groups={}; list.forEach(s=>(groups[s.phase]??=[]).push(s));
+    const keys=[...DOMAINS,'never'].filter(k=>groups[k]);
+    const GAP=0.028, span=(Math.PI*2-GAP*keys.length)/list.length;
+    let a=-Math.PI/2+GAP/2;
+    keys.forEach(k=>{ const arr=groups[k], a0=a;
+      arr.forEach((s,i)=>{ home[s.id]=a+span*(i+.5); });
+      a+=span*arr.length; sectors.push({key:k,a0,a1:a,col:SECTOR[k],n:arr.length}); a+=GAP; });
+  } else list.forEach((s,i)=>{ home[s.id]=-Math.PI/2+((i+.5)/list.length)*Math.PI*2; });
+});
+const RF={}, RBAND={}; RINGS.forEach(R=>{RF[R.key]=R.frac; RBAND[R.key]=R.band;});
+const bandCount={};
+const N=SKILLS.map(s=>{
+  const k=ringOf(s), b=RBAND[k], i=(bandCount[k]=(bandCount[k]||0)+1)-1;
+  const t=(i*0.6180339887498949)%1;          // low-discrepancy: no rings, no clumps
+  return {...s, ring:k, x:0,y:0,vx:0,vy:0,
+    A:home[s.id], F:b[0]+(b[1]-b[0])*t, R:0, rad:5, agent:s.src==='agent'};});
+const isOpen=id=>!!FIXES[id] && (BASIS[id]||[])[0]!=='done';
+N.forEach(n=>{ n.flag = isOpen(n.id); n.tags = TAGS[n.id]||[]; });
+ANCHOR.flag = isOpen(ANCHOR.id);
+console.assert(N.every(n=>n.tags.length),'untagged skill',N.filter(n=>!n.tags.length).map(n=>n.id));
+const IDX={}; N.forEach((n,i)=>IDX[n.id]=i);
+
+const EDGES=[], pairSeen=new Set();
+N.forEach(n=>{ EDGES.push({a:ANCHOR.id,b:n.id,kind:n.phase==='always'?'bind':'phase'});
+  // canonical pair key, not `r > n.id` — that silently dropped any relation declared on
+  // only one side whose partner sorted lower (security-review -> security, for one)
+  n.rel.forEach(r=>{ if(IDX[r]===undefined) return;
+    const key=n.id<r?n.id+'|'+r:r+'|'+n.id;
+    if(pairSeen.has(key)) return; pairSeen.add(key);
+    EDGES.push({a:n.id,b:r,kind:'overlap'}); }); });
+const neigh={}; N.forEach(n=>neigh[n.id]=new Set());
+EDGES.filter(e=>e.kind==='overlap').forEach(e=>{neigh[e.a].add(e.b);neigh[e.b].add(e.a);});
+
+$('k-p').textContent=N.filter(n=>statusOf(n)==='present').length;
+$('k-m').textContent=N.filter(n=>statusOf(n)==='missing').length;
+$('k-n').textContent=N.filter(n=>statusOf(n)==='never').length;
+// the anchor carries a fix but is not in N, so count the same set the brief does — otherwise
+// the row says 14 and the button says 15, and both are right about different things
+const FIXCOUNT=[ANCHOR].concat(N).filter(n=>isOpen(n.id)).length;
+$('k-f').textContent=FIXCOUNT;
+{ // spell the number out where it is shown, not only in the copied brief
+  const open=[ANCHOR].concat(N).filter(n=>isOpen(n.id));
+  const tally=k=>open.filter(n=>NEEDS[n.id]===k).length;
+  $('k-flag').querySelector('.q').dataset.tip=
+    '<b>'+FIXCOUNT+' still open.</b> Settled ones keep a green dashed ring on the map, carry no '+
+    'fix, and are not in the copied brief.<br><br>Not all of these need a change:<br><br>'+
+    '<b>'+tally('paste')+'</b> need a paste — the replacement text is written out already.<br>'+
+    '<b>'+tally('command')+'</b> need one command, and will probably close.<br>'+
+    '<b>'+tally('read')+'</b> need a skill read, then a call.<br>'+
+    '<b>'+tally('decide')+'</b> need a decision only you can make.<br><br>'+
+    'Where I got something wrong, correcting my claim did not remove the item — it changed '+
+    'what the item asks you to do. Click the row to show only these.';
+}
+
+/* ------------------------------------------------------------------ svg scaffold */
+
+/* A real honeycomb, matched to the reference: pointy-top cells packed edge to edge, each
+   one a moulded plate rather than an outline. What makes the reference read as hexagons is
+   not a stroke around each cell — it is that every plate is lit from above. A bright bevel
+   along its upper three edges, a dark one along its lower three, and a near-black gap
+   between. Outlining them instead, which is what this did before, gives a wire lattice.
+
+   Pointy-top hex of circumradius R: rows sit 1.5R apart, columns sqrt(3)R apart, and every
+   other row shifts half a column. So a tile sqrt(3)R wide by 3R tall carries one whole cell
+   at its centre and four quarter-cells at its corners, which complete themselves against
+   the next tile. Built in code because it only tessellates if the geometry is exact.
+
+   Kept dark on purpose — the reference is a mid grey and this sits behind a map. */
+const HEXPATTERN=(()=>{
+  const R=21, w=Math.sqrt(3)*R, H2=3*R;        // tile 36.37 x 63
+  const K=0.955;                               // plate inset: what leaves the gap
+  // vertices clockwise from the top point
+  const pts=(cx,cy)=>{ const r=R*K, x=w/2*K;
+    return [[cx,cy-r],[cx+x,cy-r/2],[cx+x,cy+r/2],[cx,cy+r],[cx-x,cy+r/2],[cx-x,cy-r/2]]; };
+  const poly=p=>'M'+p.map(([x,y])=>`${x.toFixed(2)},${y.toFixed(2)}`).join('L')+'Z';
+  const run=(p,i,n)=>'M'+Array.from({length:n+1},(_,k)=>p[(i+k)%6])
+    .map(([x,y])=>`${x.toFixed(2)},${y.toFixed(2)}`).join('L');
+  const centres=[[w/2,H2/2],[0,0],[w,0],[0,H2],[w,H2]];
+  const plates=centres.map(c=>poly(pts(...c))).join(' ');
+  // upper three edges catch the light, lower three fall away
+  const lit  =centres.map(c=>run(pts(...c),4,3)).join(' ');   // upper-left → top → upper-right
+  const shade=centres.map(c=>run(pts(...c),1,3)).join(' ');   // lower-right → bottom → lower-left
+  return `
+ <linearGradient id="plate" x1="0" y1="0" x2=".25" y2="1">
+   <stop offset="0%" stop-color="#151B29"/><stop offset="100%" stop-color="#080B13"/>
+ </linearGradient>
+ <pattern id="hex" width="${w.toFixed(3)}" height="${H2}" patternUnits="userSpaceOnUse"
+          patternTransform="scale(0.66)">
+   <rect width="${w.toFixed(3)}" height="${H2}" fill="#04060B"/>
+   <path d="${plates}" fill="url(#plate)"/>
+   <path d="${shade}" fill="none" stroke="#02040A" stroke-opacity=".95" stroke-width="1.6"
+         stroke-linejoin="round"/>
+   <path d="${lit}" fill="none" stroke="#39435C" stroke-opacity=".62" stroke-width="1.3"
+         stroke-linejoin="round"/>
+ </pattern>`;
+})();
+
+const defs=mk('defs');
+defs.innerHTML=`
+ <radialGradient id="core" cx="50%" cy="50%" r="50%">
+   <stop offset="0%" stop-color="#FFD79B"/><stop offset="55%" stop-color="#F2A03C"/>
+   <stop offset="100%" stop-color="#C86B18"/></radialGradient>
+ <filter id="glow" x="-140%" y="-140%" width="380%" height="380%">
+   <feGaussianBlur stdDeviation="5" result="b"/>
+   <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="glowsm" x="-120%" y="-120%" width="340%" height="340%">
+   <feGaussianBlur stdDeviation="2.4" result="b"/>
+   <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+   <feGaussianBlur stdDeviation="1.2"/></filter>`;
+const gSpin=mk('g'), gDeco=mk('g',{class:'deco',filter:'url(#soft)'}), gRing=mk('g'), gFlow=mk('g',{id:'flow'}), gEdge=mk('g'), gNode=mk('g'), gRingTop=mk('g'), gLabel=mk('g');
+gSpin.append(gDeco);
+
+/* The world scales and pans; the labels do not. gLabel is deliberately OUTSIDE gWorld and
+   positioned in screen units, so a name stays 13px and a stroke stays a hairline however
+   far you zoom in — and so the dodge engine, which reasons about the visible rectangle,
+   keeps working on coordinates that mean what it thinks they mean. */
+const gWorld=mk('g',{id:'world'});
+/* The board is wider than the frame and pans, so its far columns run under the right-hand
+   panel — which is translucent, so they showed through it as a smear rather than stopping.
+   In the flat views the world is clipped to the strip the panel leaves; a column you have
+   not panned to yet is simply not drawn. */
+const clipR=mk('rect',{x:0,y:0,width:1000,height:1000});
+{ const cp=mk('clipPath',{id:'safeclip'}); cp.appendChild(clipR); defs.appendChild(cp); }
+function clipFlat(){
+  if(!FLAT()){ gClip.removeAttribute('clip-path'); return; }
+  // The clip lives inside the pan transform, so its rectangle is in world units, not screen
+  // ones. Setting it to the screen strip once meant the window itself slid away with the
+  // pan and the board disappeared into it. Convert the strip back through the transform
+  // every time either of them moves.
+  clipR.setAttribute('x',((SAFE_L-6-panX)/zoom).toFixed(1));
+  clipR.setAttribute('y',((-40-panY)/zoom).toFixed(1));
+  clipR.setAttribute('width',((SAFE_R-SAFE_L+12)/zoom).toFixed(1));
+  clipR.setAttribute('height',((H+80)/zoom).toFixed(1));
+  gWorld.setAttribute('clip-path','url(#safeclip)');
+}
+gRing.setAttribute('class','scaffold'); gRingTop.setAttribute('class','scaffold');
+/* The clip is what keeps a board that is wider than the frame from sliding under the
+   right-hand panel, and it was put on the whole world — which took the decorative ground
+   with it. The honeycomb then stopped dead at the panel's edge, leaving the map sitting on
+   a bare rectangle. Only the map itself needs clipping; the ground runs edge to edge as it
+   always did. */
+/* Names take precedence over links, by knocking themselves out of the link layer.
+   Routing links around the names was the first attempt and it was worse than the problem:
+   a line coming up from below-left at a twenty-character name has to travel the whole width
+   of it, so the detour ends up longer and louder than the line it was avoiding.
+   Interrupting the line where the name is says the same thing — the name wins — in no ink
+   at all, and it is what a map does when a road meets a place name. */
+const lblMask=mk('mask',{id:'lblmask',maskUnits:'userSpaceOnUse'});
+const maskAll=mk('rect',{x:-4000,y:-4000,width:12000,height:12000,fill:'#fff'});
+lblMask.appendChild(maskAll);
+defs.appendChild(lblMask);
+gEdge.setAttribute('mask','url(#lblmask)');
+
+const gClip=mk('g',{id:'clipped'});
+gClip.append(gRing,gFlow,gEdge,gRingTop,gNode);
+gWorld.append(gSpin,gClip);
+let zoom=1, panX=0, panY=0;
+// The anchor is a landmark, not a subject. Left to scale with the view it becomes an
+// orange wall at 5x, so it grows to about 1.6x and then stops.
+const coreScale=()=>FLAT()?1:Math.min(1,1.6/zoom);
+const toScreenX=x=>x*zoom+panX, toScreenY=y=>y*zoom+panY;
+const toWorldX=x=>(x-panX)/zoom, toWorldY=y=>(y-panY)/zoom;
+/* Node names live outside gWorld so they hold 13px at any zoom. The column headings and the
+   arc's phase ticks do not — they are drawn in world units, so at 2.2x they came out twice
+   the size of the names they sit above and dominated the picture. They are labels, not
+   content; they should read the same at every zoom, like the names do.
+
+   Counter-scaling only above 1x. Below it the board is zoomed out to fit its full width, and
+   growing the headings back would push them out of the columns fitText just measured them
+   into. Zoomed out, a heading shrinking with its column is what you expect anyway. */
+let scafZ=0;
+function sizeScaffold(){
+  const f=1/Math.max(1,zoom);
+  if(Math.abs(f-scafZ)<0.002) return;
+  scafZ=f;
+  for(const t of gRingTop.querySelectorAll('.collbl,.ringsub,.ringcount,.lanelbl,.hubn,.hublbl')){
+    if(t._base===undefined) t._base=parseFloat(getComputedStyle(t).fontSize);
+    t.style.fontSize=(t._base*f).toFixed(2)+'px';
+  }
+}
+function applyView(){ gWorld.setAttribute('transform',
+  `translate(${panX.toFixed(2)},${panY.toFixed(2)}) scale(${zoom.toFixed(4)})`);
+  clipFlat(); sizeScaffold(); }
+
+// The ground is its own layer beneath the trail canvas, because the map above it has to
+// be transparent for the trails to show through at all.
+const bgsvg=mk('svg',{id:'bgviz','aria-hidden':'true'});
+const bgdefs=mk('defs');
+bgdefs.innerHTML=HEXPATTERN+`
+ <radialGradient id="vig" cx="50%" cy="48%" r="72%">
+   <stop offset="0%" stop-color="#0B1120" stop-opacity="0"/>
+   <stop offset="50%" stop-color="#070A14" stop-opacity=".38"/>
+   <stop offset="100%" stop-color="#04060C" stop-opacity=".94"/></radialGradient>`;
+bgsvg.append(bgdefs, mk('rect',{x:0,y:0,width:'100%',height:'100%',fill:'url(#hex)'}),
+  mk('rect',{x:0,y:0,width:'100%',height:'100%',fill:'url(#vig)'}));
+document.body.insertBefore(bgsvg, document.body.firstChild);
+svg.append(defs, gWorld, gLabel);
+
+/* ---- the decorative field ------------------------------------------------------------
+   The soft coloured bands behind the map were drawn as five concentric arcs, which is the
+   radial layout's own shape and belongs to it. In the board and the arc it stayed a circle
+   while the chart underneath was a row of columns or a fan over a line, so the backdrop was
+   describing a picture that was no longer on the screen.
+
+   It is now the same field of dots in every layout, moved rather than redrawn: the same
+   circle in radial, vertical bands standing in the columns' own footprints on the board,
+   and nested domes echoing the link arcs in the arc. Switching view tweens each dot from
+   where it is to where it belongs, over about a second, and then stops — a move, not a
+   loop. Nothing about it repeats or draws attention to itself once it has arrived.
+
+   Fixed population, stable per-dot parameters: a morph needs the same dot to exist on both
+   sides of the transition, so the count cannot depend on the layout. */
+const DECO=[];
+// The original drew as many dots per band as the arc length needed, which came to roughly
+// 120 for the innermost. A fixed count has to match that or the bands read as a dotted line
+// rather than a glow — and the arc's domes are longer than the circle's bands, so slightly
+// more again.
+{ const BANDS=5, PER=140, STARS=150;
+  for(let b=0;b<BANDS;b++) for(let i=0;i<PER;i++)
+    DECO.push({kind:'band', b, u:(i+.5)/PER, v:rnd(), j:rnd()*2-1,
+               r:1.05-b*.06, op:.42-b*.055});
+  for(let i=0;i<STARS;i++)
+    DECO.push({kind:'star', u:rnd(), v:rnd(), j:rnd()*2-1, a:rnd()*Math.PI*2,
+               r:.5+rnd()*.7, op:.10+rnd()*.22, tw:i%3===0,
+               dur:(3+rnd()*5).toFixed(1)+'s', del:(rnd()*6).toFixed(1)+'s'});
+  for(const d of DECO){
+    d.el=mk('circle',{r:d.r.toFixed(2),'fill-opacity':d.op.toFixed(2)});
+    if(d.tw){ d.el.setAttribute('class','tw');
+      d.el.style.animationDuration=d.dur; d.el.style.animationDelay=d.del; }
+    gDeco.appendChild(d.el);
+  }
+}
+
+/* Where every dot belongs in the layout that is showing now. The board and the arc read
+   their geometry off SCAF, which homes() has just rebuilt, so the backdrop follows the
+   chart automatically rather than carrying a second copy of its measurements. */
+function decoTargets(){
+  const cols = SCAF.filter(s=>s.t==='col'), ticks = SCAF.filter(s=>s.t==='tick');
+  const hubs = SCAF.filter(s=>s.t==='hub');
+  const board = VIEW==='board' && cols.length;
+  const arc   = VIEW==='arc'   && ticks.length;
+  const flow  = VIEW==='flow'  && hubs.length;
+  const rowY  = arc ? ticks[0].y : 0;
+  const AL=FLATX[0]+40, AR=FLATX[1]-40, ARCH=Math.max(40,rowY-FLATY[0]-14);
+  for(const d of DECO){
+    if(flow){
+      // four soft streams lying along the four destinations, widest where the ribbons leave
+      // the field and narrowing into the hub — the same shape the ribbons draw
+      const h=hubs[Math.min(hubs.length-1,Math.floor(d.u*hubs.length))];
+      const t=(d.u*hubs.length)%1;
+      const x0=FLATX[0]+30, k=d.kind==='band'?t:d.v;
+      d.tx=x0+(h.x-x0)*k;
+      // spread wide at the source and converge on the hub, and give each band its own offset
+      const spread=(1-k)*(d.kind==='band'?18+d.b*9:34)*(d.j||1);
+      d.ty=h.y+spread*(d.kind==='band'?1:(d.v*2-1));
+      d.tc=d.kind==='band'?h.col:'#8FB0E8';
+    } else if(board){
+      // one band per column, standing in that column's own footprint — so the backdrop
+      // rises and falls with how much each column actually holds
+      const c = cols[Math.min(cols.length-1, Math.floor(d.u*cols.length))];
+      const t = (d.u*cols.length)%1;
+      d.tx = c.x + c.w*(.14+.72*(d.kind==='band'?t:d.v));
+      d.ty = d.kind==='band'
+        ? c.top - 16 + (c.base+22-(c.top-16))*(d.v*.86+d.b*.028)
+        : c.headTop-56 + (H-c.headTop+40)*d.v;
+      d.tc = d.kind==='band' ? c.col : '#8FB0E8';
+    } else if(arc){
+      // nested domes over the row, which is the shape the links themselves draw
+      const t = d.kind==='band' ? d.u : d.v;
+      const x = AL + (AR-AL)*t;
+      const rise = Math.sin(Math.PI*t) * ARCH * (d.kind==='band' ? .30+d.b*.088 : .06+d.v*.98);
+      d.tx = x;
+      d.ty = rowY - rise + (d.kind==='band' ? d.j*3 : 0);
+      d.tc = d.kind==='band'
+        ? (ticks.reduce((p,q)=>Math.abs(q.x-x)<Math.abs(p.x-x)?q:p, ticks[0]).col)
+        : '#8FB0E8';
+    } else {
+      // the original circle: five arcs banded by sector, and a scatter of stars beyond them
+      if(d.kind==='band'){
+        const S = sectors.length ? sectors[Math.min(sectors.length-1,
+                    Math.floor(d.u*sectors.length))] : null;
+        if(!S){ d.tx=CX; d.ty=CY; d.tc='#8FB0E8'; continue; }
+        const t=(d.u*sectors.length)%1, r=MAXR*(.375+d.b*.036);
+        [d.tx,d.ty]=P(CX,CY,r,S.a0+(S.a1-S.a0)*t); d.tc=S.col;
+      } else {
+        [d.tx,d.ty]=P(CX,CY,MAXR*(1.02+d.v*.22),d.a); d.tc='#8FB0E8';
+      }
+    }
+  }
+}
+
+/* A dot outside the frame is not worth drawing, and in the flat views most of the star
+   scatter would be. Hiding rather than removing keeps the population stable. */
+function decoPaint(){
+  for(const d of DECO){
+    d.el.setAttribute('cx',d.x.toFixed(1)); d.el.setAttribute('cy',d.y.toFixed(1));
+    d.el.setAttribute('fill',d.c||d.tc);
+    d.el.style.display = (d.x<-40||d.x>W+40||d.y<-40||d.y>H+40) ? 'none' : '';
+  }
+}
+
+let decoRAF=0;
+function deco(anim){
+  decoTargets();
+  if(decoRAF){ cancelAnimationFrame(decoRAF); decoRAF=0; }
+  const first = DECO[0].x===undefined;
+  if(!anim || first || matchMedia('(prefers-reduced-motion: reduce)').matches){
+    for(const d of DECO){ d.x=d.tx; d.y=d.ty; d.c=d.tc; }
+    decoPaint(); return;
+  }
+  // Straight from here to there on a soft ease. It runs once and ends; there is no idle
+  // animation left behind to compete with the map for attention.
+  const from = DECO.map(d=>({x:d.x,y:d.y,c:d.c}));
+  const t0 = performance.now(), DUR = 900;
+  const ease = t => t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+  const step = now => {
+    const p = Math.min(1,(now-t0)/DUR), e = ease(p);
+    DECO.forEach((d,i)=>{ d.x=from[i].x+(d.tx-from[i].x)*e;
+                          d.y=from[i].y+(d.ty-from[i].y)*e;
+                          d.c=e>.5?d.tc:from[i].c; });
+    decoPaint();
+    if(p<1) decoRAF=requestAnimationFrame(step); else decoRAF=0;
+  };
+  decoRAF=requestAnimationFrame(step);
+}
+/* ---- the opening ---------------------------------------------------------------------
+   The map arrives in motion: every node on its own ring, in no particular order, each ring
+   turning at its own rate. It says "these are the five places configuration comes from and
+   there is a lot of it" without asking anyone to read a word. The first click stops the
+   drift and sorts each ring by engineering domain — the same rings, ordered.
+
+   Inner rings turn faster and neighbouring rings turn opposite ways, which is what stops
+   the whole thing reading as one rigid disc rotating. */
+let orbiting=true, spinT=0;
+// during the drift the centre is the page's, not the layout's
+const oCX=()=>orbiting?W/2:(settled?AX:coreX);
+const oCY=()=>orbiting?H/2:(settled?AY:coreY);
+function orbitHomes(){
+  N.forEach(n=>{
+    if(n.oA===undefined){
+      n.oA   = rnd()*Math.PI*2;                        // anywhere on the clock
+      // radius by sqrt so the disc fills evenly rather than crowding the middle, and
+      // deliberately unrelated to the ring this node will end up in
+      n.oF   = .10+Math.sqrt(rnd())*.92;
+      // its own rate, its own direction. Tighter orbits run faster, the way they would,
+      // but with enough spread that no two nodes keep step for long
+      n.oSpd = (rnd()<.5?-1:1)*(.10+rnd()*.80)*Math.min(2.4,Math.pow(.75/n.oF,.65));
+    }
+    n.oR = n.oF*Math.min(W/2-20, H/2-20);
+  });
+  RINGS.forEach(R=>{ R.top=CY-(R.band?R.band[1]:R.frac)*MAXR-10; });
+}
+function orbitPlace(){
+  const cx=oCX(), cy=oCY();
+  N.forEach(n=>{ const a=n.oA+spinT*n.oSpd;
+    n.x=cx+Math.cos(a)*n.oR; n.y=cy+Math.sin(a)*n.oR;
+  });
+}
+/* ---- the settle -----------------------------------------------------------------------
+   The centre moves first and everything else is dragged after it.
+
+   Three things happen at once and none of them is a tween between two positions. The core
+   glides from the middle of the page to the middle of the layout. While it travels it drags
+   the field: each node takes a share of the core's own velocity, weighted by how close it
+   is, so the inner ones are yanked along and the outer ones barely feel it. Then a spring
+   to each node's place on its ring switches on — inner rings first, propagating outward —
+   and gravity does the rest. Nodes arrive, overshoot a little, and settle.
+
+   Nothing is clickable, nothing is named and no ring is drawn until the whole field has
+   come to rest. A click during the settle is remembered, not ignored, and applied the
+   moment it goes live. */
+let settled=true;                       // false only while the field is coming to rest
+let pending=null;                       // a click made mid-settle, applied when it lands
+let coreX=0, coreY=0, corePX=0, corePY=0;
+const CORE_MS=760, SPRING=0.055, DRAG=0.865, SETTLE_MS=520;
+let restFrames=0;
+
+function startSettle(aimed){
+  if(!orbiting) return;
+  orbiting=false; settled=false; restFrames=0;
+  pending=aimed||null;
+  svg.classList.remove('orbiting'); svg.classList.add('settling');
+  sparks.length=0; tcv.style.opacity='0';
+  setTimeout(()=>tcx.clearRect(0,0,TW,TH),700);
+  rings();
+  coreX=corePX=W/2; coreY=corePY=H/2;
+  settleT=0; settleAcc=0; settleWall=performance.now();
+  N.forEach(n=>{ n.vx=n.vy=0;
+    // the pull reaches the inner rings first and travels outward
+    n._gate = (n.F-0.15)/0.9*SETTLE_MS*0.75; });
+  alpha=0;
+  if(!raf) raf=requestAnimationFrame(tick);
+}
+
+/* Substepped at a fixed 60Hz rather than once a frame. A spring advanced once per frame
+   settles in a second at 60fps and never settles at all on something slower — traced at
+   ten frames a second it was still 51 units out after four. The clock is virtual, so the
+   choreography is identical on any machine, and a hard stop guarantees it always lands. */
+let settleT=0, settleAcc=0, settleWall=0;
+const STEP=1000/60, SETTLE_CAP=3600;
+
+function settleSub(){
+  settleT+=STEP;
+  const k=Math.min(1,settleT/CORE_MS), e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+  corePX=coreX; corePY=coreY;
+  coreX=W/2+(CX-W/2)*e; coreY=H/2+(CY-H/2)*e;
+  const cvx=coreX-corePX, cvy=coreY-corePY;
+  const reach=Math.max(1,MAXR);
+  let moving=0;
+  for(const n of N){
+    // dragged along by the centre, hardest on whatever is closest to it
+    const d=Math.hypot(n.x-coreX,n.y-coreY);
+    const share=Math.max(0,1-d/(reach*1.35));
+    n.vx+=cvx*share*1.9; n.vy+=cvy*share*1.9;
+    // then gravity toward its place, switched on ring by ring
+    const g=Math.max(0,Math.min(1,(settleT-n._gate)/300));
+    n.vx+=(n.hx-n.x)*SPRING*g; n.vy+=(n.hy-n.y)*SPRING*g;
+    n.vx*=DRAG; n.vy*=DRAG;
+    n.x+=n.vx; n.y+=n.vy;
+    if(Math.abs(n.vx)+Math.abs(n.vy)>0.09 || Math.hypot(n.hx-n.x,n.hy-n.y)>1.4) moving++;
+  }
+  restFrames = (moving===0 && settleT>CORE_MS) ? restFrames+1 : 0;
+  return restFrames>=4 || settleT>SETTLE_CAP;
+}
+
+function settleStep(){
+  const now=performance.now();
+  settleAcc+=Math.min(200, now-settleWall); settleWall=now;
+  let done=false, guard=0;
+  while(settleAcc>=STEP && guard++<24){ settleAcc-=STEP; if(settleSub()){ done=true; break; } }
+  if(!done) return;
+  N.forEach(n=>{ n.x=n.hx; n.y=n.hy; n.vx=n.vy=0; });
+  coreX=CX; coreY=CY;
+  settled=true; svg.classList.remove('settling');
+  if(pending){ const p=pending; pending=null; select(p); }
+  else apply();
+}
+
+function unpack(aimed){ startSettle(aimed); }
+
+let ringBoxes=[];
+function rings(){
+  gRing.textContent=''; gRingTop.textContent=''; ringBoxes=[];
+  if(false){
+    // group titles sit where the ring titles would, and are obstacles for node labels too
+    RINGS.forEach(R=>{
+      const ty=R.top;
+      const t=mk('text',{class:'ringlbl',x:R.cx.toFixed(1),y:ty.toFixed(1),
+        fill:cv(R.col),'fill-opacity':.42});
+      t.textContent=R.label; gRingTop.appendChild(t);
+      const half=R.label.length*4.7;
+      ringBoxes.push({x0:R.cx-half-12,x1:R.cx+half+12,ty,h:11});
+    });
+    return;
+  }
+  if(VIEW!=='radial') return scaffold();
+  RINGS.forEach(R=>{
+    const r=(R.band?R.band[1]:R.frac)*MAXR, c=cv(R.col);
+    const circ=mk('circle',{cx:CX,cy:CY,r:r.toFixed(1),fill:'none',stroke:c,
+      'stroke-opacity':.30,'stroke-width':.9,'stroke-dasharray':'1.5 7','stroke-linecap':'round'});
+    gRing.appendChild(circ);
+    const ty=CY-r-10, half=R.label.length*4.7;
+    const t=mk('text',{class:'ringlbl',x:CX,y:ty.toFixed(1),fill:c,'fill-opacity':.34});
+    t.textContent=R.label; gRingTop.appendChild(t);
+    ringBoxes.push({x0:CX-half-12,x1:CX+half+12,ty,h:15});   // node labels must dodge these too
+  });
+}
+
+/* Whatever a view puts behind its nodes. Registered in ringBoxes for the same reason the
+   ring titles are: a node name that lands on a column heading is unreadable. */
+function scaffold(){
+  SCAF.forEach(s=>{
+    if(s.t==='col'){
+      // Two layers, not one. A dark plate at .8 so the honeycomb stops reading through the
+      // column and the dots have something to sit on, then the column's own colour over it
+      // at a whisper — enough to tell one from the next without turning the board into
+      // seventeen coloured blocks.
+      const box={x:(s.x+2).toFixed(1),y:(s.top-16).toFixed(1),
+                 width:(s.w-4).toFixed(1),height:(s.base-s.top+34).toFixed(1),rx:9};
+      gRing.appendChild(mk('rect',{...box,fill:cv('--void2'),'fill-opacity':.8}));
+      gRing.appendChild(mk('rect',{...box,fill:s.col,'fill-opacity':.07}));
+      gRing.appendChild(mk('line',{x1:(s.x+5).toFixed(1),y1:(s.base+15).toFixed(1),
+        x2:(s.x+s.w-5).toFixed(1),y2:(s.base+15).toFixed(1),
+        stroke:s.col,'stroke-opacity':.32,'stroke-width':.9}));
+      const cx=s.x+s.w/2, ty=(s.headTop!==undefined?s.headTop:s.top)-28;
+      // Estimating a heading's width from its character count kept being wrong — bold caps
+      // run about 0.72 of the font size, not the 0.60 a mixed-case average suggests, so
+      // ADVERTISING and HARDENING still collided after being "fitted". Measure the text
+      // that was actually laid out and shrink it to its column. Below 4.6 units it stops
+      // being readable, so it is dropped rather than printed as a smear — the colour band
+      // and the count still identify the column, and the phase is on every node in it.
+      const room=s.w-8;
+      const fitText=(el,floorFrac)=>{
+        const start=parseFloat(getComputedStyle(el).fontSize);
+        const w=el.getComputedTextLength();
+        if(w<=room) return true;
+        const px=start*room/w;
+        if(px<start*floorFrac){ el.remove(); return false; }   // too small to read: drop it
+        el.style.fontSize=px.toFixed(2)+'px';
+        return true;
+      };
+      const t=mk('text',{class:'collbl hd',x:cx.toFixed(1),y:ty.toFixed(1),
+        fill:cv('--ink'),'fill-opacity':1});
+      if(s.key){ t.dataset.g=s.key; t.setAttribute('tabindex','0');
+                 t.setAttribute('role','button');
+                 t.setAttribute('aria-label',s.title[0]+' — what this column is'); }
+      t.textContent=s.title[0]; gRingTop.appendChild(t); fitText(t,0.62);
+      if(s.title[1]){
+        const t2=mk('text',{class:'ringsub',x:cx.toFixed(1),y:(ty+12).toFixed(1),
+          fill:cv('--ink2'),'fill-opacity':.9});
+        t2.textContent=s.title[1]; gRingTop.appendChild(t2); fitText(t2,0.64);
+      }
+      const c2=mk('text',{class:'ringcount',x:cx.toFixed(1),y:(s.base+31).toFixed(1),
+        fill:s.col,'fill-opacity':.75});
+      c2.textContent=s.n; gRingTop.appendChild(c2);
+      ringBoxes.push({x0:s.x,x1:s.x+s.w,ty:ty-4,h:s.title[1]?28:16});
+      if(s.key){
+        // SVG text is only clickable where a glyph is actually painted, so a press landing
+        // in the gap between two letters — or on the second line, or just above the word —
+        // hit nothing. A transparent rect over the whole heading block is the target, which
+        // is also a hand-sized one rather than a 6px-tall strip of type.
+        const hit=mk('rect',{class:'hdhit',x:(s.x+2).toFixed(1),y:(ty-11).toFixed(1),
+          width:(s.w-4).toFixed(1),height:(s.title[1]?26:15).toFixed(1),
+          fill:'transparent',tabindex:'0',role:'button'});
+        hit.setAttribute('aria-label',s.title[0]+' — what this column is');
+        const open=e=>{ e.stopPropagation(); arm(); groupPanel(s.key); };
+        hit.onclick=open;
+        hit.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(e); } };
+        hit.onpointerenter=()=>{ t.classList.add('hot'); };
+        hit.onpointerleave=()=>{ t.classList.remove('hot'); };
+        hit.onfocus=()=>t.classList.add('hot');
+        hit.onblur=()=>t.classList.remove('hot');
+        gRingTop.appendChild(hit);
+        t.removeAttribute('tabindex'); t.removeAttribute('role');
+      }
+    } else if(s.t==='lane'){
+      // A hairline behind each build step, and its name turned on its side under the field.
+      // Horizontal names would need the width the streams are using.
+      gRing.appendChild(mk('line',{x1:s.x.toFixed(1),y1:s.top.toFixed(1),
+        x2:s.x.toFixed(1),y2:s.bot.toFixed(1),
+        stroke:s.col,'stroke-opacity':.20,'stroke-width':.7}));
+      /* All the names share one baseline under the field. Hanging each one off the end of
+         its own line put them at seventeen different heights, which reads as a second data
+         series and is not one.
+
+         Set in its own class rather than borrowing the column heading's. Turned on its side
+         at 11px and three-quarter opacity, in colours several of which are deliberately
+         muted, half of them could not be read at all — and a name you cannot read is not a
+         label. Bigger, at full strength, with the same dark halo the node names carry. */
+      const ly=s.base;
+      const t=mk('text',{class:'lanelbl',x:s.x.toFixed(1),y:ly.toFixed(1),
+        fill:s.col,'text-anchor':'end',
+        transform:`rotate(-90 ${s.x.toFixed(1)} ${ly.toFixed(1)})`});
+      t.textContent=s.label; gRingTop.appendChild(t);
+      if(s.key){
+        // The hit target is a rect in the text's own rotated frame, sized from the glyphs
+        // that were actually laid out — a name turned on its side is a 6-unit-wide strip of
+        // type, and nobody hits that.
+        const len=t.getComputedTextLength()||40, tr=t.getAttribute('transform');
+        const hit=mk('rect',{class:'hdhit',x:(s.x-len-4).toFixed(1),y:(s.base-11).toFixed(1),
+          width:(len+8).toFixed(1),height:15,rx:4,fill:'transparent',transform:tr});
+        hit.setAttribute('aria-label',s.label+' — '+s.n+' skills, show them');
+        pickable(hit,'g:'+s.key);
+        hit.classList.toggle('pick',PICKS.has('g:'+s.key));
+        previewable(hit,'g:'+s.key,[t]);
+        gRingTop.appendChild(hit);
+      }
+    } else if(s.t==='hub'){
+      const g=mk('g');
+      g.appendChild(mk('circle',{cx:s.x.toFixed(1),cy:s.y.toFixed(1),r:(s.r*2.2).toFixed(1),
+        fill:s.col,'fill-opacity':.11}));
+      g.appendChild(mk('circle',{cx:s.x.toFixed(1),cy:s.y.toFixed(1),r:s.r.toFixed(1),
+        fill:s.col}));
+      // The count is the point of the view, so it is set large and in the stream's own
+      // colour; the ring's name goes under it small, because by then the colour has said it.
+      const c=mk('text',{class:'hubn',x:(s.x+s.r+7).toFixed(1),y:(s.y+2.4).toFixed(1),
+        fill:s.col,'text-anchor':'start'});
+      c.textContent=s.n; gRingTop.appendChild(g); gRingTop.appendChild(c);
+      const l=mk('text',{class:'hublbl',x:(s.x+s.r+7).toFixed(1),y:(s.y+11).toFixed(1),
+        fill:s.col,'fill-opacity':.72,'text-anchor':'start'});
+      l.textContent=s.label; gRingTop.appendChild(l);
+      ringBoxes.push({x0:s.x-s.r-4,x1:s.x+s.r+58,ty:s.y+4,h:14});
+      /* The destination is the same switch as its chip in the key: click it and that ring's
+         skills light up and are named. It reads as a total, so being able to ask "which
+         nineteen?" of it is the obvious next question — and SVG text is only clickable on
+         painted glyphs, so the target is a rect over the dot, the count and the name rather
+         than the type itself. */
+      const hit=mk('rect',{class:'hdhit',x:(s.x-s.r-6).toFixed(1),y:(s.y-9).toFixed(1),
+        width:(s.r+6+9+62).toFixed(1),height:24,rx:5,fill:'transparent'});
+      hit.setAttribute('aria-label',s.label+' — '+s.n+' skills, show them');
+      pickable(hit,'r:'+s.key);
+      hit.classList.toggle('pick',PICKS.has('r:'+s.key));
+      previewable(hit,'r:'+s.key,[g,c,l]);
+      gRingTop.appendChild(hit);
+    } else if(s.t==='tick'){
+      const dy=17+s.row*15;
+      gRing.appendChild(mk('line',{x1:(s.x-5).toFixed(1),y1:(s.y+13).toFixed(1),
+        x2:(s.x-5).toFixed(1),y2:(s.y+dy+7).toFixed(1),
+        stroke:s.col,'stroke-opacity':.45,'stroke-width':.9}));
+      if(s.label){
+        const t=mk('text',{class:'collbl',x:(s.x-1).toFixed(1),y:(s.y+dy+16).toFixed(1),
+          fill:s.col,'fill-opacity':.85,'text-anchor':'start'});
+        t.textContent=s.label; gRingTop.appendChild(t);
+      }
+    }
+  });
+  // fresh elements, so the cached base sizes went with the old ones — and any preview was
+  // pointing at an element that no longer exists
+  hoverPick=null;
+  scafZ=0; sizeScaffold();
+}
+// `sectors` still groups the build-plan ring by step so those nodes sit together, but the arcs
+// and their filter chips are gone: every skill in that ring is missing, so the grouping
+// never separated anything, and search already finds a phase by name.
+
+function hexPath(r){ let d='';
+  for(let i=0;i<6;i++){ const a=-Math.PI/2+i*Math.PI/3;
+    d+=(i?'L':'M')+(Math.cos(a)*r).toFixed(2)+','+(Math.sin(a)*r).toFixed(2); }
+  return d+'Z'; }
+
+const edgeVis=new Uint8Array(EDGES.length);
+const edgeEl=EDGES.map(e=>{
+  const c=e.kind==='bind'?'--bind':e.kind==='overlap'?'--overlap':'--phase';
+  const p=mk('path',{class:'edge',stroke:cv(c),'stroke-width':e.kind==='overlap'?.45:.32,
+    'stroke-opacity':0,'stroke-linecap':'round',pathLength:1,'stroke-dashoffset':1});
+  gEdge.appendChild(p); return p; });
+
+const labelEl=[];
+const nodeEl=N.map((n,i)=>{
+  const g=mk('g',{class:'node',tabindex:'0',role:'button','aria-label':n.id});
+  const c=paintOf(n), delay=(.10+Math.min(.9,i*.0016)).toFixed(3)+'s';
+  if(n.flag){ const f=mk('circle',{class:'flag',r:n.rad+5,fill:'none',
+    stroke:cv('--amber'),'stroke-width':1.3}); f.style.animationDelay='1.1s'; g.appendChild(f); }
+  // finished work stays visible — otherwise it just disappears and progress is invisible
+  if(FIXES[n.id]&&!isOpen(n.id)) g.appendChild(mk('circle',{class:'tick',r:n.rad+4.2,fill:'none',
+    stroke:cv('--present'),'stroke-width':1.4,'stroke-opacity':.9}));
+  const ring=mk('circle',{class:'ring',r:n.rad+3.2,fill:c,
+    'fill-opacity':n.status==='present'?.22:.15});
+  ring.style.animationDelay=delay; g.appendChild(ring);
+  const dots=[];
+  if(n.agent){
+    // solid core so an agent reads as a node like any other, then a clearly dotted
+    // collar around it. The earlier hollow-only version was too faint to spot.
+    dots.push(mk('circle',{class:'dot',r:n.rad,fill:c}));
+    // no glow on the collar — the blur turns the dashes back into a smear
+    dots.push(mk('circle',{class:'dot collar',r:n.rad+5.2,fill:'none',stroke:c,'stroke-width':1.2,
+      'stroke-dasharray':'2.2 3.2','stroke-linecap':'round','stroke-opacity':1}));
+  } else if(n.status==='present'){
+    dots.push(mk('circle',{class:'dot',r:n.rad,fill:c}));
+  } else {
+    dots.push(mk('circle',{class:'dot',r:n.rad,fill:c,'fill-opacity':.22}));
+    dots.push(mk('circle',{class:'dot',r:n.rad,fill:'none',stroke:c,'stroke-width':1.5,
+      'stroke-dasharray':statusOf(n)==='never'?'0':'2.6 2','stroke-opacity':.95}));
+  }
+  dots.forEach(d=>{ d.style.animationDelay=delay; g.appendChild(d); });
+  // A 2.5-unit dot is a 4px target, and while the map is drifting it is a 4px target that
+  // moves. The hit area is a transparent disc big enough to catch a pointer aimed at the
+  // node, without being so big it steals from its neighbours — nodes sit 19px apart at
+  // the tightest tenth, so 7 units is comfortably inside that.
+  g.appendChild(mk('circle',{r:7,fill:'transparent'}));
+  gNode.appendChild(g);
+  const lg=mk('g',{class:'lg'});
+  lg.appendChild(mk('line',{class:'lead',x1:0,y1:0,x2:0,y2:0}));
+  // "new" is prefixed to the name rather than added to the node, which already carries five
+  // markers. Same text element, so it moves, fades and dodges with the name it belongs to.
+  const t=mk('text',{class:'lbl',y:3});
+  if(NEWTAG.has(n.id)){ const nu=mk('tspan',{class:'nu'}); nu.textContent='\u2726 ';
+    t.appendChild(nu); }
+  t.appendChild(document.createTextNode(n.id)); lg.appendChild(t);
+  lg._t=t; lg._ld=lg.querySelector('.lead');
+  gLabel.appendChild(lg); labelEl.push(lg);
+  return g; });
+
+const gA=mk('g',{class:'node',tabindex:'0',role:'button','aria-label':ANCHOR.id});
+// The core's glow reached 56 units — past the always-on ring, so those four nodes sat inside
+// the core's hit area. Everything decorative is inert; the target is one deliberate circle.
+/* The core is two things. In the radial view it is the middle of the picture and the badge
+   earns its size — concentric rings, a glow, the name set into it. In a column or on a row
+   it is one entry among sixty-three, and that badge was a disc with unreadable text baked
+   inside it at a size nothing else on the chart uses. The `.badge` parts are the radial
+   dressing; the flat views drop them and draw the core as a node with a name beside it,
+   like every other node. */
+gA.appendChild(mk('circle',{class:'badge flag nohit',r:34,fill:'none',stroke:cv('--amber'),'stroke-width':1.6}));
+gA.appendChild(mk('circle',{class:'badge ring corehalo nohit',r:56,fill:cv('--amber'),'fill-opacity':.07,
+  filter:'url(#soft)'}));
+gA.appendChild(mk('circle',{class:'badge ring nohit',r:38,fill:cv('--amber'),'fill-opacity':.12}));
+gA.appendChild(mk('circle',{class:'badge nohit',cx:0,cy:0,r:30,fill:'none',stroke:cv('--amber'),
+  'stroke-opacity':.55,'stroke-width':1.6,'stroke-dasharray':'2 6','stroke-linecap':'round'}));
+gA.appendChild(mk('circle',{r:24,fill:'transparent'}));
+gA.appendChild(mk('circle',{class:'badge dot nohit',r:21,fill:'url(#core)',filter:'url(#glow)'}));
+// the flat core: a dot the size of the others, in the same amber, with no text inside it
+gA.appendChild(mk('circle',{class:'plaincore nohit',r:5.4,fill:cv('--amber')}));
+gA.appendChild(mk('circle',{class:'plaincore nohit',r:9,fill:'none',stroke:cv('--amber'),
+  'stroke-width':1.1,'stroke-opacity':.55}));
+const aT=mk('text',{class:'badge nohit',y:3.6,'text-anchor':'middle','font-size':8.6,'font-weight':'700',
+  fill:'#2A1607','font-family':'var(--font)','letter-spacing':'.06em'});
+aT.textContent=COMPANY.toUpperCase();
+gA.appendChild(aT);
+const aT2=mk('text',{class:'badge nohit',y:12.4,'text-anchor':'middle','font-size':4.3,
+  'font-weight':'700',fill:'#4A2A08','letter-spacing':'.06em','font-family':'var(--mono)'});
+aT2.textContent='ENTERPRISE'; gA.appendChild(aT2);
+const aT3=mk('text',{class:'plaincore corelbl nohit','text-anchor':'middle',y:22,
+  fill:cv('--amber')});
+aT3.textContent='CLAUDE.md'; gA.appendChild(aT3);
+gNode.appendChild(gA);
+
+function repaint(){
+  N.forEach((n,i)=>{
+    const c=paintOf(n), el=nodeEl[i];
+    el.querySelector('.ring').setAttribute('fill',c);
+    el.querySelectorAll('.dot').forEach(d=>{
+      if(d.getAttribute('fill')&&d.getAttribute('fill')!=='none') d.setAttribute('fill',c);
+      if(d.getAttribute('stroke')) d.setAttribute('stroke',c);
+    });
+  });
+  document.querySelectorAll('.ringkey').forEach(k=>k.classList.toggle('capmode',colourMode==='cap'));
+}
+
+/* ------------------------------------------------------------------ layout */
+function gutters(){
+  const u=W/innerWidth, wide=innerWidth>820;
+  // The right-hand side is one column or two: the controls always, and an open skill
+  // beside them once there is room for it. Measure whichever reaches furthest left, or
+  // node names get laid out underneath it. The left gutter is free again now that the
+  // trail has moved across — measuring it there was about to withdraw every label on the
+  // map, because the trail's right edge is now the far side of the screen.
+  let edge=innerWidth;
+  if(wide){
+    edge=Math.min(edge,$('panel').getBoundingClientRect().left);
+    // In the radial view an open skill takes a column of its own and the map
+    // gives way to it. A board or a row cannot: its width is its layout, so giving way means
+    // re-laying it out and clipping it, which is what made the chart disappear behind the
+    // panel. There the panel simply floats over it.
+    const d=$('detail');
+    if(!FLAT() && d.classList.contains('on') && getComputedStyle(d).position==='fixed')
+      edge=Math.min(edge,d.getBoundingClientRect().left);
+  }
+  SAFE_R = wide ? (edge-14)*u : W-8;
+  SAFE_L = 10;
+  // The flat views are clipped to this strip, and the strip narrows when a skill panel
+  // opens beside the controls. Nothing re-ran the clip when the panel closed again, so the
+  // board stayed cropped to the narrower strip and a slice of it was simply missing until
+  // something else happened to redraw. The clip follows the strip both ways now.
+  if(typeof clipFlat==='function' && FLAT()){ clipFlat(); panX=clampPanX(panX); applyView(); }
+}
+/* ---- views -----------------------------------------------------------------------------
+   Four arrangements of the same nodes. A view only ever decides where a node's home is and
+   what scaffolding sits behind it — nothing else in the map knows which one is showing, so
+   selection, search, picks, labels and the panel all work the same in all four.
+
+   Transitions are free: the physics already springs every node toward its home, so moving
+   the homes and waking the field animates from one layout to the next. */
+let VIEW='radial', AX=500, AY=370, SCAF=[], FLATX=[0,1000], FLATY=[0,740], FLATROW=[0,740], COLGAP=16, HUB={};
+// the two layouts that are laid out along one axis and centred on the other
+const FLAT=()=>VIEW==='board'||VIEW==='arc'||VIEW==='flow';
+/* Zoom in a flat view is bounded at both ends, and the bounds come from the layout rather
+   than from a number someone picked.
+
+   The ceiling is the zoom at which the layout is exactly as tall as the window. Past it the
+   columns — or the arcs, and the labels under the row — start going off the top and bottom,
+   and since these views do not pan vertically, whatever leaves is simply gone. That is the
+   "you cannot see the nodes" problem: it is not that the zoom is large, it is that the
+   layout is taller than the frame and nothing can bring the rest back.
+
+   The floor is the zoom that fits the whole width, so the far end of the board is one
+   gesture away rather than unreachable. */
+const FRAMEZ=2.2;                    // enough that a 13px name reads as a 29px one
+// At rest the whole layout has to fit, arcs included. Framing one node is a different
+// question: there the arcs are context and the row is the content, so the band that must stay
+// on screen is the nodes and their names. Without this the arc could barely zoom at all — its
+// ceiling was 1.3x, because the tallest arc is most of its height.
+const flatBand=()=>(sel && FLAT() ? FLATROW : FLATY);
+function zoomLimits(){
+  const wAvail=SAFE_R-SAFE_L, hAvail=H;
+  const lo=Math.min(1, wAvail/Math.max(1,FLATX[1]-FLATX[0]));
+  const band = flatBand();
+  const hi=Math.max(lo, hAvail/Math.max(1,band[1]-band[0]));
+  return [lo,hi];
+}
+const clampZoom=z=>{ if(!FLAT()) return z;
+  const [lo,hi]=zoomLimits(); return Math.max(lo,Math.min(hi,z)); };
+/* Vertical pan is locked, so the zoom has to keep the layout centred by itself — and it has
+   to centre the SAME band the ceiling was raised for. It did not. The ceiling used FLATROW
+   when a node was selected, on the argument that the arcs are context and the row is the
+   content; the centring went on using FLATY, arcs included. So the arc zoomed to 2.2x — a
+   height the row could take and the whole fan could not — and then centred the fan, which
+   put the row 30 units below the bottom of the frame. Zoom in, everything gone. One band,
+   both decisions. */
+const centreY=z=>{ const b=flatBand(); return CY-((b[0]+b[1])/2)*z; };
+
+/* The board is wider than the frame on purpose, so it can be dragged sideways — but not so
+   far that it leaves. Either end may be pulled to the middle of the visible area and no
+   further, which is enough to read the last column and not enough to lose the thing. */
+// The zoom it is clamping FOR, which is not always the zoom in force. Framing a selection
+// computes the pan for the zoom it is about to animate to, and this was bounding it against
+// the zoom it was animating from — so the selected node came to rest under the right-hand
+// panel instead of in the middle.
+function clampPanX(px,z){
+  if(!FLAT()) return px;
+  const zz=z||zoom;
+  // Pan until an edge of the board meets the matching edge of the visible strip and no
+  // further. Allowing the midpoint to reach either edge, as this first did, let the whole
+  // board be dragged into the half of the screen you cannot see.
+  const lo=SAFE_R-FLATX[1]*zz, hi=SAFE_L-FLATX[0]*zz;
+  return lo>hi ? (lo+hi)/2 : Math.max(lo,Math.min(hi,px));
+}
+const VIEWS={
+  radial:  {name:'Radial',      hint:'where it lives'},
+  board:   {name:'Phase board', hint:"what it's for"},
+  arc:     {name:'Arc',         hint:'how tangled'},
+  flow:    {name:'Flow',        hint:'where it all lands'}
+};
+const PHASE_ORDER=['always','A','B','C','D','E','F','G','H','S2','never','unmapped','builtin'];
+const phaseRank=p=>{const i=PHASE_ORDER.indexOf(p); return i<0?99:i;};
+/* "Phase A" is a filing reference, not a name — it says where something sits in a list and
+   nothing about what it is. The heading is what the column is FOR, from GROUP_NAME in the
+   data; where the build plan made the assignment its numbered step stays on the sub-line so
+   BUILD-PLAN.md is still cross-referenceable, but it is not what you read first. */
+const groupOf=n=>GROUP[n.id]||'setup';
+function phaseTitle(p){
+  if(GROUP_NAME[p]) return GROUP_NAME[p];
+  const full=PHASES[p]||p, m=full.indexOf('·');
+  if(m>0) return [full.slice(m+1).trim().toUpperCase(), full.slice(0,m).trim().toLowerCase()];
+  return [full.toUpperCase(),''];
+}
+
+/* Order inside a column, and along the arc within a group.
+
+   It was the order the data happened to be written in, which is not an order. The useful
+   one is by what you would act on: a column stacks upward from a floor, so the first
+   entries sit at the bottom where the eye lands, and that is where the work should be.
+
+   Open items first — the six things with a fix waiting. Then unverified, the ones nobody
+   has opened the file for. Then everything settled or already fine. Alphabetical inside
+   each band so a column does not reshuffle for no reason.
+
+   Agents deliberately do NOT sort first. They already read differently at a glance — the
+   dotted collar is theirs alone — so spending the sort on them would buy a distinction the
+   drawing already makes, at the cost of the one it does not. Swap the first line of rank()
+   for `n.agent?0:1` if you would rather have them together. */
+function rank(n){
+  if(n.flag) return 0;                          // has an open fix
+  if(EVIDENCE[n.id]==='named') return 1;        // nobody has looked at the file
+  return 2;
+}
+const byRank=(a,b)=>rank(a)-rank(b)||a.id.localeCompare(b.id);
+
+function homes(){
+  SCAF=[];
+  if(VIEW==='radial') return homesRadial();
+  if(VIEW==='board') return homesBoard();
+  if(VIEW==='flow')  return homesFlow();
+  return homesArc();
+}
+
+/* ---- flow: everything on the left, where it lands on the right -------------------------
+   The other four views answer "what is next to what". This one answers a different question
+   and is the only one that states a total: of everything in the library, how much loads
+   every session, how much the build plan actually places, how much it never mentions, and
+   how much came with Claude Code. Four numbers, with every skill drawn travelling to the one
+   it belongs to — so the thickness of each stream is the answer rather than a caption.
+
+   Nothing here is new data. It is the ring each node already has, drawn as a destination
+   instead of as a radius. What is new is that you can see the proportions, which a circle
+   cannot show: on the radial view the outermost ring looks the biggest because it is the
+   longest, when it is not. */
+function homesFlow(){
+  const rings=RINGS.filter(R=>N.some(n=>n.ring===R.key));
+  // The hubs stop at 80% of the strip, not 92%: their names are set beside them and the last
+  // 20% is what those names need. Pushed further right they ran under the panel and read
+  // "Not in the..." — a view whose whole point is four labelled totals, with the labels cut.
+  const W0=SAFE_R-SAFE_L;
+  const L=SAFE_L+54, HUBX=SAFE_L+W0*0.80;
+  const FIELD_R=SAFE_L+W0*0.40;                // the empty middle is where the streams read
+  const groups={}; N.forEach(n=>(groups[groupOf(n)]??=[]).push(n));
+  Object.values(groups).forEach(g=>g.sort(byRank));
+  const cols=GROUP_ORDER.filter(p=>groups[p]).concat(
+    Object.keys(groups).filter(p=>!GROUP_ORDER.includes(p)));
+  const cw=(FIELD_R-L)/Math.max(1,cols.length);
+  const top=H*0.10, bot=H*0.84, span=bot-top, midY=(top+bot)/2;
+  /* Every column stacks on the same pitch and hangs from the middle, so a column of two is a
+     short mark near the centre and a column of eleven reaches out from it — the height of a
+     column is how much is in it.
+
+     Stretching each column to the full height instead, which is what this did first, made
+     every column the same length whatever it held, and put the first and last item of all
+     seventeen on the same two lines: a dense row of dots across the top and another across
+     the bottom, which is a grid artefact and not a fact about anything. */
+  const tallest=Math.max(...cols.map(p=>groups[p].length));
+  const HT=H*0.70, HTOP=H*0.15;            // the block the four destinations occupy
+  const pitch=Math.min(24,span/Math.max(8,tallest));
+  COLGAP=pitch;                            // node radii are derived from it
+  cols.forEach((p,ci)=>{
+    const list=groups[p], x=L+cw*(ci+0.5);
+    // Two lanes inside a column rather than one: eleven dots on a single vertical is a line,
+    // not a distribution. The lane comes from the index so the stagger is stable.
+    list.forEach((n,i)=>{
+      n.hx=x+((i%2)?1:-1)*Math.min(cw*0.26,5.5);
+      n.hy=midY+(i-(list.length-1)/2)*pitch;
+    });
+    const half=(list.length-1)/2*pitch;
+    // Columns with no sector colour of their own fell back to --ink3, which on this ground
+    // is a whisper: eight of the seventeen names were effectively unreadable while the
+    // coloured ones were fine. Fall back to the body ink instead — grey still says "no
+    // colour of its own", and it can be read while saying it.
+    SCAF.push({t:'lane',key:p,x,top:midY-half-11,bot:midY+half+11,base:0,
+               label:phaseTitle(p)[0],n:list.length,col:SECTOR[p]||cv('--ink2')});
+  });
+  // One baseline for every name, just under the deepest column — not under the field's
+  // nominal floor, which after the columns were centred was a long way below anything drawn.
+  const deepest=midY+(tallest-1)/2*pitch;
+  SCAF.forEach(x=>{ if(x.t==='lane') x.base=deepest+22; });
+  // The destinations are spaced by share, not evenly: a ring holding a third of the library
+  // is given a third of the height, so the gaps between the hubs ARE the proportions and the
+  // streams arrive at the angle their size earns.
+  let acc=0;
+  rings.forEach(R=>{
+    const nR=N.filter(n=>n.ring===R.key).length;
+    const h=HT*(nR/N.length);
+    // The dot is a destination marker, not a bar: the count beside it carries the quantity
+    // already, so it only has to be big enough to see the streams land on it.
+    SCAF.push({t:'hub',key:R.key,x:HUBX,y:HTOP+acc+h/2,n:nR,label:R.label,col:cv(R.col),
+               r:Math.max(2.4,Math.sqrt(nR)*0.82)});
+    acc+=h;
+  });
+  HUB={}; SCAF.filter(s=>s.t==='hub').forEach(s=>HUB[s.key]={x:s.x,y:s.y});
+  // Everything in this view flows from the agreement, so it sits at the head of the field
+  // rather than off the edge of it.
+  AX=SAFE_L+22; AY=(top+bot)/2;
+  FLATX=[SAFE_L+4,SAFE_R-4];
+  // top of the tallest column and the hub block, down past the rotated names under the field
+  FLATY=[Math.min(midY-(tallest-1)/2*pitch, HTOP)-20, deepest+22+74];
+  FLATROW=FLATY;
+}
+
+function homesRadial(){
+  AX=CX; AY=CY;
+  N.forEach(n=>{ n.R=n.F*MAXR;
+    if(n.jit===undefined) n.jit=1;   // the band already spreads the radius
+    n.hx=CX+Math.cos(n.A)*n.R*n.jit; n.hy=CY+Math.sin(n.A)*n.R*n.jit; });
+}
+
+/* Overlap pulls, everything else pushes, and the result is scaled to fill the frame. The
+   scaling matters: without it the answer depends on how well the force constants happen to
+   suit this particular node count, which is not something worth tuning by hand. */
+/* A column per phase, stacked from a common floor — a taller column is more work waiting
+   in that phase, which is the only thing this view is for. Centring the nodes in each
+   column would put the tallest and the shortest at the same eye level and lose it. */
+function homesBoard(){
+  const groups={}; N.forEach(n=>(groups[groupOf(n)]??=[]).push(n));
+  Object.values(groups).forEach(g=>g.sort(byRank));
+  const cols=GROUP_ORDER.filter(p=>groups[p]).concat(
+    Object.keys(groups).filter(p=>!GROUP_ORDER.includes(p)));
+  // Seventeen named columns do not fit 640 units at any size worth reading, so the board is
+  // as wide as it needs to be and pans sideways — which is how you read a board anyway. It
+  // starts at the left because the columns are in order. panBounds() stops it being dragged
+  // off the screen entirely.
+  const n=cols.length+1;                    // +1 for the agreement, which governs rather than fires
+  // 30% narrower than they were. A column only has to hold three dots and a heading, and at
+  // 78 units it was holding a lot of empty space either side of both — which also meant more
+  // of the board was off the frame than needed to be.
+  const cw=Math.max(55,(SAFE_R-32-SAFE_L)/n);
+  const L=SAFE_L+16;
+  FLATX=[L,L+cw*n];
+  const per=Math.min(3,Math.max(1,Math.round((cw-8)/15)));
+  COLGAP=Math.min(22,(cw-10)/per);          // the dots have to fit the narrower column
+  const tallest=Math.max(...cols.map(p=>Math.ceil(groups[p].length/per)));
+  const rowH=Math.min(34,(H-176)/Math.max(1,tallest-1));
+  const contentH=(tallest-1)*rowH;
+  const base=Math.round((H+contentH)/2)+12, top=base-contentH;
+  FLATY=[top-34,base+38];                 // the heading block down to the tally under it
+  FLATROW=FLATY;                          // a board is all content; there is no context to drop
+  // the agreement gets a column of its own: it governs the phases, it is not one of them
+  AX=L+cw/2; AY=base-6;
+  SCAF.push({t:'col',key:'agreement',x:L,w:cw,title:['Agreement','governs all'],n:1,
+             col:cv('--amber'),top:base,base,headTop:top});
+  cols.forEach((p,ci)=>{
+    const list=groups[p], x=L+cw*(ci+1), mid=x+cw/2;
+    // Each box is the height of what it holds. Drawing every column to the tallest one's
+    // height made a column of two look like a column of eleven with nine missing.
+    const colTop=base-Math.max(0,Math.ceil(list.length/per)-1)*rowH;
+    SCAF.push({t:'col',key:p,x,w:cw,title:phaseTitle(p),n:list.length,
+               col:SECTOR[p]||cv('--ink3'),top:colTop,base,headTop:top});
+    list.forEach((n,i)=>{
+      const row=Math.floor(i/per), inRow=i%per;
+      const rowN=Math.min(per,list.length-row*per);
+      n.hx=mid+(inRow-(rowN-1)/2)*COLGAP; n.hy=base-row*rowH;
+    });
+  });
+}
+
+/* One row, every declared overlap arced above it. Density is the whole point. */
+function homesArc(){
+  const gi=g=>{const i=GROUP_ORDER.indexOf(g); return i<0?99:i;};
+  const order=[...N].sort((a,b)=>gi(groupOf(a))-gi(groupOf(b))||byRank(a,b));
+  // The picture is the row plus everything above and below it, so centring the row leaves
+  // the arcs crammed into the top half and a void underneath. Centre the whole thing: the
+  // tallest arc rises ARCH above the row and three staggered label rows drop LABELS below.
+  const ARCH=H*0.62, LABELS=64;
+  const L=SAFE_L+34, R=SAFE_R-34, y=(H-ARCH-LABELS)/2+ARCH;
+  const step=(R-L)/Math.max(1,order.length-1);
+  order.forEach((n,i)=>{ n.hx=L+step*i; n.hy=y; });
+  FLATX=[L-40,R+40];
+  FLATY=[y-ARCH-14,y+LABELS+10];          // the tallest arc down to the last label row
+  FLATROW=[y-70,y+LABELS+10];             // the row and its names, without the fan above it
+  AX=L-step*1.4; AY=y;
+  // A phase name under sixty nodes has about fifteen units of width and needs forty, so
+  // they printed through each other. Two staggered rows, and the lettered phases lose the
+  // word "phase" — the tick colour already says what kind of label it is.
+  // Two rows were not enough and picking "the emptier one" as a fallback still overlapped:
+  // ACCOUNTS has two nodes and EXCLUDED has one, so three headings landed inside forty
+  // units and two of them shared a row. Three rows, first-fit, and a heading with room on
+  // none of them is dropped rather than printed through its neighbour — the tick mark still
+  // marks the boundary, and the phase is on the node itself.
+  let last=null; const rowEnd=[-1e9,-1e9,-1e9];
+  order.forEach((n,i)=>{ const g=groupOf(n); if(g===last) return; last=g;
+    const t=phaseTitle(g)[0];
+    const x=L+step*i, w=t.length*4.6+10;
+    const row=rowEnd.findIndex(e=>x>e);
+    if(row>=0) rowEnd[row]=x+w;
+    SCAF.push({t:'tick',x,y,label:row>=0?t:'',col:SECTOR[n.phase]||cv('--ink3'),row:Math.max(0,row)}); });
+}
+
+function setLayout(v){
+  if(v===VIEW) return;
+  VIEW=v;
+  /* A search does not survive the chart it was made in. Its results list is positions in a
+     layout that has just been replaced, and a typed query left in the box quietly hides most
+     of the new chart — you switch to the arc to see how tangled it is and get four nodes,
+     with the reason sitting in a search box at the top of a panel you are not looking at.
+
+     Picks are left alone on purpose. "Show me the agents" is a question about the skills, and
+     it is the same question in every layout; a typed search is a question about this one. */
+  if(query) clearFilter();
+  document.querySelectorAll('#viewmenu button').forEach(b=>
+    b.classList.toggle('on',b.dataset.v===v));
+  svg.classList.toggle('freeform',v!=='radial');
+  svg.classList.toggle('flatcore',FLAT());
+  $('hint').textContent = FLAT()
+    ? 'scroll or drag to move sideways · +/\u2212 to zoom · click a node for its links · esc to clear'
+    : 'scroll to zoom · drag to pan · click a node for its links · esc to clear · / to search';
+  homes(); rings(); deco(true); clipFlat();   // the one place the backdrop animates
+  select(null);
+  resetView();
+  if(FLAT()){
+    zoom=clampZoom(1); updateZoomLabel();
+    panY=centreY(zoom);
+    panX=clampPanX(v==='board' ? SAFE_L-FLATX[0]*zoom+8 : (SAFE_L+SAFE_R)/2-(FLATX[0]+FLATX[1])/2*zoom);
+    applyView();
+  }
+  reheat(1);                      // the springs carry every node to its new home
+  apply(); kick();
+}
+
+function resize(){
+  W=1000; H=Math.round(1000*innerHeight/innerWidth); CY=H/2;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  // map units per CSS pixel — every node name is 13px on screen whatever the width
+  const u=W/innerWidth;
+  LBLU=13*u; LBLH=LBLU*1.55; LBLOFF=52*u;
+  // how far a name stands off its dot before the leader line takes over
+  LBLSTAND=9*u;
+  svg.style.setProperty('--lbl',LBLU.toFixed(3)+'px');
+  svg.style.setProperty('--lblhalo',(3.4*u).toFixed(3)+'px');
+  // Column headings, sub-lines and tick labels in screen pixels too, so they stay the same
+  // size as everything else on the page whatever the window is doing.
+  svg.style.setProperty('--col',(11*u).toFixed(3)+'px');
+  svg.style.setProperty('--colsub',(10*u).toFixed(3)+'px');
+  // The flow view's own type, in the same screen pixels. Set as a fixed world size it came
+  // out at twice the node names on a wide window — legible, and shouting.
+  svg.style.setProperty('--lane',(12.5*u).toFixed(3)+'px');
+  svg.style.setProperty('--hubn',(15*u).toFixed(3)+'px');
+  svg.style.setProperty('--hubl',(10*u).toFixed(3)+'px');
+  trailFit();
+  gutters();
+  // centre and size the map in the space the panel leaves, so no node ever sits under it
+  CX=(SAFE_L+SAFE_R)/2;
+  MAXR=Math.max(90, Math.min((SAFE_R-SAFE_L)/2, CY) - Math.min(60,Math.min(W,H)*.09));
+  homes(); clipFlat();
+  sizeNodes();
+  orbitHomes();
+  svg.classList.toggle('orbiting',orbiting);
+  if(orbiting) orbitPlace();
+  else if(!N[0].x) N.forEach(n=>{ n.x=n.hx; n.y=n.hy; });
+  deco(); rings();
+  if(orbiting){ alpha=0; if(!raf) raf=requestAnimationFrame(tick); } else { alpha=0; paint(); }
+}
+
+// Node radius is derived from the arc each ring gives one node, so the map stays legible
+// whether it holds 56 skills or several hundred. NODE_SC feeds back into the repulsion,
+// otherwise a dense map would push its own nodes off their rings.
+let NODE_SC=1;
+function sizeNodes(){
+  const per={}; N.forEach(n=>per[n.ring]=(per[n.ring]||0)+1);
+  let smallest=Infinity;
+  N.forEach(n=>{
+    const arcPer=2*Math.PI*n.R/Math.max(8,per[n.ring]);
+    // Drawn smaller than it is pressable: the hit disc below is a separate transparent
+    // circle of 7 units, so shrinking this costs nothing in aim.
+    const base=Math.max(1.05,Math.min(2.3,arcPer*0.195));
+    smallest=Math.min(smallest,base);
+    n.rad=base*(0.80+n.w*0.06);
+  });
+  NODE_SC=smallest/3.1;
+  // The radius is derived from the arc a ring gives one node, which says nothing about a
+  // column. In the board a node has COLGAP to itself, and what has to fit inside it is the
+  // outermost circle — the agent collar at twice the radius, or the ring at 1.45 times it.
+  if(VIEW==='board') N.forEach(n=>{
+    n.rad=Math.min(n.rad, Math.max(1.05, (COLGAP/2-0.8)/(n.agent?1.55:1.26)));
+  });
+  N.forEach((n,i)=>{
+    const el=nodeEl[i];
+    // The rings scale with the node instead of clearing it by a fixed distance. A fixed
+    // 3.2 units around a 2-unit dot is a ring nearly twice the width of the thing it is
+    // marking, which reads as a circle with a dot loose inside it. Proportional keeps the
+    // relationship the same whatever size the node ends up, which matters because the board
+    // caps its radii and the radial view does not.
+    const f=el.querySelector('.flag'); if(f) f.setAttribute('r',(n.rad*1.48+0.26).toFixed(2));
+    const tk=el.querySelector('.tick'); if(tk) tk.setAttribute('r',(n.rad*1.40+0.24).toFixed(2));
+    el.querySelector('.ring').setAttribute('r',(n.rad*1.26+0.22).toFixed(2));
+    el.querySelectorAll('.dot').forEach(d=>
+      d.setAttribute('r',(d.classList.contains('collar')?n.rad*1.55+0.4:n.rad).toFixed(2)));
+  });
+}
+
+/* ---- trails ---------------------------------------------------------------------------
+   Three treatments, one picked at random each load, so the opening is not the same twice.
+   All of it goes on a canvas behind the SVG: two hundred nodes shedding particles is
+   thousands of elements a second, which SVG will not carry, and none of it is interactive
+   so it has no business being in the document at all.
+
+   One style, not three picked at random. It was three so the opening had some variety, but
+   variety in the first three seconds is not a feature — it means the map you describe to
+   someone is not the map they open.
+
+   The one kept is the particles: each node sheds sparks as it travels, and they drift off
+   the path and die where they fall. The other two were a tapering comet tail and a thin arc
+   drawn along the node's own orbit. I kept the arc first and that was the wrong call — it
+   draws the orbit, which is a line the map does not otherwise have and does not mean
+   anything, where the particles only ever say "this was moving, and it went that way".
+
+   Everything stops the moment the map is asked to sort itself out. The canvas is cleared
+   and never drawn again, so nothing costs anything once you are past the opening. */
+const tcv=document.createElement('canvas');
+tcv.id='trailcv'; document.body.insertBefore(tcv,svg);
+const tcx=tcv.getContext('2d');
+let TW=0,TH=0,TDPR=1;
+function trailFit(){
+  TDPR=Math.min(2,devicePixelRatio||1);
+  TW=innerWidth; TH=innerHeight;
+  tcv.width=Math.round(TW*TDPR); tcv.height=Math.round(TH*TDPR);
+  tcx.setTransform(TDPR,0,0,TDPR,0,0);
+}
+
+const sparks=[];
+function trailStep(dt){
+  for(const n of N){
+    n._emit=(n._emit||0)-dt;
+    if(n._emit<=0){
+      n._emit=0.05+Math.random()*0.07;
+      sparks.push({x:n.x,y:n.y,col:paintOf(n),life:1,sz:0.7+Math.random()*1.1,
+        vx:(Math.random()-0.5)*7,vy:(Math.random()-0.5)*7});
+    }
+  }
+  for(let i=sparks.length-1;i>=0;i--){
+    const s=sparks[i]; s.life-=dt*1.15; s.x+=s.vx*dt; s.y+=s.vy*dt;
+    if(s.life<=0) sparks.splice(i,1);
+  }
+}
+function trailDraw(){
+  if(!orbiting){ tcx.clearRect(0,0,TW,TH); return; }
+  const sc=TW/W;                                  // map units to screen pixels
+  tcx.clearRect(0,0,TW,TH);
+  tcx.lineCap='round';
+  for(const s of sparks){
+    tcx.globalAlpha=s.life*s.life*0.62; tcx.fillStyle=s.col;
+    tcx.beginPath(); tcx.arc(s.x*sc,s.y*sc,(0.5+s.life*s.sz*1.6),0,7); tcx.fill();
+  }
+  tcx.globalAlpha=1;
+}
+
+/* ------------------------------------------------------------------ physics */
+let drag=null, alpha=1, raf=null;
+// Physics is a 62-node luxury. Past a few hundred the repulsion overwhelms every spring
+// and the map turns to mush, so both layouts are computed and the simulation stays off.
+const SIMULATE=N.length<=200;
+function sim(){
+  const k=alpha, sc=MAXR/340;
+  // Outside the radial view a node's home is the whole answer — the ring constraint and
+  // the overlap springs would drag a column or a row back into a circle. Spring to home,
+  // with just enough separation to stop two nodes sitting exactly on top of each other.
+  if(VIEW!=='radial'){
+    for(let i=0;i<N.length;i++){ const a=N[i];
+      for(let j=i+1;j<N.length;j++){ const b=N[j];
+        let dx=b.x-a.x, dy=b.y-a.y, d2=dx*dx+dy*dy; if(d2<1)d2=1;
+        if(d2<150){ const d=Math.sqrt(d2), f=26/d2; dx/=d; dy/=d;
+          a.vx-=dx*f; a.vy-=dy*f; b.vx+=dx*f; b.vy+=dy*f; } } }
+    N.forEach(n=>{ n.vx+=(n.hx-n.x)*.075; n.vy+=(n.hy-n.y)*.075;
+      n.vx*=.72; n.vy*=.72;
+      if(n!==drag){ n.x+=n.vx*k; n.y+=n.vy*k; } });
+    return;
+  }
+  for(let i=0;i<N.length;i++){ const a=N[i];
+    for(let j=i+1;j<N.length;j++){ const b=N[j];
+      let dx=b.x-a.x, dy=b.y-a.y, d2=dx*dx+dy*dy; if(d2<1)d2=1;
+      if(d2<14000*sc*sc*NODE_SC){ const d=Math.sqrt(d2), f=520*sc*NODE_SC/d2; dx/=d; dy/=d;
+        a.vx-=dx*f; a.vy-=dy*f; b.vx+=dx*f; b.vy+=dy*f; } } }
+  N.forEach(n=>{
+    let dx=n.x-CX, dy=n.y-CY, d=Math.hypot(dx,dy)||1;
+    n.vx+=dx/d*(n.R-d)*.075; n.vy+=dy/d*(n.R-d)*.075;
+    const hx=CX+Math.cos(n.A)*n.R, hy=CY+Math.sin(n.A)*n.R;
+    n.vx+=(hx-n.x)*.010; n.vy+=(hy-n.y)*.010;
+  });
+  EDGES.forEach(e=>{ if(e.kind!=='overlap')return;
+    const a=N[IDX[e.a]], b=N[IDX[e.b]];
+    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1;
+    const f=(d-92*sc)/d*.012; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f; });
+  N.forEach(n=>{ n.vx*=.79; n.vy*=.79;
+    if(n!==drag){ n.x+=n.vx*k; n.y+=n.vy*k; }
+    n.x=Math.max(14,Math.min(W-14,n.x)); n.y=Math.max(14,Math.min(H-14,n.y));
+  });
+}
+
+/* every shown label is pushed clear of its neighbours, with a leader when it moves */
+// Row pitch and the width estimate are both in map units, so they have to track the label
+// size — pinning names to 13px on screen changes how many units of the map they occupy.
+let LBLH=11.6, LBLU=8.5, LBLOFF=40, LBLSTAND=8;
+const DEAD=24;              // the deadband that stops labels flip-flopping across the gutter
+let easing=false;
+const EASE=.26;
+const LBLBOX=[];
+function paintMask(){
+  while(lblMask.childNodes.length>1) lblMask.removeChild(lblMask.lastChild);
+  const pad=LBLH*0.26/zoom;
+  for(const b of LBLBOX)
+    lblMask.appendChild(mk('rect',{x:(b.x0-pad).toFixed(1),y:(b.y0-pad).toFixed(1),
+      width:(b.x1-b.x0+pad*2).toFixed(1),height:(b.y1-b.y0+pad*2).toFixed(1),
+      rx:(pad*1.4).toFixed(1),fill:'#000'}));
+}
+function dodge(){
+  easing=false; LBLBOX.length=0;
+  const items=[];
+  N.forEach((n,i)=>{
+    const el=labelEl[i], LT=el._t, LD=el._ld;
+    if(nodeEl[i].style.display==='none'||!el.classList.contains('show')){
+      // retract to the node so the next reveal animates outward from it
+      if(n._ldy===undefined) n._ldy=0;
+      if(Math.abs(n._ldy)>.4){ n._ldy+=(0-n._ldy)*EASE; easing=true;
+        LT.setAttribute('y',(n._ldy+3).toFixed(1)); }
+      // _lead was set to 0 here and never set to anything else, so this ran once per node
+      // for the life of the page. A label that showed, drew a leader, then hid again left
+      // that leader on screen for good — a line from a node to a name that is no longer
+      // there. Those are the random lines. Clear it every time.
+      LD.style.opacity=0; return; }
+    const est=(n.id.length+(NEWTAG.has(n.id)?2:0))*LBLU*.635+LBLU*.94;   // text width in map units, from the label size
+    // Side is sticky: a node drifting a pixel across the gutter must not swap the label
+    // back and forth every frame. Only commit once it is clearly past the threshold.
+    const sx=n.sx, sy=n.sy, srad=n.srad;
+    const rEdge=sx+srad+8+est, lEdge=sx-srad-8-est;
+    const left = sx<CX ? (lEdge > (n._left===false ? SAFE_L+DEAD : SAFE_L))
+                       : (rEdge > (n._left===true  ? SAFE_R-DEAD : SAFE_R));
+    n._left=left;
+    // A bigger standoff is what buys the room: the labels were starting 8 units from the
+    // dot, so a row of three nodes 15 units apart had its three names overlapping before
+    // the dodge had anywhere to put them. Further out, and the leader line says which name
+    // belongs to which dot.
+    const ax = left ? -(srad+LBLSTAND) : (srad+LBLSTAND);
+    const x0 = left ? sx+ax-est : sx+ax;
+    items.push({n,el,left,ax,x0,x1:x0+est,ty:sy});
+  });
+  // one sweep over every label, both columns at once — a left-anchored label from the
+  // right half can still land on top of a right-anchored one, which per-side misses
+  items.sort((a,b)=>a.ty-b.ty);
+  // The pitch is what the map can afford, not the tightest that fits. Twelve names on an
+  // empty board were being stacked at 14 units in the middle of 600 units of nothing.
+  const PITCH=Math.max(LBLH, Math.min(LBLH*2.0,(H-70)/Math.max(1,items.length)));
+  /* How far a name may travel from its own dot before it is withdrawn instead. The cap
+     exists because a name a long way from its node stops belonging to it — but it was a
+     fixed distance, and the distance a name NEEDS depends on how many others are competing
+     for the same column. Picking "agent (not a skill)" lights five names; two of them sat a
+     pixel apart in y, so one had to move a full pitch, which is further than the cap allows,
+     so it vanished. Five names on an empty screen and one of them silently gone.
+
+     The budget therefore scales with how crowded it is. Sixty names showing and it stays
+     where it was; a handful and a name may go a long way, because there is nothing else up
+     there to confuse it with. A name you asked to see and did not get is worse than a name
+     sitting further from its dot than it might.
+
+     34 rather than 14: measured, not guessed. Lighting each ring in turn and counting both
+     withdrawals and actual overlapping glyph boxes, 14 still dropped four names from the
+     eighteen-node rings; 34 drops none, and every set tested — 4, 5, 14, 18 — comes out with
+     nothing withdrawn and nothing overlapping. */
+  const OFF=LBLOFF*Math.max(1,Math.min(4,34/Math.max(1,items.length)));
+  // Names stack downward everywhere except the arc, where below the row is where the phase
+  // headings already are — three staggered rows of them — so a skill name pushed down lands
+  // on top of one. Above the row there is only the fan of arcs, which the name can cross.
+  const PUSH = VIEW==='arc' ? -1 : 1;
+  if(PUSH<0) items.reverse();          // nearest the row first, so the stack grows outward
+  const placed=ringBoxes.slice();     // ring titles are fixed obstacles, never moved
+  // Obstacles carry their own required clearance: a fat disc needs more room above and
+  // below it than a text row does, so a flat pitch left labels sitting on the big nodes.
+  // the core moves and scales with the view, so its obstacle has to as well
+  const acx=toScreenX(AX), acy=toScreenY(AY), ar=34*coreScale()*zoom;
+  placed.push({x0:acx-ar,x1:acx+ar,ty:acy,h:ar+6});
+  // Only the nodes that are themselves being named are obstacles. Dodging every dot on
+  // screen meant a single label had 55 of them in its column, got pushed past the
+  // displacement cap, and was withdrawn — a framed node with nothing but a dot. A name
+  // crossing an unlit dot is not ambiguous: unlit dots have no names to be confused with,
+  // and the label carries a dark halo stroke to stay legible over one.
+  for(const it of items)
+    placed.push({owner:it.n,x0:it.n.sx-it.n.srad-3,x1:it.n.sx+it.n.srad+3,
+                 ty:it.n.sy,h:it.n.srad+5});
+  for(const it of items){
+    for(let guard=0,moved=true; moved&&guard<80; guard++){
+      moved=false;
+      for(const p of placed)
+        { if(p.owner===it.n) continue;              // never dodge your own dot
+          const gap=p.h||PITCH;
+          if(it.x0<p.x1 && p.x0<it.x1 && Math.abs(it.ty-p.ty)<gap){ it.ty=p.ty+gap*PUSH; moved=true; } }
+    }
+    placed.push(it);
+  }
+  // A long push chain can walk the last labels off-screen. Clamping them individually
+  // would collapse rows back together, so shift the whole set — that keeps every gap.
+  if(items.length){
+    const hi=Math.max(...items.map(i=>i.ty)), lo=Math.min(...items.map(i=>i.ty));
+    let shift=hi>H-10 ? (H-10)-hi : 0;
+    if(lo+shift<10) shift=10-lo;
+    if(shift) for(const i of items) i.ty+=shift;
+  }
+  const kept=[];
+  for(const s of items){
+    const t=s.el._t, ld=s.el._ld;
+    // withdraw rather than drag: also covers nodes panned outside the safe gutter, whose
+    // labels the clamp would otherwise sling across the whole screen
+    // The displacement cap can stop a push before the row is actually clear, which leaves
+    // two names touching. Two names touching is worse than one name missing, so the
+    // second one goes.
+    let clash=false;
+    for(const k of kept)
+      if(s.x0<k.x1 && k.x0<s.x1 && Math.abs(s.ty-k.ty)<PITCH*0.92){ clash=true; break; }
+    const far = clash || Math.abs(s.ty-s.n.sy)>OFF ||
+                s.x0<SAFE_L-40 || s.x1>SAFE_R+40 || s.n.sy<-20 || s.n.sy>H+20;
+    s.el.classList.toggle('toofar',far);
+    if(far){ s.n._ldy=0; t.setAttribute('y',3); ld.style.opacity=0; continue; }
+    kept.push(s);
+    // glide into the clear slot rather than snapping to it
+    const target=s.ty-s.n.sy;
+    if(s.n._ldy===undefined) s.n._ldy=0;
+    // In the flat views the label lands rather than glides. The glide is a per-frame state
+    // that the withdraw rule then reads back: a label part-way to its slot can still be
+    // touching its neighbour, which withdraws it, which resets it toward zero, which clears
+    // the touch, which lets it start again. It never settles, and the leader lines swing
+    // about at angles that belong to no particular frame — the "random lines". Nodes here
+    // do not move, so there is nothing for the glide to smooth over anyway.
+    if(FLAT()) s.n._ldy=target;
+    else if(Math.abs(target-s.n._ldy)>.4){ s.n._ldy+=(target-s.n._ldy)*EASE; easing=true; }
+    else s.n._ldy=target;
+    const oy=s.n._ldy;
+    t.setAttribute('x',s.ax); t.setAttribute('y',(oy+3).toFixed(1));
+    t.setAttribute('text-anchor',s.left?'end':'start');
+    // where this name ended up, in world units, so a link can go round it rather than
+    // through it. Screen to world is the inverse of the pan and zoom the links are drawn in.
+    LBLBOX.push({x0:(s.x0-panX)/zoom, x1:(s.x1-panX)/zoom,
+                 y0:(s.ty-LBLH*0.50-panY)/zoom, y1:(s.ty+LBLH*0.40-panY)/zoom});
+    // No leader lines. They were how a name that had nowhere to go still pointed at its
+    // dot; with the flat views zooming to a selection the name has somewhere to go, and a
+    // line to every name is more ink than the thing it explains.
+    ld.style.opacity = 0;
+    ld.setAttribute('x1',s.left?-(s.n.srad+2):(s.n.srad+2)); ld.setAttribute('y1',0);
+    ld.setAttribute('x2',(s.ax*.92).toFixed(1)); ld.setAttribute('y2',oy.toFixed(1));
+  }
+  paintMask();
+}
+/* One ribbon per skill, from where it sits to where it belongs. Drawn here rather than built
+   once in scaffold() because the settle animates the nodes into place and a path laid down
+   before they arrive is a path to where they used to be.
+
+   The control points are deliberately far apart horizontally and level with each end: that
+   is what makes a hundred curves leaving one area for four points read as four streams
+   rather than as a hundred lines. Bundling them any harder would be a lie about how many
+   there are. */
+function flowPaths(){
+  gFlow.style.display='';
+  const want=N.length;
+  while(gFlow.childNodes.length<want)
+    gFlow.appendChild(mk('path',{fill:'none','stroke-width':.85,'stroke-linecap':'round'}));
+  N.forEach((n,i)=>{
+    const el=gFlow.childNodes[i], h=HUB[n.ring];
+    if(!h||nodeEl[i].style.display==='none'){ el.style.display='none'; return; }
+    el.style.display='';
+    const dx=(h.x-n.x);
+    el.setAttribute('d',`M${n.x.toFixed(1)},${n.y.toFixed(1)}`
+      +`C${(n.x+dx*.42).toFixed(1)},${n.y.toFixed(1)} `
+      +`${(h.x-dx*.30).toFixed(1)},${h.y.toFixed(1)} ${h.x.toFixed(1)},${h.y.toFixed(1)}`);
+    el.setAttribute('stroke',paintOf(n));
+    // A lit node's ribbon comes forward with it; the rest stay faint enough that sixty of
+    // them are a texture rather than a thicket. The lit/faded decision is apply()'s, taken
+    // from the node's own class rather than recomputed here — two implementations of "is
+    // this one lit" is how a ribbon ends up bright under a dimmed dot.
+    const cl=nodeEl[i].classList, isSel=cl.contains('sel');
+    el.setAttribute('stroke-opacity',cl.contains('faded')?.05:(isSel?.95:.40));
+    el.setAttribute('stroke-width',isSel?1.9:.85);
+  });
+  for(let i=want;i<gFlow.childNodes.length;i++) gFlow.childNodes[i].style.display='none';
+}
+function paint(){
+  N.forEach((n,i)=>{
+    nodeEl[i].setAttribute('transform',`translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`);
+    n.sx=toScreenX(n.x); n.sy=toScreenY(n.y); n.srad=n.rad*zoom;
+    labelEl[i].setAttribute('transform',`translate(${n.sx.toFixed(1)},${n.sy.toFixed(1)})`); });
+  gA.setAttribute('transform',`translate(${oCX()},${oCY()}) scale(${coreScale().toFixed(4)})`);
+  // Left visible, they drew over the board: sixty ribbons to four points that are not on the
+  // screen any more, on top of a layout that has nothing to do with them.
+  if(VIEW==='flow') flowPaths(); else if(gFlow.childNodes.length) gFlow.style.display='none';
+  EDGES.forEach((e,i)=>{
+    if(VIEW==='flow'){ edgeEl[i].style.display='none'; return; }  // the ribbons are the links
+    edgeEl[i].style.display='';
+    if(!edgeVis[i]) return;   // invisible edges do not need a path
+    const a=e.a===ANCHOR.id?{x:AX,y:AY}:N[IDX[e.a]];
+    const b=e.b===ANCHOR.id?{x:AX,y:AY}:N[IDX[e.b]];
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    let qx,qy;
+    if(VIEW==='arc'){
+      // on a single row a straight line between two nodes is the row itself — the whole
+      // view depends on the link leaving it, and how far it rises is how far it reaches
+      qx=mx; qy=my-Math.min(H*.62,Math.abs(b.x-a.x)*.82);
+    } else if(e.kind==='overlap' && VIEW!=='board'){ qx=mx+(AX-mx)*.45; qy=my+(AY-my)*.45; }
+    else { qx=mx; qy=my; }                      // control point at the midpoint == straight
+    edgeEl[i].setAttribute('d',`M${a.x.toFixed(1)},${a.y.toFixed(1)}Q${qx.toFixed(1)},${qy.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)}`); });
+  dodge();
+}
+function tick(){
+  // Labels easing must not keep the physics awake: moving nodes move the label targets,
+  // which keeps easing alive, which keeps the nodes moving. Freeze the graph, glide the text.
+  if(orbiting){ spinT+=1/60; orbitPlace(); trailStep(1/60); trailDraw();
+    validateHover(); paint();
+    raf=requestAnimationFrame(tick); return; }
+  if(!settled){
+    settleStep(); paint();
+    raf=requestAnimationFrame(tick); return;
+  }
+  const live=(alpha>.05&&SIMULATE)||drag;
+  if(live){ if(SIMULATE) sim(); alpha*=.997; validateHover(); }
+  paint();
+  raf=(live||easing)?requestAnimationFrame(tick):null;
+}
+function reheat(v){ alpha=Math.max(alpha,v); if(!raf) raf=requestAnimationFrame(tick); }
+// redraw without waking the graph — used for selection, filters and label easing,
+// none of which should move a node
+function kick(){ if(!raf) raf=requestAnimationFrame(tick); }
+
+/* ------------------------------------------------------------------ state */
+const nrm=t=>t.toLowerCase();
+const settledOf=n=>!!FIXES[n.id] && !isOpen(n.id);
+// Nothing in the key hides a node any more — picks light instead — so visibility is
+// only ever the search, and only when the search found nothing to light.
+const visible=n=>true;
+function score(n,q){ const id=nrm(n.id), i=id.indexOf(q);
+  if(i===0)return 0;
+  if((n.tags||[]).some(t=>t===q))return 1;            // exact capability match
+  if(i>0)return 2;
+  if((n.tags||[]).some(t=>t.includes(q)))return 3;
+  if(nrm(PHASES[n.phase]||'').includes(q))return 4;
+  if(nrm(n.desc.replace(/<[^>]+>/g,'')).includes(q))return 5; return -1; }
+
+function apply(){
+  const focus=sel||hover;
+  // At 62 nodes, focusing the root and lighting everything was a useful gesture. At a
+  // thousand it is a hairball and a 30ms label pass, so the root lights only what binds
+  // to it unconditionally — the organisation and repository surfaces.
+  const lit=focus?new Set([focus,...(focus===ANCHOR.id
+    ? N.filter(n=>n.ring==='org').map(n=>n.id)
+    : [...(neigh[focus]||[]),ANCHOR.id])]):null;
+  // A search and a pick are the same gesture — "show me these" — so they light through
+  // the same channel and add rather than compete.
+  const picked=pickedIds();
+  const lit2=(query&&hits)||picked
+    ? new Set([...((query&&hits)?hits:[]),...(picked||[])])
+    : null;
+  // Beyond what the viewport can stack, naming everything at once is noise, not a firehose.
+  // Two columns of rows is the ceiling; past it, fall back to the selection and hover only.
+  // How many names can be shown is a function of the view, not the viewport. At 100% the
+  // median gap between nodes is 10px, so ninety names cannot each sit beside their dot —
+  // they get withdrawn and you see almost nothing. Fewer names, each in the right place,
+  // and the budget grows as you zoom in and the nodes move apart.
+  const CAP=Math.max(12,Math.min(Math.floor(2*(H-20)/LBLH),Math.round(12*zoom+6)));
+  // Past the cap the old behaviour was to name nothing but the selection, which at this
+  // scale means selecting the root lit a hundred nodes and named none of them. Name the
+  // ones nearest the thing you focused instead — a full screen of labels, closest first.
+  // Which names to show is decided by which ones have somewhere to go. Ranking by
+  // distance from the focus picked exactly the most crowded nodes on the map, and every
+  // one of them then failed the displacement cap — a hundred candidates, nothing drawn.
+  // Rank by elbow room instead: the isolated node gets named, the one in the middle of a
+  // pile does not, and zooming in is what gives the pile room.
+  const cand=[];
+  N.forEach(n=>{ if(visible(n) && ((!!lit2&&lit2.has(n.id))||(!!lit&&lit.has(n.id))||n.id===hover))
+    cand.push(n); });
+  let nameable=null;
+  if(cand.length>CAP){
+    const room=cand.map((n,i)=>{ let m=Infinity;
+      for(let j=0;j<cand.length;j++){ if(i===j) continue;
+        const d=(n.x-cand[j].x)**2+(n.y-cand[j].y)**2; if(d<m) m=d; }
+      return [n.id,m]; });
+    room.sort((p,q)=>q[1]-p[1]);
+    nameable=new Set(room.slice(0,CAP).map(r=>r[0]));
+    if(sel) nameable.add(sel); if(hover) nameable.add(hover);
+  }
+  N.forEach((n,i)=>{ const el=nodeEl[i];
+    el.style.display=visible(n)?'':'none';
+    const isHit=!!lit2&&lit2.has(n.id), isLit=!!lit&&lit.has(n.id);
+    const lg=labelEl[i]; lg.style.display=el.style.display;
+    // A tag search and a selection are two ways of lighting the map, and they used to
+    // fight: a search hit that was not also a neighbour of the selected node got faded
+    // to nothing while its label stayed lit, which is how a name ended up floating with
+    // no dot under it. One rule now — lit is the union, faded is everything else.
+    const on=isHit||isLit||n.id===sel;
+    const state=[n.id===sel, isHit,
+      // Nothing is named until it has landed: a name on a node still travelling is a
+      // label for wherever that node happens to be a frame later.
+      settled && !orbiting && (on||n.id===hover) &&
+        (!nameable||nameable.has(n.id)||n.id===sel||n.id===hover),
+      (!!lit||!!lit2) && !on && n.id!==hover];
+    // Most nodes are unchanged between two states of the map. At 62 rewriting all of
+    // them anyway cost nothing; at a thousand it is eight thousand class writes for a
+    // single hover, so skip the ones whose four flags did not move.
+    const kstr=state.join('')+el.style.display;
+    if(n._kstate===kstr) return;
+    n._kstate=kstr;
+    const NAMES=['sel','hit','show','faded'];
+    for(let k=0;k<4;k++){ el.classList.toggle(NAMES[k],state[k]); lg.classList.toggle(NAMES[k],state[k]); } });
+  // The core is the landmark everything else is positioned against, not a result, so a
+  // pick never dims it — picking "excluded" left the middle of the map an empty smudge.
+  // A selection or a search still does, because then it genuinely is or is not a match.
+  const aOn = sel===ANCHOR.id || (!!lit&&lit.has(ANCHOR.id)) || (!!lit2&&lit2.has(ANCHOR.id))
+    || (!lit && !query);
+  gA.classList.toggle('sel',sel===ANCHOR.id);
+  gA.classList.toggle('faded',(!!lit||!!lit2)&&!aOn);
+  EDGES.forEach((e,i)=>{
+    const na=e.a===ANCHOR.id?null:N[IDX[e.a]], nb=e.b===ANCHOR.id?null:N[IDX[e.b]];
+    let o=0;
+    // The board draws links only for what you have selected, and draws them straight. The
+    // thicket before came from curving them toward the centre, which on a row of columns
+    // sends every line on a detour through the middle of the board; a straight line between
+    // two columns crosses only what is between them.
+    if(VIEW==='board' && !focus) { edgeVis[i]=0; edgeEl[i].setAttribute('stroke-opacity',0); return; }
+    if((!na||visible(na))&&(!nb||visible(nb))){
+      // In the arc the overlaps ARE the picture: a row of dots with
+      // nothing over it, or a scatter with nothing between it, is the one thing those
+      // layouts have nothing to say. They stay drawn at rest and lift when something is
+      // focused, rather than appearing only on a click. The radial view still hides them —
+      // there they cross the middle and make a hairball rather than a diagram.
+      if(VIEW==='arc'&&e.kind==='overlap')
+        o = focus&&(e.a===focus||e.b===focus) ? .95
+          : (lit||lit2) ? .07 : .34;
+      else if(focus&&(e.a===focus||e.b===focus)) o=e.kind==='overlap'?.9:e.kind==='bind'?.85:.45;
+      // A fan from the root to all 1024 is a purple wall, not a diagram. Draw only the
+      // links to what the root actually lights.
+      else if(focus===ANCHOR.id&&e.a===ANCHOR.id&&lit&&lit.has(e.b)) o=.75; }
+    edgeVis[i]=o>0;
+    edgeEl[i].setAttribute('stroke-opacity',o);
+    edgeEl[i].setAttribute('stroke-dashoffset',o?0:1); });   // links draw themselves in
+  $('hint').classList.toggle('gone',!!sel||!!query);
+  kick();
+}
+
+/* ------------------------------------------------------------------ clipboard */
+async function copy(text,btn){
+  let ok=true;
+  try{ await navigator.clipboard.writeText(text); }
+  catch(e){
+    const ta=document.createElement('textarea');
+    ta.value=text; ta.style.cssText='position:fixed;opacity:0;pointer-events:none';
+    document.body.appendChild(ta); ta.select();
+    try{ ok=document.execCommand('copy'); }catch(_){ ok=false; }
+    ta.remove();
+  }
+  const was=btn.innerHTML;
+  btn.textContent = ok ? 'Copied' : 'Press ⌘C';
+  btn.classList.toggle('ok',ok);
+  setTimeout(()=>{ btn.innerHTML=was; btn.classList.remove('ok'); },1600);
+}
+const ENT={'&ldquo;':'"','&rdquo;':'"','&lsquo;':"'",'&rsquo;':"'",'&mdash;':'—',
+  '&ndash;':'–','&hellip;':'…','&nbsp;':' ','&amp;':'&','&lt;':'<','&gt;':'>'};
+const plain=h=>h.replace(/<br\s*\/?>/gi,'\n\n').replace(/<[^>]+>/g,'')
+  .replace(/&[a-z]+;/gi,m=>ENT[m.toLowerCase()]??m).replace(/\n{3,}/g,'\n\n').trim();
+
+/* ---- the findings panel ----------------------------------------------------------------
+   Every finding, open and settled, in one place. Two things this changes.
+
+   They were only readable by finding the node each one belonged to, which meant you had to
+   already know what you were looking for. And a settled finding had nowhere to be read at
+   all: it keeps the record of what was found and why, which does not stop being worth
+   reading because it was dealt with.
+
+   The other change is what the copy buttons produce. The old brief opened by telling the
+   reader to work top to bottom, so pasting it started the work — on findings that are, by
+   their own labels, sometimes unverified guesses. It now asks for the premise to be checked
+   and discussed first, and says plainly that closing an item because it was wrong is a
+   result. Same content; it stops being an instruction and becomes a question. */
+const DISCUSS =
+"**Discuss before changing anything.** What follows is a set of findings from a map of this\n"+
+"library, not a work order. Some are confirmed against the documents and some are guesses from\n"+
+"names — each one says which, and one that was wrong is worth more closed than quietly acted on.\n\n"+
+"So: read them, check the premise of each against what is actually on disk, and come back with\n"+
+"what you think. Say which you agree with, which you would close as wrong, and which you cannot\n"+
+"check from where you are running. Change nothing until that has been agreed.\n\n";
+
+function fitem(n){
+  const [b]=BASIS[n.id]||['unverified'];
+  const st={present:'available',missing:'missing',never:'excluded'}[statusOf(n)]||'anchor';
+  return "# "+n.id+"\n\n"+
+    "**State:** "+BASIS_LABEL[b]+" · "+st+" · "+(PHASES[n.phase]||'anchor')+"\n"+
+    "**Run from:** "+(WHERE[n.id]||'repo')+
+      (NEEDS[n.id] ? "  ·  **Needs:** "+NEEDS_LABEL[NEEDS[n.id]] : "")+"\n\n"+
+    "**What the map observed:** "+plain(n.desc)+"\n\n"+
+    "**The finding:**\n"+FIXES[n.id]+"\n";
+}
+function allFindings(){
+  return [ANCHOR].concat(N).filter(n=>FIXES[n.id])
+    .sort((a,b)=>(BASIS[a.id]||['',99])[1]-(BASIS[b.id]||['',99])[1]);
+}
+function methodBlock(id){
+  const ks=(VIA&&VIA[id])||[];
+  if(!ks.length) return "";
+  return "**How this was reached:** "+ks.map(k=>METHODS[k]?METHODS[k].name:k).join(", ")+"\n\n"+
+    ks.map(k=>{ const m=METHODS[k]; if(!m) return "";
+      return "- **"+m.name+"** — "+plain(m.how)+" *Cannot tell you:* "+plain(m.blind)+
+             " *Lives in:* "+plain(m.where);
+    }).filter(Boolean).join("\n")+"\n";
+}
+function briefHow(){
+  return "# How this map decides things\n\n"+
+    "Everything on the skills map was reached one of these ways. I am showing you the\n"+
+    "mechanisms rather than describing my reasoning, because these ARE the reasoning — there\n"+
+    "is no separate judgement happening on top of them.\n\n"+
+    "**What I want from you:** tell me which of these you disagree with, and how you would\n"+
+    "rather it worked. A method whose blind spot does not matter to you should be trusted\n"+
+    "more; one whose blind spot is exactly your problem should be weakened or dropped. Then\n"+
+    "we change the setting and rebuild, and every finding that rested on it changes with it.\n\n"+
+    "Do not change any of this yet. Discuss it first.\n\n---\n\n"+
+    Object.entries(METHODS).map(([k,m])=>
+      "## "+m.name+"\n\n"+
+      "**What it does:** "+plain(m.how)+"\n\n"+
+      "**What it cannot tell you:** "+plain(m.blind)+"\n\n"+
+      "**Where it lives:** "+plain(m.where)+"\n\n"+
+      "**The knob:** "+plain(m.knob)+"\n"
+    ).join("\n---\n\n")+
+    "\n---\n\n## Questions worth asking me\n\n"+
+    "- Which of these should I trust less than I do?\n"+
+    "- Is the overlap threshold right, or is it reporting pairs you do not care about?\n"+
+    "- Should a skill with no build-plan placement be guessed at all, or left unplaced?\n"+
+    "- Is 30 days the right life for the new tag?\n"+
+    "- What am I deciding by a method that is not on this list? That would be a gap.\n";
+}
+function briefOne(n){
+  return DISCUSS+"---\n\n"+fitem(n)+
+    "\n"+methodBlock(n.id)+
+    "\n---\n\nTwo things to come back on, not one.\n\n"+
+    "**The finding.** Is it right? If the premise does not survive contact with the files, say\n"+
+    "so and close it — that counts. If it does, say what you would change, and wait for a yes.\n\n"+
+    "**The method.** The way it was reached is listed above, with what each method cannot tell\n"+
+    "you. If the conclusion is wrong, say which method got it wrong and how it should work\n"+
+    "instead — that fixes every other finding resting on the same one, not just this.\n";
+}
+function briefAll(rows){
+  const all=rows||allFindings(), open=all.filter(n=>isOpen(n.id));
+  return "# The skills library — "+all.length+(all.length===1?" finding":" findings")+
+    ", "+open.length+" still open\n\n"+DISCUSS+
+    "They are ordered by dependency: several touch the same paragraph, so if we do act, top to\n"+
+    "bottom rather than in parallel. Settled ones are included because the record of what was\n"+
+    "found and why is the useful part, not the tick.\n\n---\n\n"+
+    all.map(n=>fitem(n)+"\n"+methodBlock(n.id)).join("\n---\n\n")+
+    "\n---\n\n## What I want back\n\n"+
+    "Three lists: which findings you agree with, which you would close because the premise is\n"+
+    "wrong, and which you cannot check from where you are running — naming where they would have\n"+
+    "to be run instead.\n\n"+
+    "Then a fourth thing, which matters more than the three. Every finding above says how it was\n"+
+    "reached. If several are wrong, they will usually be wrong through the same method — say\n"+
+    "which one and how it should work instead. Changing a method changes every finding that\n"+
+    "rested on it; arguing them one at a time fixes the symptom.\n";
+}
+
+/* The finding text is markdown-ish. Only the two marks it actually uses are converted, and
+   everything is escaped first — these strings are mine, but converting HTML I did not escape
+   is a habit that outlives the file it was safe in. */
+const fmt = t => t.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+  // \x60 rather than a literal backtick: this is spliced into a template literal below, and
+  // a backtick inside one ends it
+  .replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>');
+
+/* 'all' or 'open'. Clicking the open-items row in the key used to light the flagged nodes and
+   stop there — you were told there was one, shown which dot it was, and given no way to read
+   it. That row now opens this panel on the open ones. */
+let findFilter='all';
+/* The strip under each finding: which of the seven mechanisms produced it. Clicking one
+   opens the rules tab rather than a tooltip, because "what is this method" and "how do I
+   change it" are the same question and the answer is longer than a hover. */
+function via(id){
+  const ks=(VIA&&VIA[id])||[];
+  if(!ks.length) return '';
+  return '<div class="f-via"><span>Reached by</span>'+
+    ks.map(k=>{ const m=METHODS[k]; if(!m) return '';
+      return '<button class="mchip'+(k==='infer'?' weak':'')+'" data-how="'+k+'">'+m.name+'</button>';
+    }).join('')+'</div>';
+}
+
+/* The rules themselves. "How can I change the way you think" has a literal answer: seven
+   mechanisms, each with a file and a setting. This is that list, not a description of it. */
+function drawHow(all,open){
+  const el=$('findings');
+  el.innerHTML='<button class="close" aria-label="Close">✕</button>'+
+    '<div class="f-head"><h3>How it decides</h3><span>'+Object.keys(METHODS).length+' methods</span></div>'+
+    '<div class="f-intro">Everything on this map was reached one of these ways. Each says what '+
+    'it cannot tell you and where its setting lives — change the setting, change the findings. '+
+    'Nothing here is a judgement call I make freshly each time; if a conclusion is wrong, one '+
+    'of these is why.</div>'+
+    '<div class="f-tabs">'+
+      '<button data-ff="all">All '+all.length+'</button>'+
+      (open.length?'<button data-ff="open">Open '+open.length+'</button>':'')+
+      '<button data-ff="how" class="on">How it decides</button></div>'+
+    '<button class="copy f-all" id="f-copyhow">Copy this, to change how it decides</button>'+
+    Object.entries(METHODS).map(([k,m])=>{
+      const used=Object.entries(VIA||{}).filter(([,v])=>v.includes(k)).length;
+      return '<div class="f-item" id="how-'+k+'">'+
+        '<div class="f-top"><span class="n">'+m.name+'</span>'+
+        '<span class="f-state '+(k==='infer'?'open':'done')+'">'+used+' finding'+(used===1?'':'s')+'</span></div>'+
+        '<div class="f-body">'+m.how+'</div>'+
+        '<div class="f-blind"><b>What it cannot tell you.</b> '+m.blind+'</div>'+
+        '<div class="f-knob"><b>To change it.</b> '+m.knob+'<br><code>'+m.where+'</code></div>'+
+      '</div>';}).join('');
+  el.querySelector('.close').onclick=e=>{ e.stopPropagation(); closeFindings(); };
+  el.querySelectorAll('[data-ff]').forEach(btn=>btn.onclick=e=>{ e.stopPropagation();
+    findFilter=btn.dataset.ff; drawFindings(); $('findings').scrollTop=0; });
+  $('f-copyhow').onclick=e=>{ e.stopPropagation(); copy(briefHow(),e.currentTarget); };
+}
+
+function drawFindings(){
+  const all=allFindings(), open=all.filter(n=>isOpen(n.id));
+  const rows = findFilter==='open' ? open : all;
+  if(findFilter==='how'){ drawHow(all,open); return; }
+  $('findbtn').innerHTML='<span>Findings</span><b>'+all.length+'</b>'+
+    '<i>'+(open.length ? open.length+' still open' : 'all settled — the record stays')+'</i>';
+  const el=$('findings');
+  el.innerHTML='<button class="close" aria-label="Close">✕</button>'+
+    '<div class="f-head"><h3>Findings</h3><span>'+all.length+' · '+open.length+' open</span></div>'+
+    '<div class="f-intro">Every finding the map has made, settled ones included — a settled one '+
+    'still records what was found and why. Copy asks for a discussion first, not a rewrite.</div>'+
+    '<div class="f-tabs">'+
+      '<button data-ff="all"'+(findFilter==='all'?' class="on"':'')+'>All '+all.length+'</button>'+
+      (open.length ? '<button data-ff="open"'+(findFilter==='open'?' class="on"':'')+
+        '>Open '+open.length+'</button>' : '')+
+      '<button data-ff="how"'+(findFilter==='how'?' class="on"':'')+'>How it decides</button>'+
+      '</div>'+
+    '<button class="copy f-all" id="f-copyall">Copy '+
+      (findFilter==='open'&&open.length!==all.length ? 'the '+rows.length+' open' : 'all '+rows.length)+
+      ', to discuss</button>'+
+    rows.map(n=>{
+      const isO=isOpen(n.id), [b]=BASIS[n.id]||['unverified'];
+      return '<div class="f-item">'+
+        '<div class="f-top"><span class="n">'+esc(n.id)+'</span>'+
+        '<span class="f-state '+(isO?'open':'done')+'">'+(isO?BASIS_SHORT[b]:'settled')+'</span>'+
+        '<button class="copy f-copy" data-fx="'+esc(n.id)+'">Copy</button></div>'+
+        '<div class="f-body">'+fmt(FIXES[n.id])+'</div>'+
+        via(n.id)+
+        '<button class="f-go" data-fgo="'+esc(n.id)+'">Show it on the map →</button>'+
+      '</div>';}).join('');
+  el.querySelector('.close').onclick=e=>{ e.stopPropagation(); closeFindings(); };
+  el.querySelectorAll('[data-ff]').forEach(btn=>btn.onclick=e=>{ e.stopPropagation();
+    findFilter=btn.dataset.ff; drawFindings(); $('findings').scrollTop=0; });
+  $('f-copyall').onclick=e=>{ e.stopPropagation(); copy(briefAll(rows),e.currentTarget); };
+  el.querySelectorAll('[data-fx]').forEach(btn=>btn.onclick=e=>{ e.stopPropagation();
+    const n=allFindings().find(x=>x.id===btn.dataset.fx); copy(briefOne(n),btn); });
+  el.querySelectorAll('[data-fgo]').forEach(btn=>btn.onclick=e=>{ e.stopPropagation();
+    closeFindings(); select(btn.dataset.fgo); });
+  el.querySelectorAll('[data-how]').forEach(btn=>btn.onclick=e=>{ e.stopPropagation();
+    findFilter='how'; drawFindings();
+    const t=$('how-'+btn.dataset.how);
+    if(t) t.scrollIntoView({block:'center'});
+    if(t){ t.classList.add('flash'); setTimeout(()=>t.classList.remove('flash'),1400); } });
+}
+function openFindings(filter){
+  // the two panels share a slot on a wide screen, so they cannot both be up
+  if(sel) select(null);
+  if(filter && filter!==findFilter){ findFilter=filter; drawFindings(); }
+  $('findings').hidden=false; $('findbtn').classList.add('on');
+  $('findings').scrollTop=0;
+}
+function closeFindings(){ $('findings').hidden=true; $('findbtn').classList.remove('on'); }
+
+function brief(){
+  const all=[ANCHOR].concat(N).filter(n=>FIXES[n.id])
+    .sort((a,b)=>(BASIS[a.id]||['',99])[1]-(BASIS[b.id]||['',99])[1]);
+  const rows=all.filter(n=>isOpen(n.id));
+  const counts={};
+  rows.forEach(n=>{ const k=(BASIS[n.id]||['unverified'])[0]; counts[k]=(counts[k]||0)+1; });
+  const needs={};
+  rows.forEach(n=>{ const k=NEEDS[n.id]; if(k) needs[k]=(needs[k]||0)+1; });
+  const tally=Object.entries(counts)
+    .map(([k,v])=>`${v} ${BASIS_SHORT[k]}`).join(', ');
+  return `# ${COMPANY} · Copilot Enterprise — ${rows.length} open items\n\n`+
+    "> **Synthetic demo.** Generated data, invented company, invented files. Not a real audit,\n> and not safe to run against a real repository.\n\n"+
+
+    `How far each one has got:\n\n| State | Count | Means |\n|---|---|---|\n`+
+    BASIS_ORDER.filter(k=>counts[k]).map(k=>
+      `| **${BASIS_SHORT[k]}** | ${counts[k]} | ${BASIS_MEANS[k]} |`).join('\n')+`\n\n`+
+    `\n**Nothing here is finished.** Drafted means the text is written but not pasted; corrected `+
+    `means I fixed my claim, not that the question is settled. Every one of the ${rows.length} `+
+    `still needs something from you:\n\n`+
+    `| What it still needs | Count |\n|---|---|\n`+
+    NEEDS_ORDER.filter(k=>needs[k]).map(k=>`| ${NEEDS_LABEL[k]} | ${needs[k]} |`).join('\n')+`\n\n`+
+    `Ordered by dependency: several edit the same paragraph, so work top to bottom rather than in `+
+    `parallel. Step 1 may close some of the unverified ones outright.\n\n`+
+    PREAMBLE+`\n`+
+    rows.map((n,i)=>{
+      const st={present:'available',missing:'missing',never:'excluded'}[statusOf(n)];
+      const [b]=BASIS[n.id]||['unverified'];
+      return `## Step ${i+1} — ${n.id}  (${st}, ${PHASES[n.phase]||'anchor'}) — ${BASIS_LABEL[b]}\n\n`+
+        `**Run from:** ${WHERE[n.id]||'repo'}  ·  **Needs:** ${NEEDS_LABEL[NEEDS[n.id]]||'—'}\n\n`+
+        `**What I observed:** ${plain(n.desc)}\n\n`+
+        `**Fix:**\n${FIXES[n.id]}\n`;
+    }).join('\n---\n\n')+
+    `\n\n---\n\n## When you finish\n\n`+
+    `Report three lists: what you changed, what you could not reach and exactly where to run it, `+
+    `and anything you closed because the premise turned out to be wrong. Several of these are `+
+    `marked unverified precisely so that closing them counts as a result.\n\n`+
+    `Then update vibehq/docs/skills-map/skills-map.html — the BASIS entry for each step you `+
+    `settled — and append to docs/decisions.md and docs/gotchas.md as that repo's agreement `+
+    `requires. Commit and push: that repo treats an unpushed change as unbacked up.\n\n`+
+    `The workspace library is a git repo (G-001) and now has a remote (D-010): `+
+    `github.com/Joenebula/skills. If you changed a SKILL.md there, commit and push it too — `+
+    `that is the whole point of step 1. The account library at ~/.claude/skills is not a repo, `+
+    `so say which files you touched there, or nothing records it.\n`;
+}
+
+/* ------------------------------------------------------------------ detail */
+/* A column heading, opened. Same panel a skill uses, because it answers the same shape of
+   question — what is this, what is in it, what does being in it imply — and a second panel
+   somewhere else would be a second thing to learn. */
+function groupPanel(key){
+  const list=N.filter(n=>groupOf(n)===key);
+  const t=key==='agreement'?['Agreement','governs all']:phaseTitle(key);
+  const col=key==='agreement'?cv('--amber'):(SECTOR[key]||cv('--ink3'));
+  const members=key==='agreement'
+    ? `<button class="relbtn" data-go="${ANCHOR.id}">${ANCHOR.id}</button>`
+    : list.map(n=>`<button class="relbtn" data-go="${esc(n.id)}">${esc(n.id)}</button>`).join('');
+  const unver=list.filter(n=>EVIDENCE[n.id]==='named').length;
+  sel=null; $('detail').classList.add('on');
+  $('detail').innerHTML=`<button class="close" aria-label="Close">✕</button>
+    <div class="d-name">${esc(t[0])}</div>
+    <div class="d-stamp">${esc(t[1]||'')}</div>
+    <div class="d-meta"><span class="tag st" style="background:${col};color:var(--void)">${
+      key==='agreement'?'1 file':list.length+(list.length===1?' skill':' skills')}</span>${
+      unver?`<span class="tag">${unver} unverified</span>`:''}</div>
+    <div class="d-desc">${GROUP_ABOUT[key]||'No note written for this column yet.'}</div>
+    <div class="d-rel"><div class="lbl">In this column</div>${members}</div>`;
+  $('detail').querySelector('.close').onclick=()=>{
+    $('detail').classList.remove('on'); gutters(); apply(); kick(); };
+  $('detail').querySelectorAll('[data-go]').forEach(b=>
+    b.onclick=()=>select(b.dataset.go));
+  gutters();
+}
+
+/* PLACED — a skill the build put in a column by resemblance because nothing places it. It
+   sits in a real column so it can be found where you would look for it, and the tag still
+   says it is new; the panel then says the column is a guess and names what it was matched
+   against, so you can judge the guess.
+
+   Rendered on its own line rather than inside the date chain. A newly discovered skill is
+   both new AND placed by guesswork, and putting the two in one if/else meant the more
+   interesting of them was never shown. */
+function detail(id){
+  const n=id===ANCHOR.id?ANCHOR:N[IDX[id]];
+  const st=statusOf(n);
+  const lab={present:'available',missing:'missing',never:'excluded'}[st];
+  const col={present:'--present',missing:'--missing',never:'--never',anchor:'--amber'}[st];
+  // Drop any later tag whose text is already contained in an earlier one — otherwise a
+  // built-in reads "Built into Claude Code / CLAUDE CODE / built-in", three ways of once.
+  const raw = n.ring
+    ? [[lab,1],[PHASES[n.phase],0],[RINGS.find(R=>R.key===n.ring).label,0],[n.src,0]]
+    : [['the anchor',1],[n.src,0]];
+  const key=t=>t.toLowerCase().replace(/[^a-z0-9]/g,'');
+  const kept=[];
+  for(const [text,isStatus] of raw){
+    const k=key(text);
+    if(kept.some(x=>key(x[0]).includes(k))) continue;
+    kept.push([text,isStatus]);
+  }
+  const tags = kept.map(([text,isStatus])=>isStatus
+    ? `<span class="tag st" style="background:var(${col})">${text}</span>`
+    : `<span class="tag">${text}</span>`);
+  const rel=[...(neigh[id]||[])];
+  const LOC = n.ring ? locationOf(id) : null;
+  $('detail').innerHTML=`<button class="close" aria-label="Close">✕</button>
+    <div class="d-name">${n.id}</div>
+    ${n.ring?`<div class="d-stamp">${
+      VER[id]?`<b>v${VER[id]}</b><span class="dot">·</span>`:''}${
+      META[id]
+        ? `Updated ${niceDate(META[id][0])}<span class="dot">·</span>${META[id][1]}`
+        : `<i>No version or date recorded</i>`}</div>`:''}
+    <div class="d-meta">${tags.join('')}${
+      NEWTAG.has(id)?'<span class="tag" style="background:rgba(94,200,240,.20);color:var(--r3)">new</span>':''}</div>
+    ${NEWTAG.has(id)&&LIVE[id]&&LIVE[id].added
+      ? `<div class="d-new">Added ${ago(LIVE[id].added)} \u00b7 ${LIVE[id].added}</div>`
+    // A skill that was already there when the library was first committed is older than the
+    // repo by an unknown amount. Saying "added 9 July" would be a lie the git history invites.
+    : LIVE[id]&&LIVE[id].since
+      ? `<div class="d-new" style="opacity:.72">In the library since before it was version-controlled on ${LIVE[id].since}</div>`
+    /* Found on disk, in a library with no git history behind it. The rule stands — the repo
+       owns the clock, and no clock beats a wrong one — but applied silently it produces the
+       worst outcome there is: you add a skill, the map finds it, and it appears with no tag
+       and nothing saying why. So it says why, and says what closes it. */
+    : NOCLOCK.has(id)
+      ? `<div class="d-noclock"><b>No date for this one.</b> It was read from your account
+         library at <code>~/.claude/skills</code>, which is not a git repository — so nothing
+         knows when it arrived, and a skill with no date is never tagged new. Commit it to
+         <code>github.com/Joenebula/skills</code> and the next build tags it.</div>` : ''}
+    <div class="d-desc">${n.desc||'<i>No note written for this one yet.</i>'}</div>
+    ${LIVE[id]&&LIVE[id].desc
+      ? `<div class="d-own"><span class="lbl">Its own description</span>${esc(LIVE[id].desc)}</div>` : ''}
+    ${PLACED[id]
+      ? `<div class="d-placed"><b>This column is a guess.</b> Nothing in the build plan places
+         this skill, so the map put it in <b>${esc(phaseTitle(PLACED[id].group)[0])}</b> —
+         the column whose skills its description most resembles, nearest being
+         <code>${esc(PLACED[id].near)}</code>. Name it in <code>BUILD-PLAN.md</code> §10 and
+         the guess is replaced by your answer.</div>` : ''}
+    ${LOC?`<div class="d-loc"><div class="lbl">Location</div>
+      <div class="locrow">
+        <code class="locpath"><b>${esc(LOC.repo)}</b> · ${esc(LOC.path)}</code>
+        <button class="loccopy" data-loc="1">Copy link</button></div>
+      <div class="locfull" id="locfull" hidden><code>${esc(LOC.url)}</code></div>
+      <div class="locnote">Invented repository — this resolves to nothing.</div></div>`:''}
+    ${rel.length?`<div class="d-rel"><div class="lbl">Trigger overlap — ${rel.length}</div>
+      ${rel.map(r=>`<button class="relbtn" data-go="${r}">${r}</button>`).join('')}</div>`:''}
+    ${(n.tags||[]).length?`<div class="d-tags"><div class="lbl">Tags</div>
+      ${n.tags.map(t=>`<button class="cap${query===t?' on':''}" data-tag="${t}">${t}</button>`).join('')}</div>`:''}
+    ${FIXES[id]&&isOpen(id)?`<div class="d-fix" role="note" aria-label="Open finding">
+      <div class="lbl">
+        <svg class="warn" viewBox="0 0 16 16" aria-hidden="true" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+             stroke-linejoin="round">
+          <path d="M8 1.9 15 14H1L8 1.9Z"/><path d="M8 6.4v3.4"/><path d="M8 11.9h.01"/>
+        </svg>
+        Needs fixing
+        <button class="copy" data-copy="one">Copy</button></div>
+      <div class="basisrow">
+        <span class="basis ${(BASIS[id]||['unverified'])[0]}">step ${(BASIS[id]||['',0])[1]} · ${BASIS_LABEL[(BASIS[id]||['unverified'])[0]]}</span></div>
+      <pre>${esc(FIXES[id])}</pre></div>`:''}`;
+  $('detail').classList.add('on');
+  $('detail').querySelector('.close').onclick=()=>select(null);
+  $('detail').querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>select(b.dataset.go));
+  // a tag is a toggle: click to filter by it, click the lit one again to clear
+  $('detail').querySelectorAll('[data-tag]').forEach(b=>b.onclick=()=>{
+    const t=b.dataset.tag, off=query===t;
+    $('detail').querySelectorAll('[data-tag]').forEach(o=>o.classList.remove('on'));
+    if(off){ $('q').value=''; query=''; hits=null; $('capsel').value=''; apply(); }
+    else { b.classList.add('on'); runTag(t); }
+    closeResults(); });
+  const lb=$('detail').querySelector('[data-loc]');
+  if(lb&&LOC) lb.onclick=e=>{ e.stopPropagation();
+    copy(LOC.url,lb);
+    const full=$('detail').querySelector('.locfull');
+    if(full) full.hidden=false; };
+  const cb=$('detail').querySelector('[data-copy]');
+  if(cb) cb.onclick=()=>copy(FIXES[id],cb);
+}
+/* ---- the trail --------------------------------------------------------------------
+   Newest at the top, joined by a line running down into the session. A place already
+   seen moves back to the top rather than appearing twice, so the list is the set of
+   places you have been in the order you last saw them, not a tally of clicks. */
+const PATH_MAX=40;
+let visited=[];
+function record(id){
+  if(!id) return;
+  const at=visited.indexOf(id);
+  if(at>=0) visited.splice(at,1);
+  visited.unshift(id);
+  if(visited.length>PATH_MAX) visited.length=PATH_MAX;
+  drawPath();
+}
+function drawPath(){
+  const box=$('pathpanel'), list=$('pp-list');
+  box.hidden = visited.length===0;
+  $('pp-n').textContent=visited.length;
+  list.textContent='';
+  visited.forEach(id=>{
+    const n = id===ANCHOR.id ? ANCHOR : N[IDX[id]];
+    if(!n) return;
+    const col = id===ANCHOR.id ? cv('--amber') : paintOf(n);
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='ppstep'+(sel===id?' now':'');
+    const dot=document.createElement('i'); dot.style.background=col;
+    const nm=document.createElement('span'); nm.textContent=id; b.title=id;
+    b.append(dot,nm);
+    if(sel===id){ const h=document.createElement('em'); h.className='pphere';
+      h.textContent='here'; b.append(h); }
+    b.onclick=e=>{ e.stopPropagation(); select(id); };
+    list.appendChild(b);
+  });
+  list.scrollTop=0;                       // the newest step is the one to keep in view
+}
+$('pp-clear').onclick=e=>{ e.stopPropagation(); visited=[]; drawPath(); gutters(); apply(); kick(); };
+
+function select(id){
+  // they share a slot on a wide screen; a selection wins, because it is the thing you just
+  // pointed at
+  if(id) closeFindings();
+  sel=(id&&sel===id)?null:id;
+  if(sel) record(sel); else drawPath();
+  hover=null;                      // a selection replaces the hover, never stacks on it
+  if(sel){ detail(sel); closeResults(); } else $('detail').classList.remove('on');
+  apply(); gutters();
+  if(typeof syncClear==='function') syncClear();
+  if(sel) frameSelection(sel); else unframe();
+}
+
+/* ------------------------------------------------------------------ predictive search */
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function hl(id,q){ const i=nrm(id).indexOf(q);
+  return i<0?esc(id):esc(id.slice(0,i))+'<mark>'+esc(id.slice(i,i+q.length))+'</mark>'+esc(id.slice(i+q.length)); }
+function closeResults(){ $('results').classList.remove('on');
+  $('q').setAttribute('aria-expanded','false'); cur=-1; }
+function search(){
+  const q=nrm(query); res=[];
+  if(!q){ hits=null; closeResults(); apply(); return; }
+  const pool=[ANCHOR].concat(N.filter(visible));
+  const all=pool.map(n=>({n,s:score(n,q)})).filter(o=>o.s>=0)
+    .sort((a,b)=>a.s-b.s||a.n.id.localeCompare(b.n.id)).map(o=>o.n);
+  hits=new Set(all.map(n=>n.id));      // the map lights all of them
+  res=all.slice(0,14);                 // the list shows the first screenful
+  const box=$('results');
+  box.innerHTML=res.length?res.map((n,i)=>{
+    const st=statusOf(n), c=n.ring?colourOf(n):'--amber';
+    return `<div class="res" role="option" data-id="${n.id}" data-i="${i}">
+      <i class="${st==='missing'?'hollow':''}" style="background:var(${c})"></i>
+      <span class="n">${hl(n.id,q)}</span>
+      <span class="p">${(PHASES[n.phase]||'anchor').split('·')[0].trim()}</span></div>`;
+  }).join('')+(all.length>res.length
+      ?`<div class="res none">+${all.length-res.length} more, all lit on the map</div>`:'')
+    :`<div class="res none">No skill matches “${esc(query)}”.</div>`;
+  box.classList.add('on'); $('q').setAttribute('aria-expanded','true');
+  box.querySelectorAll('.res[data-id]').forEach(el=>{
+    el.onclick=()=>{ $('q').value=el.dataset.id; query=el.dataset.id; search(); select(el.dataset.id); };
+    el.onpointerenter=()=>{ cur=+el.dataset.i; mark(); }; });
+  cur=res.length?0:-1; mark(); apply();
+}
+const mark=()=>$('results').querySelectorAll('.res').forEach((e,i)=>e.classList.toggle('cur',i===cur));
+
+/* ------------------------------------------------------------------ events */
+
+/* pointerleave is not enough on a map that moves. A node sliding out from under a
+   stationary cursor fires no leave event, so `hover` got stuck on whatever happened to
+   be there when the graph last settled — the name stayed lit over empty space. Every
+   frame that moves anything re-checks the hovered node against the real cursor. */
+let ptr={x:-1e4,y:-1e4};
+function validateHover(){
+  if(!hover) return;
+  const n = hover===ANCHOR.id ? {sx:CX,sy:CY,srad:21} : N[IDX[hover]];
+  if(!n||n.sx===undefined) { hover=null; return; }
+  if(Math.hypot(n.sx-ptr.x,n.sy-ptr.y) > Math.max(n.srad||0,7*zoom)+6){ hover=null; apply(); }
+}
+
+function bind(el,id){
+  // the first click on any node is what stops the drift and settles the map
+  el.addEventListener('click',e=>{e.stopPropagation();
+    if(orbiting){ unpack(id); return; }
+    if(!settled) return;            // still landing
+    select(id);});
+  el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();
+    if(orbiting){ unpack(id); return; } if(settled) select(id); } });
+  // Leaving always clears, whether or not something is selected. The old guard meant a
+  // node hovered before a selection stayed "hovered" for good, so its name hung on the
+  // map with nothing under it and the highlight looked arbitrary.
+  el.addEventListener('focus',()=>{ if(!sel&&settled&&!orbiting){hover=id;apply();} });
+  el.addEventListener('blur',()=>{ if(hover===id){hover=null;apply();} });
+  el.addEventListener('pointerenter',()=>{ if(!sel&&settled&&!orbiting){hover=id;apply();} });
+  el.addEventListener('pointerleave',()=>{ if(hover===id){hover=null;apply();} });
+}
+N.forEach((n,i)=>{ bind(nodeEl[i],n.id);
+  nodeEl[i].addEventListener('pointerdown',ev=>{ ev.preventDefault(); drag=n;
+    nodeEl[i].setPointerCapture(ev.pointerId); reheat(.3); }); });
+bind(gA,ANCHOR.id);
+
+svg.addEventListener('pointermove',ev=>{
+  const r=svg.getBoundingClientRect();
+  ptr.x=(ev.clientX-r.left)/r.width*W; ptr.y=(ev.clientY-r.top)/r.height*H;
+  if(!drag)return;
+  drag.x=toWorldX(ptr.x); drag.y=toWorldY(ptr.y); drag.vx=drag.vy=0; paint(); });
+svg.addEventListener('pointerleave',()=>{ ptr={x:-1e4,y:-1e4};
+  if(hover){ hover=null; apply(); } });
+addEventListener('pointerup',()=>{ if(drag){drag=null;reheat(.28);} });
+
+/* ---- navigating a thousand nodes ---------------------------------------------------
+   Wheel zooms toward the cursor, so the thing you are pointing at stays under the
+   pointer. Dragging empty space pans. Neither touches the layout: the world transform
+   is presentation only, which is why labels and strokes keep their screen sizes and the
+   physics never has to know the view moved. */
+const ZMIN=.55, ZMAX=9;
+function zoomAt(sx,sy,factor){
+  const z=clampZoom(Math.max(ZMIN,Math.min(ZMAX,zoom*factor)));
+  if(z===zoom) return;
+  panX = sx-(sx-panX)*(z/zoom);
+  panY = FLAT() ? centreY(z) : sy-(sy-panY)*(z/zoom);
+  zoom = z; userZoomed=true; autoFrom=null;
+  if(FLAT()) panX=clampPanX(panX);
+  applyView(); paint(); kick(); updateZoomLabel();
+}
+svg.addEventListener('wheel',ev=>{
+  ev.preventDefault();
+  arm();
+  // A board and a row have one axis. Zooming them changes nothing you wanted to see and
+  // takes away everything either side, so the wheel scrolls along instead — which is the
+  // gesture the shape asks for. Either axis of the wheel drives it, so a trackpad swipe
+  // and a mouse wheel both work.
+  if(FLAT()){
+    const d=Math.abs(ev.deltaX)>Math.abs(ev.deltaY)?ev.deltaX:ev.deltaY;
+    panX=clampPanX(panX-d*(ev.deltaMode===1?16:1)*0.9);
+    applyView(); paint(); kick();
+    return;
+  }
+  const r=svg.getBoundingClientRect();
+  zoomAt((ev.clientX-r.left)/r.width*W,(ev.clientY-r.top)/r.height*H,
+         Math.pow(.9988, ev.deltaMode===1?ev.deltaY*16:ev.deltaY));
+},{passive:false});
+
+let panning=null, panMoved=0;   // survives pointerup so the click after a drag can be ignored
+svg.addEventListener('contextmenu',ev=>ev.preventDefault());
+svg.addEventListener('pointerdown',ev=>{
+  if(ev.button!==0) return;                            // panning is a left-drag only
+  // A press that starts on something interactive is not the start of a pan. This has to be
+  // checked here rather than on the click, because starting a pan calls setPointerCapture,
+  // and from that moment every pointer event — including the click — is delivered to the
+  // canvas instead of the thing under the finger. The heading never saw its own press.
+  if(drag||ev.target.closest('g.node')||ev.target.closest('.hdhit')) return;
+  panning={x:ev.clientX,y:ev.clientY,px:panX,py:panY,moved:0}; panMoved=0;
+  svg.setPointerCapture(ev.pointerId); svg.style.cursor='grabbing';
+});
+svg.addEventListener('pointermove',ev=>{
+  if(!panning) return;
+  const r=svg.getBoundingClientRect(), u=W/r.width;
+  panX=clampPanX(panning.px+(ev.clientX-panning.x)*u);
+  // A board and a row are horizontal things: they are laid out to fit the height exactly,
+  // so any vertical pan can only take them off the top or bottom of the frame. Dragging
+  // one sideways is the gesture; dragging it up and down only ever loses it.
+  if(!FLAT()) panY=panning.py+(ev.clientY-panning.y)*u;
+  panning.moved=Math.max(panning.moved,Math.abs(ev.clientX-panning.x)+Math.abs(ev.clientY-panning.y));
+  applyView(); paint(); kick();
+});
+addEventListener('pointerup',()=>{ if(panning){ svg.style.cursor=''; panMoved=panning.moved; panning=null; } });
+
+function resetView(){ userZoomed=false; autoFrom=null; setView(1,0,0,true); }
+
+/* ---- framing a selection ------------------------------------------------------------
+   Measured: at 100% the median gap between neighbouring nodes is 10px and a label row
+   needs 16, so half the map cannot be named where it sits. No amount of spreading fixes
+   that without a map three times the viewport. Framing does: at 4-6x the same neighbours
+   are 40-60px apart and every label sits where it belongs, unmoved.
+
+   If you have set a zoom level yourself, that is a decision — clicking a node then pans
+   to it and leaves the level alone. */
+let userZoomed=false, autoFrom=null, vraf=null;
+function setView(z,px,py,animate){
+  const z0=zoom,x0=panX,y0=panY, z1=clampZoom(Math.max(ZMIN,Math.min(ZMAX,z)));
+  if(FLAT()){ py=centreY(z1); px=clampPanX(px,z1); }
+  if(!animate){ zoom=z1; panX=px; panY=py; applyView(); paint(); kick(); updateZoomLabel(); return; }
+  if(vraf) cancelAnimationFrame(vraf);
+  const t0=performance.now(), D=420;
+  const step=()=>{ const k=Math.min(1,(performance.now()-t0)/D);
+    const e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    zoom=z0+(z1-z0)*e; panX=x0+(px-x0)*e; panY=y0+(py-y0)*e;
+    applyView(); paint(); updateZoomLabel();
+    vraf = k<1 ? requestAnimationFrame(step) : null;
+    if(k>=1) kick(); };
+  vraf=requestAnimationFrame(step);
+}
+function frameSelection(id){
+  if(orbiting) return;
+  /* A flat view frames its selection too, but along one axis. It zooms until the names are
+     comfortably readable, tracks sideways to put the selected node in the middle, and holds
+     the vertical centre — so the row or the columns stay where they were and only the scale
+     and the sideways position change. The zoom is still bounded by the layout's own height,
+     which is what stops it throwing the rest of the board off the frame. */
+  if(FLAT()){
+    // The flow view holds still. Its whole subject is the journey from the left field to the
+    // right-hand total, and zooming to the node throws the destination off the frame — you
+    // select a skill to see where it lands and the landing is what leaves. The ribbon
+    // lighting up while everything else dims is the framing here.
+    if(VIEW==='flow') return;
+    const n=IDX[id]!==undefined?N[IDX[id]]:null;
+    if(!n) return;
+    if(!autoFrom) autoFrom={zoom,panX,panY};
+    const z=clampZoom(FRAMEZ);
+    // Left of centre, not centred. A name is drawn on whichever side has room, and a node
+    // sitting exactly in the middle gets a right-anchored one that runs at the panel. Put it
+    // at 38% of the strip and the name has the whole right-hand half to lie in.
+    const aim=SAFE_L+(SAFE_R-SAFE_L)*0.38;
+    setView(z, clampPanX(aim-n.x*z, z), centreY(z), true);
+    return;
+  }
+  // Selecting the root frames the organisation ring — the surfaces the enterprise root
+  // actually owns. It used to light repository instructions too: a hundred nodes in the
+  // two densest bands, which cannot carry names at any zoom that still shows them all.
+  const ids = id===ANCHOR.id
+    ? N.filter(n=>n.ring==='org').map(n=>n.id)
+    : (IDX[id]===undefined ? [] : [id,...(neigh[id]||[])].filter(i=>IDX[i]!==undefined));
+  if(!ids.length) return;
+  const pts=ids.map(i=>N[IDX[i]]);
+  const cx=pts.reduce((a,n)=>a+n.x,0)/pts.length, cy=pts.reduce((a,n)=>a+n.y,0)/pts.length;
+  const keepY = FLAT() ? panY : null;             // flat views hold their vertical centre
+  if(userZoomed){                                  // your zoom level, your call
+    setView(zoom,(SAFE_L+SAFE_R)/2-cx*zoom,keepY!==null?keepY:CY-cy*zoom,true); return; }
+  // otherwise fit the selection and its overlaps into the space the panel leaves
+  const spread=Math.max(40,...pts.map(n=>Math.hypot(n.x-cx,n.y-cy)));
+  // Frame tightly. A selection framed to 62% of the screen left sixteen organisation
+  // nodes spanning 165 units of height, and sixteen label rows need 195 — so most of them
+  // were withdrawn for want of somewhere to sit. The frame has to give the labels room,
+  // not just get the nodes on screen.
+  const availW=(SAFE_R-SAFE_L)*.86, availH=H*.86;
+  const rows=Math.max(2,ids.length);
+  const needH=rows*LBLH*1.15;                       // the stack the labels will want
+  const z=Math.max(1.6,Math.min(7.5,
+    Math.max(Math.min(availW,availH)/(spread*2+40), needH/Math.max(40,spread*2))));
+  if(!autoFrom) autoFrom={zoom,panX,panY};
+  // In a flat view the zoom changes but the vertical centre does not: the whole layout is
+  // one band, so recentring on a node's y only pushes the rest of the band off the frame.
+  // Whatever world-y is at the middle of the screen right now stays there through the zoom.
+  const midY=(CY-panY)/zoom;
+  setView(z,clampPanX((SAFE_L+SAFE_R)/2-cx*z),FLAT()?CY-midY*z:CY-cy*z,true);
+}
+// Deselecting goes back to the default view rather than to wherever the last frame left
+// you — after two or three selections "where I was" is not a place anyone remembers.
+function unframe(){ autoFrom=null;
+  if(userZoomed) return;                       // unless you set the zoom yourself
+  if(zoom!==1||panX!==0||panY!==0) setView(1,0,0,true); }
+function updateZoomLabel(){ const b=$('zlabel'); if(b) b.textContent=Math.round(zoom*100)+'%'; }
+// reaching for any control is a decision to stop watching and start using it
+function arm(){ if(orbiting){ startSettle(null); return true; } return false; }
+
+$('zin').onclick =()=>{ arm(); zoomAt(CX,CY,1.35); };
+$('zout').onclick=()=>{ arm(); zoomAt(CX,CY,1/1.35); };
+$('zreset').onclick=resetView;
+addEventListener('keydown',e=>{
+  if(document.activeElement===$('q')) return;
+  if(e.key==='+'||e.key==='=') zoomAt(CX,CY,1.35);
+  if(e.key==='-') zoomAt(CX,CY,1/1.35);
+  if(e.key==='0') resetView();
+});
+updateZoomLabel();
+// the first click anywhere on the map lays the rings out, not only a click on a node
+// Clicking off is the way out, and it goes all the way out — deselect and back to the
+// default view in one move, whether you got here by selecting a node or by zooming
+// yourself. Anything less means remembering which of the two put you where you are.
+svg.addEventListener('click',()=>{ if(panMoved>4){ panMoved=0; return; }
+  if(orbiting){
+    // The node you aimed at has moved by the time the click lands, so take the nearest one
+    // to where the pointer actually was. It is not opened now — nothing opens until the
+    // field has come to rest — it is remembered and applied the moment it does.
+    let best=null,bd=16*16;
+    for(const n of N){ const d=(n.x-ptr.x)**2+(n.y-ptr.y)**2; if(d<bd){bd=d;best=n;} }
+    startSettle(best?best.id:null);
+    return; }
+  if(!settled) return;                       // the field is still landing
+  closeResults();
+  // Clicking away clears what is lit, whichever way it got lit. A destination picked by
+  // clicking it behaved differently from a node selected by clicking it — one cleared on a
+  // background click and the other did not — and nothing on screen said why.
+  const had=clearPicks(); if(had){ syncClear(); }
+  if(sel) select(null); else if(had){ apply(); kick(); }
+  // Clicking the background used to snap the view back to where it started. On a board you
+  // have scrolled halfway along, that throws away the thing you were looking at to undo a
+  // selection — two different intentions on one gesture. Deselect only; where you have
+  // scrolled to is yours, and Reset is there when you want it back.
+  if(!FLAT()) resetView(); });
+
+/* Every entry in the key is a selector, and selecting shows you a group rather than
+   removing it. Clicking "always-on" used to hide the always-on nodes, which is the
+   opposite of what the gesture reads as — you point at a thing to see it. Clicking a tag
+   inside a description was fixed to light its nodes some time ago and the key was left
+   behind, so the same click meant two opposite things depending on where you made it.
+
+   One rule now, everywhere: click to light the group, click again to release it. Several
+   can be lit at once and they add. Nothing in the key removes a node from the map — what
+   you did not pick recedes, so you keep the context you are picking out of. */
+const PICKS=new Set();
+const pickMatch={
+  agent:      n=>n.agent,
+  settled:    n=>settledOf(n),
+  unverified: n=>EVIDENCE[n.id]==='named',
+  flag:       n=>n.flag,
+  // "available" has to mean the same thing here as in the number beside it. The counter was
+  // made honest — it stopped counting a skill as available on the strength of a document
+  // naming it — and this predicate was left on the old status field, so the chip said 28
+  // and lit 62.
+  present:    n=>statusOf(n)==='present'&&EVIDENCE[n.id]!=='named',
+  missing:    n=>statusOf(n)==='missing',
+  never:      n=>statusOf(n)==='never'
+};
+// null when nothing is picked, which is what tells apply() to leave the map alone
+/* Pointing at a destination or a build step previews it: the same set lights that clicking
+   would pick, and it goes again when you point elsewhere. A total you cannot interrogate
+   without committing to a click is a number you have to trust; one you can sweep along is a
+   number you can check. It is a separate channel from PICKS on purpose — a preview must not
+   survive the pointer leaving, and a pick must not die because it did. */
+let hoverPick=null;
+function idsForKeys(keys){
+  const rings=keys.filter(k=>k.startsWith('r:')).map(k=>k.slice(2));
+  const grps =keys.filter(k=>k.startsWith('g:')).map(k=>k.slice(2));
+  const kinds=keys.filter(k=>!k.startsWith('r:')&&!k.startsWith('g:'));
+  const out=new Set();
+  for(const n of N)
+    if(rings.includes(n.ring) || grps.includes(groupOf(n))
+       || kinds.some(k=>pickMatch[k]&&pickMatch[k](n))) out.add(n.id);
+  return out;
+}
+function pickedIds(){
+  const keys=[...PICKS]; if(hoverPick) keys.push(hoverPick);
+  return keys.length ? idsForKeys(keys) : null;
+}
+function clearPicks(){
+  if(!PICKS.size) return false;
+  PICKS.clear();
+  document.querySelectorAll('.pick').forEach(el=>{
+    el.classList.remove('pick'); el.setAttribute('aria-checked','false'); });
+  return true;
+}
+/* Pointing at it shows what clicking it would pick, and stops showing it when you point
+   away — including on focus, so a keyboard finds the same thing a pointer does. */
+function previewable(el,key,brighten){
+  const on=v=>{ hoverPick=v?key:(hoverPick===key?null:hoverPick);
+                for(const e of brighten) e.style.opacity=v?1:'';
+                el.style.cursor='pointer'; apply(); kick(); };
+  el.addEventListener('pointerenter',()=>on(true));
+  el.addEventListener('pointerleave',()=>on(false));
+  el.addEventListener('focus',()=>on(true));
+  el.addEventListener('blur',()=>on(false));
+}
+function pickable(el,key){
+  el.tabIndex=0; el.setAttribute('role','switch'); el.setAttribute('aria-checked','false');
+  const hit=()=>{ arm();
+    PICKS.has(key)?PICKS.delete(key):PICKS.add(key);
+    el.classList.toggle('pick',PICKS.has(key));
+    el.setAttribute('aria-checked',PICKS.has(key)?'true':'false');
+    $('pickclear').classList.toggle('on',PICKS.size>0);
+    apply(); kick(); };
+  el.onclick=e=>{ e.stopPropagation(); hit(); };
+  el.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); hit(); } };
+}
+document.querySelectorAll('[data-f]').forEach(el=>pickable(el,el.dataset.f));
+pickable($('k-flag'),'flag');
+/* and it opens the panel on what it just lit. Lighting a dot and naming a count answers
+   "how many"; it does not answer "which, and what is wrong with it", which is the only
+   reason anyone clicks a row labelled open items. */
+$('k-flag').addEventListener('click',()=>{
+  if(PICKS.has('flag')) openFindings('open'); else closeFindings(); });
+document.querySelectorAll('.ringkey [data-r],.ringkey [data-k]').forEach(el=>
+  pickable(el, el.dataset.r?'r:'+el.dataset.r:el.dataset.k));
+/* One control that puts the map back to all of it, and one key that does the same.
+
+   The trap it fixes: clicking a related skill inside an open description selects that node,
+   and if the node it selected is off screen there was nothing on screen to press to undo it.
+   Clicking empty space works only if you can find empty space, which on a zoomed-in board or
+   a dense ring you cannot. So the button is visible whenever ANYTHING is narrowing the map —
+   a selection, a pick or a search — not only when a pick is on, and it says what it will do. */
+function anythingOn(){ return PICKS.size>0 || !!hoverPick || !!query || !!sel; }
+function syncClear(){
+  const b=$('pickclear'), on=anythingOn();
+  b.classList.toggle('on',on);
+  b.textContent = sel && !PICKS.size && !query
+    ? 'Deselect '+(sel.length>22?sel.slice(0,21)+'…':sel)
+    : 'Show everything again';
+}
+function clearAll(){
+  const had=anythingOn();
+  clearPicks();
+  if(sel) select(null);
+  if(query) clearFilter(); else { apply(); kick(); }
+  syncClear();
+  return had;
+}
+$('pickclear').onclick=e=>{ e.stopPropagation(); arm(); clearAll(); };
+
+/* ---- the opening comes back after ten minutes ------------------------------------------
+   A map left open on a second screen stops being a picture of anything: whatever was
+   selected an hour ago is still lit, at whatever zoom, and it reads as the current state
+   because nothing says otherwise. So after ten idle minutes it puts itself back — the drift,
+   the trails, the radial layout, nothing selected — which is both the honest state and the
+   one worth glancing at.
+
+   Only ever from idle. Any pointer, key, wheel or touch resets the clock, so this cannot
+   interrupt someone who is using it; and if the tab is in the background the restart waits
+   until it is looked at again rather than animating to nobody. */
+const IDLE_MS=10*60*1000;
+let lastActive=performance.now();
+const noteActive=()=>{ lastActive=performance.now(); };
+for(const ev of ['pointerdown','pointermove','wheel','keydown','touchstart'])
+  addEventListener(ev,noteActive,{passive:true});
+addEventListener('visibilitychange',()=>{ if(!document.hidden) noteActive(); });
+
+function restartOpening(){
+  if(orbiting) return;
+  if(vraf){ cancelAnimationFrame(vraf); vraf=null; }
+  clearPicks(); if(query) clearFilter();
+  if(sel) select(null);
+  closeResults(); syncClear();
+  visited=[]; drawPath();
+  if(VIEW!=='radial') setLayout('radial');
+  // back to the state the page loads in, not to whatever the last view left behind
+  userZoomed=false; autoFrom=null; pending=null;
+  zoom=1; panX=0; panY=0; applyView();
+  orbiting=true; settled=true;
+  svg.classList.remove('settling'); svg.classList.add('orbiting');
+  tcv.style.opacity=''; sparks.length=0;
+  rings(); deco(); orbitHomes(); orbitPlace();
+  alpha=0; if(!raf) raf=requestAnimationFrame(tick);
+}
+// Checked once a minute rather than scheduled for the exact moment: a timer set ten minutes
+// out is wrong the instant anything happens, and a machine that slept through the interval
+// should notice on waking rather than having missed its one chance to fire.
+setInterval(()=>{
+  if(document.hidden || orbiting) return;
+  if(performance.now()-lastActive>=IDLE_MS) restartOpening();
+},60*1000);
+// Escape does exactly what the button does, from anywhere, including out of the search box.
+// It could instead unwind one step at a time — close the results, then drop the search, then
+// the picks — but an escape hatch you have to press four times is not one, and both routes
+// end at the same map anyway.
+addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(!$('findings').hidden){ closeFindings(); e.preventDefault(); return; }
+  if(document.activeElement===$('q')) $('q').blur();
+  if(clearAll()) e.preventDefault();
+});
+
+/* A static page cannot check anything when you open it — everything it knows was baked in
+   at build time. So it has to say when that was, or it will be trusted for longer than it
+   has earned. Past a month it says so in amber rather than quietly. */
+{ const built=Math.round((Date.now()-Date.parse(BUILT))/86400000);
+  const stale=built>30;
+  // The scan was how the library got checked before it was pushed. Now the repo is read
+  // directly, so it is only worth mentioning when one exists.
+  const scan = SCAN_AT
+    ? ` \u00b7 scan ${Math.round((Date.now()-Date.parse(SCAN_AT))/86400000)}d old` : '';
+  const clock = CLOCK==='git' ? 'dates from git'
+    : CLOCK==='manifest' ? 'dates from the account manifest'
+    : `<span class="warn">no date source \u2014 nothing tagged new</span>`;
+  const unver = N.filter(n=>EVIDENCE[n.id]==='named').length;
+  $('stamp').innerHTML =
+    `built <b>${BUILT}</b>${stale?` <span class="warn">(${built}d ago)</span>`:''}${scan}<br>`
+    + `${clock} \u00b7 `
+    + (unver ? `<span class="warn">${unver} unverified</span>` : 'every skill read from the library')
+    + (GONE.length?` \u00b7 <span class="warn">${GONE.length} gone from the library</span>`:'');
+}
+
+{ const menu=$('viewmenu');
+  for(const [k,v] of Object.entries(VIEWS)){
+    const b=document.createElement('button');
+    b.dataset.v=k; b.className=k===VIEW?'on':'';
+    b.innerHTML=v.name+'<i>'+v.hint+'</i>';
+    b.onclick=e=>{ e.stopPropagation(); arm(); setLayout(k); };
+    menu.appendChild(b);
+  }
+}
+
+/* "Copy all 0 fixes, in order" is not a sentence, and a brief with nothing in it is not worth
+   copying. When the list empties the button stops offering the brief and reports the state
+   instead — which is the answer to the question the panel exists to ask. */
+drawFindings();
+$('findbtn').onclick=e=>{ e.stopPropagation(); arm();
+  $('findings').hidden ? openFindings() : closeFindings(); };
+
+if(FIXCOUNT){
+  $('k-f2').textContent=FIXCOUNT;
+  // One brief, in one place. This used to copy a second one written in the imperative — a
+  // different text from the panel's, telling the reader to start work rather than to check
+  // the premise first. Two briefs that disagree about what is being asked is worse than one
+  // button fewer.
+  $('fixall').textContent='Read the '+FIXCOUNT+(FIXCOUNT===1?' open item':' open items');
+  // and light them on the map while it reads, which is what the row above it does and what
+  // clicking a tag does. Reading the finding and seeing which node it is about are the same
+  // question asked twice; making them two clicks made the button look like it had done
+  // nothing to the map.
+  $('fixall').onclick=e=>{ e.stopPropagation(); arm();
+    if(!PICKS.has('flag')) $('k-flag').click(); else openFindings('open'); };
+  $('demoflag').textContent=
+    'The library was read at build time — this is what is on your machine, not a sample.';
+}else{
+  // Nothing open, so the whole card goes: the count is zero, the filter it toggles would
+  // select nothing, and the button has no brief to copy. A panel whose only content is the
+  // news that it has no content is worse than no panel. The settled work is not lost — every
+  // node still carries its finding, and the green dashed ring still marks which ones had one.
+  $('key3').hidden=true;
+}
+
+
+// tooltips: one node, positioned left of the panel so it never covers what it explains
+{ const tipEl=$('tip'); let tHide;
+  const show=el=>{ clearTimeout(tHide);
+    tipEl.innerHTML=el.dataset.tip;
+    const r=el.getBoundingClientRect();
+    tipEl.style.right=(innerWidth-r.left+12)+'px';
+    tipEl.style.top='0px'; tipEl.classList.add('on');
+    const h=tipEl.getBoundingClientRect().height;
+    tipEl.style.top=Math.max(12,Math.min(innerHeight-h-12,r.top+r.height/2-h/2))+'px'; };
+  const hide=()=>{ tHide=setTimeout(()=>tipEl.classList.remove('on'),60); };
+  document.querySelectorAll('[data-tip]').forEach(el=>{
+    el.addEventListener('click',e=>e.stopPropagation());
+    el.addEventListener('pointerenter',()=>show(el));
+    el.addEventListener('pointerleave',hide);
+    el.addEventListener('focus',()=>show(el));
+    el.addEventListener('blur',hide);
+  });
+}
+
+function runTag(t){ $('q').value=t; query=t; search(); $('capsel').value=t; closeResults(); }
+function clearFilter(){ $('q').value=''; query=''; hits=null; $('capsel').value='';
+  if(typeof syncClear==='function') setTimeout(syncClear,0);
+  document.querySelectorAll('#detail [data-tag]').forEach(o=>o.classList.remove('on'));
+  closeResults(); apply(); }
+$('qclear').onclick=e=>{ e.stopPropagation(); arm(); clearFilter(); $('q').focus(); };
+{ const counts={};
+  N.forEach(n=>n.tags.forEach(t=>counts[t]=(counts[t]||0)+1));
+  $('capsel').innerHTML='<option value="">Filter by capability…</option>'+
+    Object.keys(counts).sort().map(t=>
+      `<option value="${t}">${t} — ${counts[t]}</option>`).join('');
+  $('capsel').onchange=e=>{ arm(); const t=e.target.value;
+    if(t) runTag(t); else { $('q').value=''; query=''; hits=null; apply(); } };
+
+  // the control that set this is gone; colourMode stays at its default, which is by ring
+}
+
+const qi=$('q');
+let deb; qi.oninput=e=>{ arm(); query=e.target.value.trim(); syncClear();
+  clearTimeout(deb); deb=setTimeout(search,50); };
+qi.onfocus=()=>{ if(query)search(); };
+qi.onkeydown=e=>{
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){ e.preventDefault(); if(!res.length)return;
+    cur=(cur+(e.key==='ArrowDown'?1:-1)+res.length)%res.length; mark();
+    const el=$('results').querySelectorAll('.res')[cur]; if(el)el.scrollIntoView({block:'nearest'}); }
+  else if(e.key==='Enter'&&cur>=0&&res[cur]){ e.preventDefault();
+    qi.value=res[cur].id; query=res[cur].id; search(); select(res[cur].id); qi.blur(); }
+  else if(e.key==='Escape'){ qi.value='';query='';res=[];hits=null;
+    closeResults();apply();qi.blur(); }
+};
+addEventListener('keydown',e=>{
+  if(e.key==='/'&&document.activeElement!==qi){ e.preventDefault(); qi.focus(); qi.select(); }
+  if(e.key==='Escape'&&document.activeElement!==qi){
+    qi.value='';query='';res=[];hits=null;
+    closeResults();select(null);hover=null;apply();resetView(); } });
+addEventListener('pointerdown',e=>{ if(!$('panel').contains(e.target)) closeResults(); });
+let rz; addEventListener('resize',()=>{ clearTimeout(rz); rz=setTimeout(resize,120); });
+
+resize();
+// The ring layout is converged off-screen so it is static the moment it is revealed.
+// The orbiting layout needs none of this — the spiral already places every node.
+
+alpha=0; paint(); apply();
+</script>

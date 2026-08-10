@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  SECURITY REPORT — HTML TEMPLATE (fill in per audit)
+  ----------------------------------------------------------------------------
+  - Replace every {{TOKEN}}. One <article class="finding SEV"> per finding
+    (SEV = critical|high|medium|low), grouped most-urgent first.
+  - SIX REPORTING RULES: plain-English first; numbered fix steps; every finding
+    rated; secrets rule stated; owner 2FA surfaced; honest about reach.
+  - ALL code/paths/commits go ONLY inside the <details class="dev"> box.
+  - Delete the two EXAMPLE findings + this comment before delivering.
+  - Save to /mnt/user-data/outputs and present. Self-contained; print = PDF.
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security review — {{SITE_NAME}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,300..800&family=Roboto+Serif:ital,opsz,wght@0,8..144,300..700;1,8..144,300..600&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14171a; --paper:#f4f3f1; --card:#ffffff; --band:#ecebe8;
+    --text:#20242a; --soft:#565f68; --muted:#8a929b;
+    --accent:#2ea88f; --accent-deep:#1e7a68;
+    --crit:#c02a21; --crit-bg:#fbeae8; --crit-ink:#7d1a15;
+    --high:#c2701c; --high-bg:#fbf0e5; --high-ink:#814915;
+    --med:#a07c00;  --med-bg:#f8f2dc;  --med-ink:#6b5300;
+    --low:#5f6870;  --low-bg:#eff0f0;  --low-ink:#3d4348;
+    --shadow:0 1px 2px rgba(16,20,24,.05), 0 10px 30px rgba(16,20,24,.05);
+    --shadow-lg:0 2px 6px rgba(16,20,24,.08), 0 24px 60px rgba(16,20,24,.10);
+    --r:18px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--paper); color:var(--text);
+    font-family:"Roboto Flex","Roboto",system-ui,sans-serif; font-size:17px; line-height:1.62; font-weight:380;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px; margin:0 auto; padding:0 20px 96px}
+  h1,h2{font-family:"Roboto Serif",serif; font-weight:600; line-height:1.14; letter-spacing:-.01em}
+  h3{font-family:"Roboto Flex",sans-serif; font-weight:640; font-size:1.14rem; margin:0 0 .35em; letter-spacing:-.01em}
+  p{margin:.5em 0}
+  a{color:var(--accent-deep); text-underline-offset:2px}
+  .eyebrow{font-family:"Roboto Mono",monospace; text-transform:uppercase; letter-spacing:.18em;
+    font-size:.7rem; color:var(--muted); margin:0 0 .5em}
+  .eyebrow::before{content:"// "; color:var(--accent)}
+  .sym{font-family:"Material Symbols Rounded"; font-size:1.1em; vertical-align:-.15em; line-height:1}
+
+  /* ============ HERO ============ */
+  .hero{position:relative; margin:0; padding:0; color:#eef1f0; overflow:hidden; background:var(--ink)}
+  .hero-inner{max-width:860px; margin:0 auto; padding:58px 40px 0; position:relative; z-index:2}
+  .hero::before{content:""; position:absolute; inset:0; z-index:0;
+    background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);
+    background-size:34px 34px}
+  .hero::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(120% 90% at 88% -20%, rgba(46,168,143,.34), transparent 55%)}
+  .hero .eyebrow{color:rgba(255,255,255,.6)}
+  .pill{display:inline-flex; align-items:center; gap:.5em; font-family:"Roboto Mono",monospace;
+    font-size:.7rem; letter-spacing:.12em; text-transform:uppercase; color:#dfeee9;
+    background:rgba(46,168,143,.16); padding:6px 14px; border-radius:999px}
+  .pill .dot{width:7px; height:7px; border-radius:50%; background:var(--accent)}
+  .hero h1{color:#fff; font-size:2.7rem; margin:.5em 0 .2em; max-width:16ch}
+  .hero h1 em{font-style:italic; color:var(--accent); font-weight:500}
+  .hero .meta{font-family:"Roboto Mono",monospace; font-size:.78rem; color:rgba(255,255,255,.62); margin:.6em 0 0}
+  .hero .meta span{margin-right:1.6em; white-space:nowrap}
+  .hero .brk{position:absolute; width:16px; height:16px; z-index:2; opacity:.5}
+  .hero .brk.tl{top:20px; left:20px; border-top:2px solid var(--accent); border-left:2px solid var(--accent)}
+  .hero .brk.tr{top:20px; right:20px; border-top:2px solid var(--accent); border-right:2px solid var(--accent)}
+  .strip{position:relative; z-index:2; display:flex; margin-top:46px; background:rgba(255,255,255,.04)}
+  .strip .s{flex:1; padding:20px 24px; text-align:center}
+  .strip .s + .s{border-left:1px solid rgba(255,255,255,.1)}
+  .strip .n{font-family:"Roboto Serif",serif; font-size:2.1rem; font-weight:700; line-height:1}
+  .strip .s.c .n{color:#ff6b60} .strip .s.h .n{color:#ffa860}
+  .strip .s.m .n{color:#ffd24d} .strip .s.l .n{color:#cfd6db}
+  .strip .k{font-family:"Roboto Mono",monospace; font-size:.66rem; text-transform:uppercase;
+    letter-spacing:.14em; color:rgba(255,255,255,.6); margin-top:6px}
+
+  /* ============ REQUIRED SETUP GATE ============ */
+  .gate{display:flex; gap:18px; align-items:flex-start; background:var(--high-bg); border-radius:var(--r);
+    box-shadow:var(--shadow); padding:22px 24px; margin:34px 0 0; position:relative; overflow:hidden}
+  .gate::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--high)}
+  .gate-mark{flex:0 0 auto; width:44px; height:44px; border-radius:12px; background:var(--high);
+    color:#fff; display:flex; align-items:center; justify-content:center; margin-top:2px}
+  .gate-mark .sym{font-size:1.5rem}
+  .gate h3{color:var(--high-ink)}
+  .gate code{font-family:"Roboto Mono",monospace; background:rgba(20,23,26,.06); padding:1px 5px; border-radius:4px}
+
+  /* ============ HONESTY NOTE ============ */
+  .honesty{background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:24px 26px; margin:34px 0 8px}
+  .honesty .lead{font-family:"Roboto Serif",serif; font-size:1.22rem; line-height:1.4; color:var(--ink); margin:.1em 0 .5em}
+  .honesty p{color:var(--soft); font-size:.97rem} .honesty strong{color:var(--text)}
+
+  section.block{margin-top:52px}
+  .block > .eyebrow{margin-bottom:.2em}
+  .block > h2{font-size:1.7rem; margin:0 0 .1em}
+
+  /* ============ FINDINGS ============ */
+  .finding{position:relative; background:var(--card); border-radius:var(--r); box-shadow:var(--shadow);
+    padding:26px 28px 22px; margin:18px 0; overflow:hidden}
+  .finding::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px}
+  .finding.critical{background:var(--crit-bg)} .finding.critical::before{background:var(--crit)}
+  .finding.high{background:var(--high-bg)} .finding.high::before{background:var(--high)}
+  .finding.medium{background:var(--med-bg)} .finding.medium::before{background:var(--med)}
+  .finding.low{background:var(--low-bg)} .finding.low::before{background:var(--low)}
+  .fhead{display:flex; align-items:center; gap:12px; margin-bottom:6px}
+  .idx{font-family:"Roboto Mono",monospace; font-size:.82rem; color:var(--muted)}
+  .badge{display:inline-flex; align-items:center; gap:.45em; font-family:"Roboto Mono",monospace;
+    font-size:.66rem; font-weight:500; text-transform:uppercase; letter-spacing:.11em;
+    color:#fff; padding:4px 11px; border-radius:999px}
+  .critical .badge{background:var(--crit)} .high .badge{background:var(--high)}
+  .medium .badge{background:var(--med)} .low .badge{background:var(--low)}
+  .finding h3{margin-top:.1em}
+  .field{margin:.85em 0}
+  .field .k{font-family:"Roboto Mono",monospace; font-size:.68rem; text-transform:uppercase;
+    letter-spacing:.11em; color:var(--muted); display:block; margin-bottom:.25em}
+  .scenario{background:rgba(20,23,26,.045); border-radius:12px; padding:12px 16px; font-size:.97rem; color:var(--text)}
+  .status{display:inline-flex; align-items:center; gap:.4em; font-weight:640; font-size:.95rem}
+  .status.fixed{color:var(--accent-deep)} .status.proposed{color:var(--high-ink)} .status.decision{color:var(--ink)}
+  ol.steps{margin:.5em 0 .2em; padding:0; counter-reset:step; list-style:none}
+  ol.steps li{position:relative; padding:7px 0 7px 42px; margin:0; font-size:.98rem}
+  ol.steps li::before{counter-increment:step; content:counter(step);
+    position:absolute; left:0; top:6px; width:27px; height:27px; border-radius:50%;
+    background:var(--ink); color:#fff; font-family:"Roboto Mono",monospace; font-size:.78rem;
+    display:flex; align-items:center; justify-content:center}
+  .verify{display:flex; gap:.55em; align-items:flex-start; background:rgba(46,168,143,.1);
+    border-radius:12px; padding:11px 16px; margin-top:.7em; font-size:.95rem; color:var(--text)}
+  .verify .sym{color:var(--accent-deep); margin-top:.05em}
+  details.dev{margin-top:1em; background:rgba(20,23,26,.05); border-radius:12px; padding:0 16px}
+  details.dev summary{cursor:pointer; padding:12px 0; font-family:"Roboto Mono",monospace;
+    font-size:.78rem; color:var(--soft); list-style:none; display:flex; align-items:center; gap:.5em}
+  details.dev summary::-webkit-details-marker{display:none}
+  details.dev summary::before{content:"add"; font-family:"Material Symbols Rounded"; font-size:1.1em; color:var(--muted)}
+  details.dev[open] summary::before{content:"remove"}
+  details.dev pre{margin:0 0 14px; padding:14px; background:#14171a; color:#e6e9ea; border-radius:10px;
+    font-family:"Roboto Mono",monospace; font-size:.82rem; overflow-x:auto; line-height:1.55}
+
+  /* ============ PANELS ============ */
+  .panel{background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:26px 28px; margin:18px 0}
+  .panel.dark{position:relative; overflow:hidden; background:var(--ink); color:#eef1f0; box-shadow:var(--shadow-lg)}
+  .panel.dark::after{content:""; position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(90% 80% at 100% 0%, rgba(46,168,143,.22), transparent 55%)}
+  .panel.dark > *{position:relative; z-index:1}
+  .panel.dark h2, .panel.dark h3{color:#fff}
+  .panel.dark p{color:rgba(255,255,255,.86)}
+  .panel.dark .eyebrow{color:rgba(255,255,255,.6)}
+  .panel.dark ol.steps li::before{background:var(--accent); color:#08110e}
+  .panel.dark a{color:#8fe0d0}
+  .secrets-rule{background:rgba(46,168,143,.14); border-radius:12px; padding:15px 18px; margin:16px 0 0; font-size:.95rem; color:#eef1f0}
+  .secrets-rule code{font-family:"Roboto Mono",monospace; background:rgba(255,255,255,.1); padding:1px 5px; border-radius:4px}
+
+  /* ============ TABLE ============ */
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:.95rem}
+  th,td{text-align:left; padding:12px 8px}
+  thead th{font-family:"Roboto Mono",monospace; font-size:.66rem; text-transform:uppercase; letter-spacing:.11em; color:var(--muted); font-weight:500}
+  tbody tr + tr td{border-top:1px solid rgba(20,23,26,.09)}
+  .tag{font-family:"Roboto Mono",monospace; font-size:.72rem; padding:2px 9px; border-radius:999px}
+  .tag.was{background:var(--crit-bg); color:var(--crit-ink)}
+  .tag.now{background:rgba(46,168,143,.14); color:var(--accent-deep)}
+  .tag.wait{background:var(--high-bg); color:var(--high-ink)}
+
+  footer{margin-top:56px; padding-top:22px; color:var(--muted); font-size:.78rem; font-family:"Roboto Mono",monospace; line-height:1.7}
+
+  @media (max-width:560px){
+    .hero h1{font-size:2rem} .hero-inner{padding:44px 22px 0}
+    .strip{flex-wrap:wrap} .strip .s{flex:1 1 50%} .strip .s:nth-child(3){border-left:none}
+    .finding,.panel,.honesty{padding-left:20px; padding-right:20px}
+  }
+  @media print{
+    body{background:#fff; font-size:11.5pt; color:#000}
+    .hero{background:#14171a !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .finding,.panel,.honesty,.strip{box-shadow:none}
+    details.dev{display:none}
+    .wrap{max-width:none; padding:0}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <span class="brk tl"></span><span class="brk tr"></span>
+    <div class="hero-inner">
+      <span class="pill"><span class="dot"></span>Security review</span>
+      <h1>{{SITE_NAME}} — <em>the honest read</em></h1>
+      <p class="meta">
+        <span><span class="sym">calendar_today</span> {{DATE}}</span>
+        <span><span class="sym">folder_open</span> {{SCOPE}}</span>
+        <span><span class="sym">shield</span> code &amp; config review</span>
+      </p>
+    </div>
+    <div class="strip">
+      <div class="s c"><div class="n">{{N_CRIT}}</div><div class="k">Critical</div></div>
+      <div class="s h"><div class="n">{{N_HIGH}}</div><div class="k">High</div></div>
+      <div class="s m"><div class="n">{{N_MED}}</div><div class="k">Medium</div></div>
+      <div class="s l"><div class="n">{{N_LOW}}</div><div class="k">Low</div></div>
+    </div>
+  </header>
+
+  <div class="wrap">
+
+    <!-- ============ HONESTY NOTE ============ -->
+    <section class="honesty">
+      <p class="eyebrow">Read this first</p>
+      <p class="lead">{{PLAIN_HEADLINE — 1–2 sentences: overall state + the single most important thing to do today.}}</p>
+      <p><strong>What this is and isn’t:</strong> this reliably catches the common, high-impact flaws — but it is <strong>not a full penetration test</strong>, and it can’t see inside your GitHub, Vercel, or Stripe accounts. Anything outside the code is given to you as steps. For a shop taking real money, a professional pentest before you scale is still worth doing — this makes that cheaper, it doesn’t replace it.</p>
+    </section>
+
+    <!-- ============ REQUIRED SETUP GATE (surface on first scan; keep until confirmed) ============ -->
+    <section class="gate">
+      <div class="gate-mark"><span class="sym">notifications_active</span></div>
+      <div>
+        <p class="eyebrow" style="color:var(--high-ink)">Action required before you rely on this</p>
+        <h3 style="margin:.1em 0 .4em">Set up your security alerts email</h3>
+        <p style="margin:0 0 .5em">The automatic checks only protect you if their alerts reach you. Set up one dedicated email address to receive every security alert — vulnerable packages, failed scans, and fixes to approve — and route the sources to it. Do this before moving on.</p>
+        <ol class="steps">
+          <li>Create or choose a dedicated alerts address (e.g. <code>security@yourdomain</code>) that you'll actually check.</li>
+          <li>In GitHub → Settings → Notifications, set that address and turn on Actions + Dependabot email alerts.</li>
+          <li>In each repo → Settings → Code security, enable Dependabot alerts + security updates.</li>
+          <li>(Recommended) add a free error-monitor (e.g. Sentry) and send its alerts to the same address, so live errors reach you too.</li>
+        </ol>
+        <p style="margin:.5em 0 0; font-size:.9rem; color:var(--soft)"><strong>Honest note:</strong> these reliably alert you to vulnerable packages, failed scans, and fixes to approve. Catching an active breach (not just a weakness) needs the monitoring layer above — silence doesn't guarantee safety.</p>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="eyebrow">What needs fixing · most urgent first</p>
+      <h2>The findings</h2>
+
+      <!-- ===== EXAMPLE finding (delete before delivering) ===== -->
+      <article class="finding critical">
+        <div class="fhead"><span class="idx">/01</span><span class="badge"><span class="sym">error</span>Critical · fix before launch</span></div>
+        <h3>Card checkout takes no money but creates real orders</h3>
+        <div class="field"><span class="k">What it is</span>
+          When a customer pays by card or Google Pay, the site marks the order paid and gives loyalty points — but never actually charges anything. Only PayPal takes real money.</div>
+        <div class="field"><span class="k">What someone could do</span>
+          <div class="scenario">Any visitor can order your products, choose “Card”, and receive a real, fulfillable order plus loyalty points <strong>without paying a penny</strong> — no hacking, just normal use of the shop.</div></div>
+        <div class="field"><span class="k">Status</span>
+          <span class="status decision"><span class="sym">pending</span> Needs a decision from you</span>
+          <p style="margin:.25em 0 0; font-size:.95rem; color:var(--soft)">Turning the fake path off is safe and I can do it now. Wiring up real Stripe card payments is a bigger change I’d want your go-ahead for first.</p></div>
+        <div class="field"><span class="k">What to do</span>
+          <ol class="steps">
+            <li>Decide: switch card/Google Pay <em>off</em> for now (only PayPal takes money), or have me wire up real Stripe card payments.</li>
+            <li>Until then, I’ll make the card path <strong>refuse to complete</strong> so no free orders can be created.</li>
+            <li>Tell me which way to go — I’ll make the change and show you before it goes live.</li>
+          </ol></div>
+        <div class="verify"><span class="sym">check_circle</span><div><strong>How you’ll know it’s fixed:</strong> choosing “Card” at checkout no longer creates a paid order.</div></div>
+        <details class="dev"><summary>Developer detail</summary>
+          <pre>src/app/checkout/actions.ts:118
+persistOrder(..., { status: "simulated" })   // no gateway call
+Fix: gate fulfilment on a verified payment; disable the
+non-PayPal path until Stripe Payment Intents are wired.</pre></details>
+      </article>
+
+      <!-- ===== EXAMPLE finding 2 (delete before delivering) ===== -->
+      <article class="finding high">
+        <div class="fhead"><span class="idx">/02</span><span class="badge"><span class="sym">warning</span>High · fix before real traffic</span></div>
+        <h3>Anyone can view another customer’s saved address</h3>
+        <div class="field"><span class="k">What it is</span>
+          A logged-in customer can load someone else’s account details by changing a number in the web address — the site doesn’t check the record belongs to them.</div>
+        <div class="field"><span class="k">What someone could do</span>
+          <div class="scenario">Read other customers’ names and delivery addresses — a privacy breach and, under UK data-protection rules, a reportable one.</div></div>
+        <div class="field"><span class="k">Status</span> <span class="status fixed"><span class="sym">check_circle</span> Fixed for you</span></div>
+        <div class="field"><span class="k">What to do</span>
+          <ol class="steps"><li>Nothing needed from you — the fix is applied.</li><li>Push the change and let Vercel deploy so it goes live.</li></ol></div>
+        <div class="verify"><span class="sym">check_circle</span><div><strong>How you’ll know it’s fixed:</strong> opening another account’s address now shows “not found”.</div></div>
+        <details class="dev"><summary>Developer detail</summary>
+          <pre>account/actions.ts saveAddress — scoped the lookup to the
+current customerId; every record fetch now filters by owner.</pre></details>
+      </article>
+      <!-- ===== end examples ===== -->
+
+    </section>
+
+    <!-- ============ THINGS ONLY YOU CAN DO (Ring 2) ============ -->
+    <section class="block">
+      <div class="panel dark">
+        <p class="eyebrow">Things only you can do</p>
+        <h2>Outside the code — your accounts &amp; settings</h2>
+        <p>I can’t click these for you, so here they are as plain steps. The first matters most.</p>
+
+        <h3 style="margin-top:1.2em">1 · Turn on two-factor authentication (2FA)</h3>
+        <p>On GitHub, Vercel, and Stripe. I can’t see whether it’s on, so treat it as <strong>off until you’ve confirmed it</strong> — the single most valuable thing on this page.</p>
+        <ol class="steps">
+          <li>Open each account’s security settings.</li>
+          <li>Turn on two-factor authentication (an authenticator app beats text messages).</li>
+          <li>Save the backup codes somewhere safe — not in your code or repository.</li>
+        </ol>
+
+        <h3 style="margin-top:1.3em">2 · Rotate any leaked keys {{OMIT_IF_NONE}}</h3>
+        <ol class="steps">
+          <li>Log into the provider (e.g. Stripe) and regenerate the exposed key.</li>
+          <li>Paste the new key into Vercel → Settings → Environment Variables.</li>
+          <li>Redeploy so the site uses the new key.</li>
+        </ol>
+
+        <div class="secrets-rule"><strong>The rule for secrets:</strong> a secret key belongs only on your computer (<code>.env.local</code>) and in Vercel’s settings — never in the code, the repository, or the browser. If one turns up in the wrong place it’s removed <em>and</em> regenerated, because it may already have been copied.</div>
+
+        <p style="margin-top:1.2em">{{OTHER_OWNER_STEPS — e.g. restrict the database from the public internet, test a backup restore, turn on the registrar account’s 2FA, set up SPF/DKIM/DMARC — each as a short numbered list.}}</p>
+      </div>
+    </section>
+
+    <!-- ============ DECISIONS & OUTSIDE HELP (Ring 3) ============ -->
+    <section class="block">
+      <p class="eyebrow">Decisions &amp; outside help</p>
+      <h2>These need your judgement or a professional</h2>
+      <div class="panel"><p style="margin-top:0">I flag these honestly — I don’t certify them.</p>
+        <p>{{RING3_ITEMS — only what applies: age-verification legal sufficiency; legal pages / company details / returns / cookies (UK e-commerce law advice); customer 2FA (a business trade-off); third-party tools; an incident-readiness plan to prepare before launch; a professional penetration test before taking serious money.}}</p></div>
+    </section>
+
+    <!-- ============ AUTOMATION ============ -->
+    <section class="block">
+      <p class="eyebrow">Keeping it secure over time</p>
+      <h2>An audit is a snapshot</h2>
+      <div class="panel"><p style="margin-top:0">Your site is clean today, not three changes from now. I can set up, with plain steps:</p>
+        <ol class="steps">
+          <li>A <strong>pre-upload check</strong> on your computer that blocks you from ever uploading a secret key.</li>
+          <li>A <strong>weekly + on-every-change check</strong> on GitHub that <strong>emails you</strong> if something’s caught.</li>
+          <li>This <strong>deep review</strong>, run before a launch or whenever the checks flag something.</li>
+        </ol></div>
+    </section>
+
+    <!-- ============ BEFORE / AFTER ============ -->
+    <section class="block">
+      <p class="eyebrow">Summary</p>
+      <h2>Before &amp; after</h2>
+      <table>
+        <thead><tr><th>Finding</th><th>Was</th><th>Now</th></tr></thead>
+        <tbody>
+          <tr><td>{{C1 title}}</td><td><span class="tag was">Critical</span></td><td><span class="tag wait">Awaiting decision</span></td></tr>
+          <tr><td>{{H1 title}}</td><td><span class="tag was">High</span></td><td><span class="tag now">Fixed</span></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer>
+      Security review for {{SITE_NAME}} · {{DATE}}<br>
+      Generated by the e-commerce security audit skill · a code-and-configuration review, not a penetration test.
+    </footer>
+
+  </div>
+</body>
+</html>

@@ -1,0 +1,46 @@
+EXTRACT THIS OVER:   C:\Users\joene\.claude\
+Then restart Claude Code. That is the whole job.
+
+Back up first if you want an undo:
+    Copy-Item "$HOME\.claude\skills" "$HOME\.claude\skills-backup" -Recurse
+
+Or do it in one line:
+    Expand-Archive "$HOME\Downloads\skill-fixes.zip" "$HOME\.claude" -Force
+
+WHAT CHANGED — descriptions only. Every skill body is byte-identical to yours.
+
+  frontend-design           scoped to application surfaces; routes marketing to mydesignskill,
+                            artifacts to artifact-design, civic to public-service-website,
+                            Bootstrap rebuilds to bootstrap5-migration
+  mydesignskill             stated precedence for marketing surfaces
+  public-service-website    keeps research, IA, content, accessibility; defers Bootstrap 5
+                            mechanics to bootstrap5-migration
+  bootstrap5-migration      routes civic work away by name, and visual style to mydesignskill
+  knowledge-system-setup    only fires on projects with no ledgers of their own, so it stops
+                            competing with vibehq/docs
+  critical-thinking-partner only fires when explicitly asked, not on all analysis work
+  session-start-hook        name: startup-hook-skill  ->  name: session-start-hook
+  manifest.json             session-start-hook entry added (14 -> 15), descriptions synced
+
+CHECK IT WORKED — in a restarted session:
+  "build a page and make it not look AI-generated"  -> mydesignskill
+  "build the admin events table with filters"       -> frontend-design
+  "rebuild the council site on Bootstrap 5"         -> public-service-website + bootstrap5-migration
+
+ADDED 8 Aug — ecommerce-security-audit
+
+  It is the deep whole-site audit, and nothing said so. security-review (built into
+  Claude Code) reviews a diff, and the security-route-auditor agent covers the route
+  layer — three things claiming "security" with no statement of which does what. Its
+  description now says it is the pre-launch, whole-site pass and hands the diff-level
+  work to the other two by name.
+
+HOW THIS WAS CHECKED
+
+  node scripts/routing.mjs <skills-dir>
+
+  reports, per skill, whether its description states a boundary (when NOT to fire) and
+  whether it hands off to a named skill. Your library today: 4 of 15. With this package
+  applied: 10 of 15. The five without one — pdf, pptx, session-start-hook, skill-creator,
+  webaudio-plugin-builder — are separated by file type or have no neighbour to collide
+  with, so they do not need one.
