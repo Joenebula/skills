@@ -1245,32 +1245,9 @@ function scaffold(){
                  t.setAttribute('role','button');
                  t.setAttribute('aria-label',s.title[0]+' — what this column is'); }
       t.textContent=s.title[0]; gRingTop.appendChild(t);
-      /* Two lines before shrinking, for a heading with a space in it.
-
-         "Front-end design" is seventeen characters and the narrowest a column ever gets is
-         about fifty-five units. It could not shrink that far without going under the floor,
-         so it was dropped — and a column with no name at all is exactly the thing the floor
-         exists to prevent. Wrapping at the last space costs a line and keeps the word.
-
-         SVG does not wrap, so it is two tspans at an explicit dy, and everything below the
-         heading — the sub-line, the click target, the dodge box — moves down by that line. */
+      // One line, always. The column is sized from the longest title, so there is room.
       let head2=0;
-      if(!fitText(t,0.62) || t.getComputedTextLength()>room){
-        const sp=s.title[0].lastIndexOf(' ');
-        if(sp>0){
-          t.style.fontSize=''; t.textContent='';
-          const a=mk('tspan',{x:cx.toFixed(1),dy:'-0.42em'}); a.textContent=s.title[0].slice(0,sp);
-          const b=mk('tspan',{x:cx.toFixed(1),dy:'1.05em'}); b.textContent=s.title[0].slice(sp+1);
-          t.append(a,b);
-          if(!t.parentNode) gRingTop.appendChild(t);
-          head2=11;
-          // still too wide split? then it genuinely does not fit and the old rule applies
-          const wid=Math.max(a.getComputedTextLength(),b.getComputedTextLength());
-          if(wid>room){ const px=parseFloat(getComputedStyle(t).fontSize)*room/wid;
-            if(px<parseFloat(getComputedStyle(t).fontSize)*0.62) t.remove();
-            else t.style.fontSize=px.toFixed(2)+'px'; }
-        }
-      }
+      fitText(t,0.62);
       if(s.title[1]){
         const t2=mk('text',{class:'ringsub',x:cx.toFixed(1),y:(ty+12+head2).toFixed(1),
           fill:cv('--ink2'),'fill-opacity':.9});
@@ -1769,21 +1746,31 @@ function homesBoard(){
   // 30% narrower than they were. A column only has to hold three dots and a heading, and at
   // 78 units it was holding a lot of empty space either side of both — which also meant more
   // of the board was off the frame than needed to be.
-  /* 55 was the floor and also, in practice, the answer: eighteen columns never divided the
-     strip into anything wider, so the board was always wider than the frame and always
-     panned, even on a screen with room for it. 40 is the narrowest a column can be and still
-     hold two dots and a heading, so it fits where it fits and pans where it does not. */
-  const cw=Math.max(40,(SAFE_R-32-SAFE_L)/n);
+  /* Wide enough for the longest heading on ONE line. It has been 55 and then 40, and both
+     were derived from what a column of dots needs — which is the wrong thing to measure,
+     because the dots were never what was cramped. At 40 units "Front-end design" had to wrap
+     to two lines and its sub-line dropped below its neighbours', so a row of headings that
+     should read as one row read as three.
+
+     Measured from the actual longest title rather than a guess at one. The board is wider
+     than the frame at this width and pans, which it did at 55 anyway. */
+  /* In map units, which is what cw is in — the headings are set in SCREEN pixels, so the
+     conversion is the same u the stylesheet uses. Estimating straight from the character
+     count gave 149 units a column and a board two and a half times the frame. The sub-line
+     is not allowed to drive the width: it is smaller, it already shrinks to fit, and letting
+     "loaded every session" set the column made every other one wider for one caption. */
+  const u=W/innerWidth;
+  const longest=Math.max(...cols.map(p=>phaseTitle(p)[0].length));
+  const cw=Math.max(longest*11*0.56*u+16,(SAFE_R-32-SAFE_L)/n);
   const L=SAFE_L+16;
   FLATX=[L,L+cw*n];
   const per=Math.min(3,Math.max(1,Math.round((cw-8)/15)));
   COLGAP=Math.min(22,(cw-10)/per);          // the dots have to fit the narrower column
   const tallest=Math.max(...cols.map(p=>Math.ceil(groups[p].length/per)));
-  /* The cap was 34, which is a sensible row height and a poor use of a screen: the tallest
-     column holds seven, so the board drew 200 units of content in a 600-unit frame and left
-     two thirds of it empty. It now takes the height it is given, with a cap only loose
-     enough to stop three nodes being flung to the corners. */
-  const rowH=Math.min(78,(H-SAFE_B-150)/Math.max(1,tallest-1));
+  /* 34 wasted two thirds of the frame; 78 spent it, and a column of seven then reached the
+     top of the screen with a dot every eighty units, which is a list pretending to be a
+     chart. Between the two, and still derived from the height available. */
+  const rowH=Math.min(52,(H-SAFE_B-150)/Math.max(1,tallest-1));
   const contentH=(tallest-1)*rowH;
   const base=Math.round((H-SAFE_B+contentH)/2)+12, top=base-contentH;
   FLATY=[top-34,base+38];                 // the heading block down to the tally under it
