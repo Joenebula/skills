@@ -261,8 +261,13 @@
   @media(min-width:1400px){
     /* Solid, and only as tall as what is in it. Translucent over a chart that is still
        there — which it now is — leaves the columns reading through the description. */
-    #detail{position:fixed;top:18px;right:478px;width:450px;
-      max-height:calc(100vh - 36px);height:fit-content;flex:none;
+    /* Hard against the left edge, not floating in the middle of the map. What you are
+       reading sits in one corner and the map gets the rest of the window in one piece,
+       instead of a strip either side of a panel parked across the middle of it. */
+    #detail{position:fixed;top:18px;left:18px;right:auto;width:450px;
+      /* stops short of the bar rather than sitting on top of the one control that can
+         bring the bar back */
+      max-height:calc(100vh - 72px);height:fit-content;flex:none;
       background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
       box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
   }
@@ -294,8 +299,10 @@
     border:2px solid transparent;background-clip:padding-box}
   #findings::-webkit-scrollbar-button{display:none;width:0;height:0}
   @media(min-width:1400px){
-    #findings{position:fixed;top:18px;right:478px;width:450px;
-      max-height:calc(100vh - 36px);height:fit-content;flex:none;
+    #findings{position:fixed;top:18px;left:18px;right:auto;width:450px;
+      /* stops short of the bar rather than sitting on top of the one control that can
+         bring the bar back */
+      max-height:calc(100vh - 72px);height:fit-content;flex:none;
       background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
       box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
   }
@@ -544,7 +551,9 @@
      One strip along the bottom edge, left-aligned, tag-sized. The view names are the control;
      the hints under them were explanation, which does not need to be on screen while you are
      looking at a chart. Nothing is in the corners any more, so the map gets the whole frame. */
-  #bar{position:fixed;left:16px;bottom:13px;z-index:10;display:flex;align-items:center;
+  /* above the panel: they share the bottom-left corner now, and the open/close has to stay
+     reachable whatever is open over the map */
+  #bar{position:fixed;left:16px;bottom:13px;z-index:12;display:flex;align-items:center;
     gap:6px;-webkit-user-select:none;user-select:none}
   #barwrap{display:flex;align-items:center;gap:6px;
     transition:transform .30s var(--ease),opacity .22s var(--ease)}
@@ -1527,25 +1536,15 @@ function controlsEdge(){
 }
 function gutters(){
   const u=W/innerWidth, wide=innerWidth>820;
-  // The right-hand side is one column or two: the controls always, and an open skill
-  // beside them once there is room for it. Measure whichever reaches furthest left, or
-  // node names get laid out underneath it.
+  // The right-hand side is the controls, and nothing else now that what you are reading has
+  // moved to the far left. Measure how far left they reach, or node names get laid out
+  // underneath them.
   let edge=innerWidth;
-  if(wide){
-    edge=Math.min(edge,controlsEdge());
-    // In the radial view an open skill takes a column of its own and the map
-    // gives way to it. A board or a row cannot: its width is its layout, so giving way means
-    // re-laying it out and clipping it, which is what made the chart disappear behind the
-    // panel. There the panel simply floats over it.
-    const d=$('detail');
-    if(!FLAT() && d.classList.contains('on') && getComputedStyle(d).position==='fixed')
-      edge=Math.min(edge,d.getBoundingClientRect().left);
-  }
+  if(wide) edge=controlsEdge();
   SAFE_R = wide ? (edge-14)*u : W-8;
-  { const d=$('detail');
-    const hidden = wide && FLAT() && d.classList.contains('on')
-                && getComputedStyle(d).position==='fixed';
-    VIS_R = hidden ? Math.max(SAFE_L+80,(d.getBoundingClientRect().left-14)*u) : SAFE_R; }
+  // Nothing is parked across the middle any more, so there is no narrower "visible" right
+  // edge to keep a selection clear of — the two are the same number.
+  VIS_R = SAFE_R;
   /* And the left, which was the number 10 and had been since the left gutter held nothing but
      a trail canvas. It now holds the layout menu, the findings button and the build stamp —
      opaque cards, 186px of them — and the map was being laid out underneath.
@@ -1557,9 +1556,15 @@ function gutters(){
 
      Measured, not assumed, and only while it is showing — below 980px the column is hidden
      and the whole width is the map's again. */
-  // Nothing is in the top-left any more, so the left edge is the frame. It was measured
-  // from a 186px column that no longer exists.
+  /* The left edge used to be the frame — nothing stood there. An open skill does now, so it
+     is measured the same way the controls are on the other side. Without this the map is
+     laid out from x=8 and the first columns end up behind the thing you opened to read. */
   SAFE_L = 8;
+  if(wide) for(const el of [$('detail'),$('findings')]){
+    const shown = el.id==='findings' ? !el.hidden : el.classList.contains('on');
+    if(shown && getComputedStyle(el).position==='fixed')
+      SAFE_L = Math.max(SAFE_L,(el.getBoundingClientRect().right+14)*u);
+  }
   /* And the bottom, now that the layout nav lives there. The flat views write their labels
      along their own floor; without this the nav would sit on top of them, which is the same
      mistake the left column made at the other edge and worth not making twice. */
@@ -3447,9 +3452,21 @@ function setStow(on){
    the room rather than the room sitting empty. */
 function refit(){
   resize();
-  if(FLAT()){
-    // a board or a row keeps its place; the columns moved under it, so re-clamp, don't reset
-    panX=clampPanX(panX); applyView(); if(sel) frameSelection(sel);
+  if(VIEW==='flow'){
+    /* The flow is one picture — lanes on the left, the endpoints they arrive at on the
+       right — and it is read across. Clamping it into a strip that just got narrower slides
+       the endpoints off the edge, which is the half worth seeing. So it re-centres, the same
+       way it does when you first open it. The board does not: it is a list of columns you
+       scroll along, and re-centring it would throw away the place you had scrolled to. */
+    /* setView rather than assigning panX, because select() has already started framing the
+       selection and that animation is still running: writing panX underneath it just gets
+       overwritten on the next frame, which is why the endpoints stayed off the edge. This
+       cancels it. */
+    setView(zoom,(SAFE_L+SAFE_R)/2-(FLATX[0]+FLATX[1])/2*zoom,centreY(zoom),true);
+  }else if(FLAT()){
+    // the board keeps its place; the columns moved under it, so re-clamp, don't reset
+    setView(zoom,panX,centreY(zoom),true);
+    if(sel) frameSelection(sel);
   }else{
     /* The whole map, at rest, in the space that is left — never zoomed into. Two reasons.
        resize() has just re-homed every node, so framing the selection here would zoom to
