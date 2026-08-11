@@ -261,15 +261,19 @@
   @media(min-width:1400px){
     /* Solid, and only as tall as what is in it. Translucent over a chart that is still
        there — which it now is — leaves the columns reading through the description. */
-    /* Hard against the left edge, not floating in the middle of the map. What you are
+    /* Hard against the right edge, not floating in the middle of the map. What you are
        reading sits in one corner and the map gets the rest of the window in one piece,
-       instead of a strip either side of a panel parked across the middle of it. */
-    #detail{position:fixed;top:18px;left:18px;right:auto;width:450px;
-      /* stops short of the bar rather than sitting on top of the one control that can
-         bring the bar back */
-      max-height:calc(100vh - 72px);height:fit-content;flex:none;
+       instead of a strip either side of a panel parked across the middle of it.
+
+       It only steps in from the edge when the controls are showing, which is the one time
+       something else is already there — and it slides rather than jumps, so pulling the
+       controls out reads as one movement. */
+    #detail{position:fixed;top:18px;right:18px;left:auto;width:450px;
+      max-height:calc(100vh - 36px);height:fit-content;flex:none;
+      transition:right .34s var(--ease);
       background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
       box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
+    #panel:not(.stow) #detail,#panel:not(.stow) #findings{right:478px}
   }
   /* ---------- findings ----------
      Every finding in one place, open and settled alike, in the same slot and the same shape
@@ -299,10 +303,9 @@
     border:2px solid transparent;background-clip:padding-box}
   #findings::-webkit-scrollbar-button{display:none;width:0;height:0}
   @media(min-width:1400px){
-    #findings{position:fixed;top:18px;left:18px;right:auto;width:450px;
-      /* stops short of the bar rather than sitting on top of the one control that can
-         bring the bar back */
-      max-height:calc(100vh - 72px);height:fit-content;flex:none;
+    #findings{position:fixed;top:18px;right:18px;left:auto;width:450px;
+      max-height:calc(100vh - 36px);height:fit-content;flex:none;
+      transition:right .34s var(--ease);
       background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
       box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
   }
@@ -1520,27 +1523,23 @@ function repaint(){
 }
 
 /* ------------------------------------------------------------------ layout */
-/* How far left the right-hand column reaches. Stowed, the controls have slid off the edge
-   and claim nothing — but the column is not necessarily empty: below 1400px a skill panel
-   stacks inside it rather than taking a column of its own, and that part is still there. */
-function controlsEdge(){
+/* How far left the right-hand side reaches. It holds one thing or two — the controls, and
+   what you are reading — and whichever reaches furthest left is where the map has to stop.
+   Stowed, the controls have slid off the edge and claim nothing; a skill panel is still
+   there either way, whether it is fixed in its own column or stacked inside the controls. */
+function rightEdge(){
   const p=$('panel');
-  if(!p.classList.contains('stow')) return p.getBoundingClientRect().left;
-  let e=innerWidth;
+  let e = p.classList.contains('stow') ? innerWidth : p.getBoundingClientRect().left;
   for(const el of [$('detail'),$('findings')]){
     const shown=el.id==='findings' ? !el.hidden : el.classList.contains('on');
-    if(shown && getComputedStyle(el).position!=='fixed')
-      e=Math.min(e,el.getBoundingClientRect().left);
+    if(shown) e=Math.min(e,el.getBoundingClientRect().left);
   }
   return e;
 }
 function gutters(){
   const u=W/innerWidth, wide=innerWidth>820;
-  // The right-hand side is the controls, and nothing else now that what you are reading has
-  // moved to the far left. Measure how far left they reach, or node names get laid out
-  // underneath them.
   let edge=innerWidth;
-  if(wide) edge=controlsEdge();
+  if(wide) edge=rightEdge();
   SAFE_R = wide ? (edge-14)*u : W-8;
   // Nothing is parked across the middle any more, so there is no narrower "visible" right
   // edge to keep a selection clear of — the two are the same number.
@@ -1556,15 +1555,9 @@ function gutters(){
 
      Measured, not assumed, and only while it is showing — below 980px the column is hidden
      and the whole width is the map's again. */
-  /* The left edge used to be the frame — nothing stood there. An open skill does now, so it
-     is measured the same way the controls are on the other side. Without this the map is
-     laid out from x=8 and the first columns end up behind the thing you opened to read. */
+  // Nothing is in the top-left any more, so the left edge is the frame. It was measured
+  // from a 186px column that no longer exists.
   SAFE_L = 8;
-  if(wide) for(const el of [$('detail'),$('findings')]){
-    const shown = el.id==='findings' ? !el.hidden : el.classList.contains('on');
-    if(shown && getComputedStyle(el).position==='fixed')
-      SAFE_L = Math.max(SAFE_L,(el.getBoundingClientRect().right+14)*u);
-  }
   /* And the bottom, now that the layout nav lives there. The flat views write their labels
      along their own floor; without this the nav would sit on top of them, which is the same
      mistake the left column made at the other edge and worth not making twice. */
@@ -3495,6 +3488,12 @@ $('stowbtn').onclick=()=>{
   });
   obs.observe($('detail'),{attributes:true,attributeFilter:['class']});
   obs.observe($('findings'),{attributes:true,attributeFilter:['hidden']});
+  /* The skill panel steps in from the edge when the controls come out, and it takes 340ms
+     to get there. The re-fit above runs on the way in, off the old position, so the map is
+     laid out to a strip 460px wider than the one it ends up with. Measure again when it
+     lands — the map is otherwise correct once and wrong afterwards. */
+  for(const el of [$('detail'),$('findings')])
+    el.addEventListener('transitionend',e=>{ if(e.propertyName==='right') refit(); });
   syncStowBtn(); }
 
 resize();
