@@ -2252,11 +2252,12 @@ const FLAT=()=>VIEW==='board'||VIEW==='flow';
    The floor is the zoom that fits the whole width, so the far end of the board is one
    gesture away rather than unreachable. */
 const FRAMEZ=2.2;                    // enough that a 13px name reads as a 29px one
-// At rest the whole layout has to fit, arcs included. Framing one node is a different
-// question: there the arcs are context and the row is the content, so the band that must stay
-// on screen is the nodes and their names. Without this the arc could barely zoom at all — its
-// ceiling was 1.3x, because the tallest arc is most of its height.
-const flatBand=()=>(sel && FLAT() ? FLATROW : FLATY);
+/* The whole layout has to fit, always. This used to switch to a narrower band when something
+   was selected, so that framing it could zoom past what the full layout allows. Nothing frames
+   a selection in a flat view any more, so the exception has nothing left to serve — and
+   keeping it would mean the ceiling changed depending on whether something was selected,
+   which is a thing no one could see and everyone would feel. */
+const flatBand=()=>FLATY;
 function zoomLimits(){
   const wAvail=SAFE_R-SAFE_L, hAvail=H;
   const lo=Math.min(1, wAvail/Math.max(1,FLATX[1]-FLATX[0]));
@@ -3681,28 +3682,17 @@ function setView(z,px,py,animate){
 }
 function frameSelection(id){
   if(orbiting) return;
-  /* A flat view frames its selection too, but along one axis. It zooms until the names are
-     comfortably readable, tracks sideways to put the selected node in the middle, and holds
-     the vertical centre — so the row or the columns stay where they were and only the scale
-     and the sideways position change. The zoom is still bounded by the layout's own height,
-     which is what stops it throwing the rest of the board off the frame. */
-  if(FLAT()){
-    // The flow view holds still. Its whole subject is the journey from the left field to the
-    // right-hand total, and zooming to the node throws the destination off the frame — you
-    // select a skill to see where it lands and the landing is what leaves. The ribbon
-    // lighting up while everything else dims is the framing here.
-    if(VIEW==='flow') return;
-    const n=IDX[id]!==undefined?N[IDX[id]]:null;
-    if(!n) return;
-    if(!autoFrom) autoFrom={zoom,panX,panY};
-    const z=clampZoom(FRAMEZ);
-    // Left of centre, not centred. A name is drawn on whichever side has room, and a node
-    // sitting exactly in the middle gets a right-anchored one that runs at the panel. Put it
-    // at 38% of the strip and the name has the whole right-hand half to lie in.
-    const aim=SAFE_L+(SAFE_R-SAFE_L)*0.38;
-    setView(z, clampPanX(aim-n.x*z, z), centreY(z), true);
-    return;
-  }
+  /* The flat views hold still. Selecting a node used to zoom the board to 2.2x and track
+     sideways to it — a useful gesture on a map you have to hunt through, and the wrong one
+     here. The board already shows everything, in an order, and moving it means finding your
+     place again afterwards. Lighting the node and dimming the rest is the whole of what
+     "show me this one" needs.
+
+     The flow reached this first, by its own argument: zooming to a node threw the destination
+     off the frame, and the destination is what you selected it to see. Same conclusion from
+     two directions, so it is one rule now rather than one view opting out of the other's
+     behaviour. */
+  if(FLAT()) return;
   // Selecting the root frames the organisation ring — the surfaces the enterprise root
   // actually owns. It used to light repository instructions too: a hundred nodes in the
   // two densest bands, which cannot carry names at any zoom that still shows them all.
