@@ -573,7 +573,18 @@
   /* The icon is the thing it controls: a frame with a filled column down the right-hand side
      and an arrow saying which way that column is about to go. Stowed, the column slides out
      and fades, and the arrow turns round to point back at the space it left. */
-  #stowbtn{padding:6px 8px;display:flex;align-items:center;line-height:0}
+  /* A square the height of the tags beside it. Stretched rather than given a number, so it
+     tracks them if the type ever changes; aspect-ratio then makes the width follow. */
+  /* #bar button sets the padding every tag shares, and it out-specifies a bare id — matched
+     the same way so the padding actually comes off, or the square is drawn around it. */
+  /* One number, because neither of the ways of deriving it works here. A flex item in a row
+     takes its width from its content, and content width beats aspect-ratio — so stretching
+     the height and asking for a 1:1 ratio gave 19 wide by 26 tall; taking the icon out of
+     flow to free the width gave 0 by 26. --tag is the height of the tags beside it, stated
+     once, and the square is that on both sides. */
+  #bar{--tag:26px}
+  #bar #stowbtn{width:var(--tag);height:var(--tag);flex:none;padding:0;line-height:0;
+    display:flex;align-items:center;justify-content:center}
   #stowbtn svg{width:19px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5;
     stroke-linecap:round;stroke-linejoin:round;overflow:visible}
   #stowbtn .sb-frame{opacity:.5}
