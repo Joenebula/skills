@@ -519,38 +519,29 @@
   /* set back into the scene: nodes pass in front, and it never competes with a name */
   .ringlbl{font-family:var(--font);font-size:9.5px;font-weight:600;letter-spacing:.14em;
     text-anchor:middle;pointer-events:none}
-  /* ---------- left column: which layout ---------- */
-  #leftcol{position:fixed;left:18px;top:18px;z-index:10;width:186px;
-    display:flex;flex-direction:column;gap:10px;
-    max-height:calc(100vh - 36px);-webkit-user-select:none;user-select:none}
-  /* Centred on the map's own strip rather than on the window, so it does not drift under the
-     right-hand panel on a wide screen. The offset is set from JS with the safe area. */
-  #navbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:10;
-    padding:5px;-webkit-user-select:none;user-select:none}
-  #viewmenu{display:flex;flex-direction:row;gap:3px}
-  #viewmenu button{white-space:nowrap}
-  @media(max-width:820px){#navbar{display:none}}
-  #stamp{flex:none;font-family:var(--mono);font-size:10.5px;line-height:1.5;
-    color:var(--ink3);padding:0 4px}
+  /* ---------- the bar ----------
+     One strip along the bottom edge, left-aligned, tag-sized. The view names are the control;
+     the hints under them were explanation, which does not need to be on screen while you are
+     looking at a chart. Nothing is in the corners any more, so the map gets the whole frame. */
+  #bar{position:fixed;left:16px;bottom:13px;z-index:10;display:flex;align-items:center;
+    gap:6px;-webkit-user-select:none;user-select:none}
+  #viewmenu{display:flex;gap:5px}
+  #bar button{appearance:none;border:0;outline:0;cursor:pointer;font-family:inherit;
+    font-size:13px;font-weight:600;letter-spacing:.01em;color:var(--ink3);
+    padding:5px 11px;border-radius:7px;background:rgba(8,12,24,.78);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);white-space:nowrap;
+    transition:background .16s var(--ease),color .16s var(--ease)}
+  #bar button:hover,#bar button:focus-visible{background:rgba(94,200,240,.16);color:var(--r3)}
+  #bar button.on{background:rgba(94,200,240,.20);color:var(--r3)}
+  #bar button i{display:none}                  /* the hint text: gone, these are tags now */
+  #findbtn{margin-left:6px}
+  #findbtn b{font-family:var(--mono);font-weight:700;margin-left:6px;opacity:.75}
+  #stamp{font-family:var(--mono);font-size:10.5px;line-height:1.35;color:var(--ink3);
+    margin-left:8px;white-space:nowrap;opacity:.75}
   #stamp b{color:var(--ink2);font-weight:700}
-  #stamp .warn{color:var(--amber)}
-  #viewmenu h3{font-size:13px;letter-spacing:.14em;color:var(--ink3);
-    font-weight:700;margin:3px 0 6px 7px}
-  #viewmenu button{appearance:none;border:0;cursor:pointer;text-align:left;width:100%;
-    font-family:inherit;font-size:13px;font-weight:600;color:var(--ink2);
-    padding:8px 11px;border-radius:8px;background:transparent;
-    transition:background .16s var(--ease),color .16s var(--ease),box-shadow .16s var(--ease)}
-  #viewmenu button:hover{background:rgba(140,170,235,.16);color:var(--ink)}
-  #viewmenu button.on{background:rgba(94,200,240,.18);color:var(--r3);
-    box-shadow:inset 0 0 0 1.2px rgba(94,200,240,.40)}
-  #viewmenu button i{font-style:normal;font-weight:400;font-size:13px;
-    color:var(--ink3);margin-left:7px}
-  /* Three names and three hints is 550px, and the strip between the left column and the
-     panel is 528 at 1200. The hints go first — the names are the control, the hints are a
-     courtesy — rather than the bar overlapping the things either side of it. */
-  #navbar.tight #viewmenu button i{display:none}
-  #viewmenu button.on i{color:var(--r3);opacity:.72}
-  @media(max-width:980px){#leftcol{display:none}}
+  #stamp .warn{color:var(--amber);opacity:1}
+  #stamp br{display:none}                      /* one line down here, not two */
+  @media(max-width:820px){#bar{display:none}}
 
   /* the board's column headings are two facts, so they get two lines and a tally */
   /* Chart text is sized in screen pixels like the node names, not in map units — a unit is
@@ -626,18 +617,7 @@
   .pphere{margin-left:auto;font-family:var(--mono);font-size:13px;color:var(--r3);flex:none}
   @media(max-width:820px){#pathpanel{display:none}}
   #panel{overflow-y:auto;overscroll-behavior:contain}
-  #zoomctl{position:fixed;left:18px;bottom:16px;z-index:10;display:flex;align-items:center;
-    gap:4px;padding:5px;border-radius:11px;background:rgba(8,12,24,.80);
-    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-    box-shadow:0 0 0 1px var(--edge2),0 16px 46px rgba(0,0,0,.6);
-    -webkit-user-select:none;user-select:none}
-  #zoomctl button{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
-    font-weight:600;min-width:30px;height:28px;padding:0 9px;border-radius:7px;
-    background:rgba(140,170,235,.10);color:var(--ink2);transition:background .16s var(--ease),color .16s var(--ease)}
-  #zoomctl button:hover{background:var(--r3);color:var(--void)}
-  #zlabel{font-family:var(--mono);font-size:13px;color:var(--ink3);min-width:46px;
-    text-align:center}
-  @media(max-width:820px){#zoomctl{display:none}}
+
   @media(prefers-reduced-motion:reduce){
     .node .dot,.node .ring,.flag,.corehalo,.tw,#results.on,#detail.on{
       animation:none!important}
@@ -646,26 +626,15 @@
 
 <svg id="viz" role="img" aria-label="Radial map of every skill available to me"></svg>
 <div id="tip" class="card" role="tooltip"></div>
-<div id="zoomctl">
-  <button id="zout" type="button" aria-label="Zoom out">−</button>
-  <span id="zlabel">100%</span>
-  <button id="zin" type="button" aria-label="Zoom in">+</button>
-  <button id="zreset" type="button">Reset</button>
-</div>
-<!-- The left column. #viewmenu positioned itself and the two things under it did not, so
-     they sat in normal flow at the bottom of a body with overflow:hidden — off the screen.
-     The build stamp has been invisible since it was written, which is a poor showing for the
-     element whose whole job is to say how old the page is. One fixed column, three children,
-     nothing positioning itself. -->
-<!-- The layout nav is a bar along the bottom, not a stack in the corner. Three views read
-     as three words in a row; as a column they were 250px of furniture standing on the map. -->
-<div id="navbar" class="card"><div id="viewmenu"></div></div>
-<div id="leftcol">
-  <!-- reachable whatever is selected and whatever the open count is. The findings outlive
-       being open: a settled one still records what was found and why, and that was only
-       readable by hunting down the node it belonged to. -->
-  <button id="findbtn" class="card" type="button"></button>
+<!-- One bar, bottom left. It used to be three pieces of furniture — a layout column
+     top-left, a zoom control bottom-left, a findings button between them — each standing on a
+     different part of the map. The map is the subject; the controls are a strip along one
+     edge, sized like tags. -->
+<div id="bar">
+  <div id="viewmenu"></div>
+  <button id="findbtn" type="button"></button>
   <div id="stamp"></div>
+</div>
 </div>
 <div id="hint">scroll to zoom · drag to pan · click a node for its links · esc to clear · / to search</div>
 
@@ -1340,18 +1309,22 @@ function scaffold(){
       gRing.appendChild(mk('line',{x1:s.x.toFixed(1),y1:s.top.toFixed(1),
         x2:s.x.toFixed(1),y2:s.bot.toFixed(1),
         stroke:s.col,'stroke-opacity':.20,'stroke-width':.7}));
-      const ly=s.base+s.row*13, lx=s.lx!==undefined?s.lx:s.x;
-      // a leader from the column down and across to wherever its name landed
-      gRing.appendChild(mk('path',{d:`M${s.x.toFixed(1)},${(s.bot+3).toFixed(1)}`
-        +`V${(s.base-14).toFixed(1)}L${lx.toFixed(1)},${(ly-9).toFixed(1)}`,
-        fill:'none',stroke:s.col,'stroke-opacity':.28,'stroke-width':.7}));
-      const t=mk('text',{class:'lanelbl',x:lx.toFixed(1),y:ly.toFixed(1),
-        fill:s.col,'text-anchor':'middle'});
+      /* Turned on their side, under their own column, on one baseline. Laid flat they
+         needed the width the streams are using — spread across the bottom of the strip they
+         fitted, but they stopped being under the thing they name, which is the only reason
+         a column label is a column label. Vertical costs height, and height is what this
+         view has spare. */
+      const ly=s.base;
+      const t=mk('text',{class:'lanelbl',x:s.x.toFixed(1),y:ly.toFixed(1),
+        fill:s.col,'text-anchor':'end',
+        transform:`rotate(-90 ${s.x.toFixed(1)} ${ly.toFixed(1)})`});
       t.textContent=s.label; gRingTop.appendChild(t);
       if(s.key){
-        const len=t.getComputedTextLength()||40;
-        const hit=mk('rect',{class:'hdhit',x:(lx-len/2-4).toFixed(1),y:(ly-11).toFixed(1),
-          width:(len+8).toFixed(1),height:15,rx:4,fill:'transparent'});
+        // the hit target is a rect in the text's own rotated frame, sized from the glyphs
+        // that were laid out — a name on its side is a six-unit strip of type
+        const len=t.getComputedTextLength()||40, tr=t.getAttribute('transform');
+        const hit=mk('rect',{class:'hdhit',x:(s.x-len-4).toFixed(1),y:(ly-11).toFixed(1),
+          width:(len+8).toFixed(1),height:15,rx:4,fill:'transparent',transform:tr});
         hit.setAttribute('aria-label',s.label+' — '+s.n+' skills, show them');
         pickable(hit,'g:'+s.key);
         hit.classList.toggle('pick',PICKS.has('g:'+s.key));
@@ -1528,26 +1501,15 @@ function gutters(){
 
      Measured, not assumed, and only while it is showing — below 980px the column is hidden
      and the whole width is the map's again. */
-  let lx=0;
-  if(wide){ const lc=$('leftcol');
-    if(lc && getComputedStyle(lc).display!=='none') lx=lc.getBoundingClientRect().right; }
-  SAFE_L = wide ? (lx+14)*u : 8;
+  // Nothing is in the top-left any more, so the left edge is the frame. It was measured
+  // from a 186px column that no longer exists.
+  SAFE_L = 8;
   /* And the bottom, now that the layout nav lives there. The flat views write their labels
      along their own floor; without this the nav would sit on top of them, which is the same
      mistake the left column made at the other edge and worth not making twice. */
-  const nb=$('navbar');
+  const nb=$('bar');
   SAFE_B = (nb && getComputedStyle(nb).display!=='none')
-    ? (innerHeight-nb.getBoundingClientRect().top+10)*u : 10*u;
-  // and the bar centres on the strip, not on the window, so it stays off the panel
-  if(nb){
-    nb.style.left = (((SAFE_L+SAFE_R)/2)/u).toFixed(0)+'px';
-    // measure, drop the hints if it does not fit, and measure again — the class changes the
-    // width, so deciding from the first measurement alone would leave it tight or roomy by
-    // one state forever
-    nb.classList.remove('tight');
-    const strip=(SAFE_R-SAFE_L)/u;
-    if(nb.getBoundingClientRect().width>strip) nb.classList.add('tight');
-  }
+    ? (innerHeight-nb.getBoundingClientRect().top+8)*u : 8*u;
   // The flat views are clipped to this strip, and the strip narrows when a skill panel
   // opens beside the controls. Nothing re-ran the clip when the panel closed again, so the
   // board stayed cropped to the narrower strip and a slice of it was simply missing until
@@ -1686,14 +1648,25 @@ function homesFlow(){
   const lblW=Math.max(...RINGS.map(R=>R.label.length))*4.6+16;
   const HUBX=Math.max(SAFE_L+W0*0.55, SAFE_R-lblW-14);
   const L=SAFE_L+54;
-  const FIELD_R=SAFE_L+(HUBX-SAFE_L)*0.50;     // the empty middle is where the streams read
   const groups={}; N.forEach(n=>(groups[groupOf(n)]??=[]).push(n));
   Object.values(groups).forEach(g=>g.sort(byRank));
   const cols=GROUP_ORDER.filter(p=>groups[p]).concat(
     Object.keys(groups).filter(p=>!GROUP_ORDER.includes(p)));
+  /* Half the run to the hubs is the field and half is the streams — until half is not
+     enough. At 1200px that gave sixteen columns eleven units each, which is narrower than a
+     name turned on its side, so every label touched its neighbour. The field takes what a
+     legible column needs and the streams get the rest, up to a ceiling where the streams
+     would stop being the point of the view. */
+  const MINCW=15;
+  const FIELD_R=Math.min(SAFE_L+(HUBX-SAFE_L)*0.72,
+                Math.max(SAFE_L+(HUBX-SAFE_L)*0.50, SAFE_L+54+MINCW*cols.length));
   const cw=(FIELD_R-L)/Math.max(1,cols.length);
-  const HB=H-SAFE_B;                         // the floor the nav leaves
-  const top=HB*0.10, bot=HB*0.80, span=bot-top, midY=(top+bot)/2;
+  /* The vertical names hang below the field, so the field itself stops well short of the
+     floor — how short depends on the longest name, which is why it is measured rather than
+     guessed at a percentage. Everything above that is the field's. */
+  const HB=H-SAFE_B;
+  const nameH=Math.max(...cols.map(p=>phaseTitle(p)[0].length))*6.6+26;
+  const top=HB*0.04, bot=HB-nameH, span=Math.max(60,bot-top), midY=(top+bot)/2;
   /* Every column stacks on the same pitch and hangs from the middle, so a column of two is a
      short mark near the centre and a column of eleven reaches out from it — the height of a
      column is how much is in it.
@@ -1703,7 +1676,7 @@ function homesFlow(){
      seventeen on the same two lines: a dense row of dots across the top and another across
      the bottom, which is a grid artefact and not a fact about anything. */
   const tallest=Math.max(...cols.map(p=>groups[p].length));
-  const HT=HB*0.70, HTOP=HB*0.15;          // the block the four destinations occupy
+  const HT=HB*0.82, HTOP=HB*0.09;          // the block the four destinations occupy
   const pitch=Math.min(24,span/Math.max(8,tallest));
   COLGAP=pitch;                            // node radii are derived from it
   cols.forEach((p,ci)=>{
@@ -1740,25 +1713,7 @@ function homesFlow(){
      the document yet — an over-estimate costs a row and an under-estimate costs a collision,
      so it errs wide. */
   const lanes=SCAF.filter(x=>x.t==='lane');
-  const NL=SAFE_L+8, NR=SAFE_R-8, step=(NR-NL)/Math.max(1,lanes.length);
-  /* How many rows the names need, rather than three because three was enough once. Three
-     holds them on a wide window and overlaps five of them at 1200px, where the strip is 416
-     units and the names want 1120. Derive it from the two numbers, add one row of slack for
-     the first-fit's waste, and cap it so a very narrow window loses the map rather than the
-     labels eating it. */
-  const totalW=lanes.reduce((a,x)=>a+x.label.length*6.4+10,0);
-  const NROWS=Math.max(3,Math.min(6,Math.ceil(totalW/(NR-NL))+1));
-  const rowEnd=new Array(NROWS).fill(-1e9);
-  lanes.forEach((x,i)=>{
-    x.base=deepest+26;
-    // held inside the strip: the first and last names are wider than the slot they were
-    // centred in, so both ran off their end of it
-    const w=x.label.length*6.4+10;
-    x.lx = Math.max(NL+w/2, Math.min(NR-w/2, NL+step*(i+0.5)));
-    const r=rowEnd.findIndex(e=>x.lx-w/2>e);
-    x.row = r<0 ? NROWS-1 : r;                 // the last row rather than nothing
-    rowEnd[Math.max(0,r)]=x.lx+w/2;
-  });
+  lanes.forEach(x=>{ x.base=deepest+22; });
   // The destinations are spaced by share, not evenly: a ring holding a third of the library
   // is given a third of the height, so the gaps between the hubs ARE the proportions and the
   // streams arrive at the angle their size earns.
@@ -1782,7 +1737,9 @@ function homesFlow(){
   FLATX=[SAFE_L+4,SAFE_R-4];
   // top of the tallest column and the hub block, down past the rotated names under the field
   // the top of the tallest column or the hub block, down to the last of the three name rows
-  FLATY=[Math.min(midY-(tallest-1)/2*pitch, HTOP)-20, deepest+26+(NROWS-1)*13+14];
+  // the top of the tallest column or the hub block, down past the vertical names
+  FLATY=[Math.min(midY-(tallest-1)/2*pitch, HTOP)-20,
+         deepest+22+Math.max(...lanes.map(x=>x.label.length))*6.6+10];
   FLATROW=FLATY;
 }
 
@@ -1812,13 +1769,21 @@ function homesBoard(){
   // 30% narrower than they were. A column only has to hold three dots and a heading, and at
   // 78 units it was holding a lot of empty space either side of both — which also meant more
   // of the board was off the frame than needed to be.
-  const cw=Math.max(55,(SAFE_R-32-SAFE_L)/n);
+  /* 55 was the floor and also, in practice, the answer: eighteen columns never divided the
+     strip into anything wider, so the board was always wider than the frame and always
+     panned, even on a screen with room for it. 40 is the narrowest a column can be and still
+     hold two dots and a heading, so it fits where it fits and pans where it does not. */
+  const cw=Math.max(40,(SAFE_R-32-SAFE_L)/n);
   const L=SAFE_L+16;
   FLATX=[L,L+cw*n];
   const per=Math.min(3,Math.max(1,Math.round((cw-8)/15)));
   COLGAP=Math.min(22,(cw-10)/per);          // the dots have to fit the narrower column
   const tallest=Math.max(...cols.map(p=>Math.ceil(groups[p].length/per)));
-  const rowH=Math.min(34,(H-SAFE_B-176)/Math.max(1,tallest-1));
+  /* The cap was 34, which is a sensible row height and a poor use of a screen: the tallest
+     column holds seven, so the board drew 200 units of content in a 600-unit frame and left
+     two thirds of it empty. It now takes the height it is given, with a cap only loose
+     enough to stop three nodes being flung to the corners. */
+  const rowH=Math.min(78,(H-SAFE_B-150)/Math.max(1,tallest-1));
   const contentH=(tallest-1)*rowH;
   const base=Math.round((H-SAFE_B+contentH)/2)+12, top=base-contentH;
   FLATY=[top-34,base+38];                 // the heading block down to the tally under it
@@ -3047,13 +3012,10 @@ function frameSelection(id){
 function unframe(){ autoFrom=null;
   if(userZoomed) return;                       // unless you set the zoom yourself
   if(zoom!==1||panX!==0||panY!==0) setView(1,0,0,true); }
-function updateZoomLabel(){ const b=$('zlabel'); if(b) b.textContent=Math.round(zoom*100)+'%'; }
+function updateZoomLabel(){ if(!$('zlabel')) return; const b=$('zlabel'); if(b) b.textContent=Math.round(zoom*100)+'%'; }
 // reaching for any control is a decision to stop watching and start using it
 function arm(){ if(orbiting){ startSettle(null); return true; } return false; }
 
-$('zin').onclick =()=>{ arm(); zoomAt(CX,CY,1.35); };
-$('zout').onclick=()=>{ arm(); zoomAt(CX,CY,1/1.35); };
-$('zreset').onclick=resetView;
 addEventListener('keydown',e=>{
   if(document.activeElement===$('q')) return;
   if(e.key==='+'||e.key==='=') zoomAt(CX,CY,1.35);
