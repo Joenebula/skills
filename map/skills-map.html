@@ -281,11 +281,11 @@
        instead of a strip either side of a panel parked across the middle of it.
 
        It only steps in from the edge when the controls are showing, which is the one time
-       something else is already there — and it slides rather than jumps, so pulling the
-       controls out reads as one movement. */
+       something else is already there. It moves in one step rather than sliding: a 340ms
+       slide meant the map was laid out against the edge the panel was leaving, and re-homed
+       every node for a strip it was about to stop having. */
     #detail{position:fixed;top:18px;right:18px;left:auto;width:450px;
       max-height:calc(100vh - 36px);height:fit-content;flex:none;
-      transition:right .34s var(--ease);
       background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
       box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
     #panel:not(.stow) #detail,#panel:not(.stow) #findings{right:478px}
@@ -320,7 +320,6 @@
   @media(min-width:1400px){
     #findings{position:fixed;top:18px;right:18px;left:auto;width:450px;
       max-height:calc(100vh - 36px);height:fit-content;flex:none;
-      transition:right .34s var(--ease);
       background:#080C18;backdrop-filter:none;-webkit-backdrop-filter:none;
       box-shadow:0 0 0 1px var(--edge2),0 22px 60px rgba(0,0,0,.72)}
   }
@@ -1544,6 +1543,7 @@ const arc=(cx,cy,r,a0,a1)=>{const s=P(cx,cy,r,a0),e=P(cx,cy,r,a1);
 const SLOW=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let W=1000,H=740,CX=500,CY=370,MAXR=340,SAFE_L=10,SAFE_R=990,SAFE_B=0;
+let FITTED='';                      // the strip the current layout was built for
 /* Where the map can still be SEEN, as opposed to where it is laid out. They are the same
    until an open skill panel takes its own column over a flat view: the board keeps its
    width, because its width is its layout and re-flowing it on every click would be worse
@@ -2673,6 +2673,12 @@ function resize(){
   else if(!N[0].x) N.forEach(n=>{ n.x=n.hx; n.y=n.hy; });
   deco(); rings();
   if(orbiting){ alpha=0; if(!raf) raf=requestAnimationFrame(tick); } else { alpha=0; paint(); }
+  // the strip the map is now laid out for. refit() compares against this rather than against
+  // whatever gutters() last measured, which is not the same thing: select() measures once
+  // with the skill panel in its beside-the-controls slot, a frame before the controls stow
+  // and it moves to the edge. Comparing to that transient made every selection look like a
+  // change of width and re-home the whole map for a strip it already had.
+  FITTED=[SAFE_L,SAFE_R,SAFE_B].join();
 }
 
 // Node radius is derived from the arc each ring gives one node, so the map stays legible
@@ -3794,35 +3800,13 @@ function frameSelection(id){
       setView(zoom,want,panY,true); }
     return;
   }
-  // Selecting the root frames the organisation ring — the surfaces the enterprise root
-  // actually owns. It used to light repository instructions too: a hundred nodes in the
-  // two densest bands, which cannot carry names at any zoom that still shows them all.
-  const ids = id===ANCHOR.id
-    ? N.filter(n=>n.ring==='core').map(n=>n.id)
-    : (IDX[id]===undefined ? [] : [id,...(neigh[id]||[])].filter(i=>IDX[i]!==undefined));
-  if(!ids.length) return;
-  const pts=ids.map(i=>N[IDX[i]]);
-  const cx=pts.reduce((a,n)=>a+n.x,0)/pts.length, cy=pts.reduce((a,n)=>a+n.y,0)/pts.length;
-  const keepY = FLAT() ? panY : null;             // flat views hold their vertical centre
-  if(userZoomed){                                  // your zoom level, your call
-    setView(zoom,(SAFE_L+SAFE_R)/2-cx*zoom,keepY!==null?keepY:CY-cy*zoom,true); return; }
-  // otherwise fit the selection and its overlaps into the space the panel leaves
-  const spread=Math.max(40,...pts.map(n=>Math.hypot(n.x-cx,n.y-cy)));
-  // Frame tightly. A selection framed to 62% of the screen left sixteen organisation
-  // nodes spanning 165 units of height, and sixteen label rows need 195 — so most of them
-  // were withdrawn for want of somewhere to sit. The frame has to give the labels room,
-  // not just get the nodes on screen.
-  const availW=(SAFE_R-SAFE_L)*.86, availH=H*.86;
-  const rows=Math.max(2,ids.length);
-  const needH=rows*LBLH*1.15;                       // the stack the labels will want
-  const z=Math.max(1.6,Math.min(7.5,
-    Math.max(Math.min(availW,availH)/(spread*2+40), needH/Math.max(40,spread*2))));
-  if(!autoFrom) autoFrom={zoom,panX,panY};
-  // In a flat view the zoom changes but the vertical centre does not: the whole layout is
-  // one band, so recentring on a node's y only pushes the rest of the band off the frame.
-  // Whatever world-y is at the middle of the screen right now stays there through the zoom.
-  const midY=(CY-panY)/zoom;
-  setView(z,clampPanX((SAFE_L+SAFE_R)/2-cx*z),FLAT()?CY-midY*z:CY-cy*z,true);
+  /* And the radial map holds still too, for the same reason the other two do. The panel it
+     used to be getting out of the way of is against the right edge now and the map is laid
+     out clear of it, so there is nothing to get out of the way of — the zoom was only ever
+     moving the map to make room that already exists. What it did instead was throw the rest
+     of the map off the frame every time you clicked a node, and reading a map you have to
+     keep re-finding is worse than reading a small one. The selection is lit and named. */
+  return;
 }
 // Deselecting goes back to the default view rather than to wherever the last frame left
 // you — after two or three selections "where I was" is not a place anyone remembers.
@@ -4183,6 +4167,15 @@ function setStow(on){
    went, the strip changed width, and the point of moving the furniture is that the map takes
    the room rather than the room sitting empty. */
 function refit(){
+  /* But only if it actually did change. Both panels are 450px wide against the same edge,
+     so opening a skill while the controls stow leaves the strip exactly where it was — and
+     re-homing every node into an identical strip still wakes the physics and sends the whole
+     field drifting to settle again. Nothing had moved, and the map jumped anyway.
+
+     Measure first, and if the three edges come back the same, leave the map alone: no
+     re-home, no reheat, nothing. It holds still until something genuinely moves. */
+  gutters();
+  if([SAFE_L,SAFE_R,SAFE_B].join()===FITTED) return;
   resize();
   if(VIEW==='flow'){
     /* The flow is one picture — lanes on the left, the endpoints they arrive at on the
@@ -4227,12 +4220,6 @@ $('stowbtn').onclick=()=>{
   });
   obs.observe($('detail'),{attributes:true,attributeFilter:['class']});
   obs.observe($('findings'),{attributes:true,attributeFilter:['hidden']});
-  /* The skill panel steps in from the edge when the controls come out, and it takes 340ms
-     to get there. The re-fit above runs on the way in, off the old position, so the map is
-     laid out to a strip 460px wider than the one it ends up with. Measure again when it
-     lands — the map is otherwise correct once and wrong afterwards. */
-  for(const el of [$('detail'),$('findings')])
-    el.addEventListener('transitionend',e=>{ if(e.propertyName==='right') refit(); });
   syncStowBtn(); }
 
 resize();
