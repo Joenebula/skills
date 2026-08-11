@@ -360,7 +360,12 @@ function gitAdded(){
     for (const line of log.split('\n')){
       if (line.startsWith('\0')){ date = line.slice(1,11); continue; }
       if (!line.trim() || !date) continue;
-      const m = /(?:^|\/)(?:skills|agents)\/([^/]+)/.exec(line);
+      /* Anchored to the start of the path, not "anywhere in it".
+         The loose version matched map/fixed-skills/skills/session-start-hook/SKILL.md — a
+         reference copy of a skill, not the skill — and dated eight long-standing skills to
+         the day the map was moved into this repo. Only a path that begins skills/ or agents/
+         is a skill. */
+      const m = /^(?:skills|agents)\/([^/]+)/.exec(line);
       if (!m) continue;
       const id = m[1].replace(/\.md$/,'');
       gitPaths.add(id);

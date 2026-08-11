@@ -1275,23 +1275,49 @@ function scaffold(){
       if(s.key){ t.dataset.g=s.key; t.setAttribute('tabindex','0');
                  t.setAttribute('role','button');
                  t.setAttribute('aria-label',s.title[0]+' — what this column is'); }
-      t.textContent=s.title[0]; gRingTop.appendChild(t); fitText(t,0.62);
+      t.textContent=s.title[0]; gRingTop.appendChild(t);
+      /* Two lines before shrinking, for a heading with a space in it.
+
+         "Front-end design" is seventeen characters and the narrowest a column ever gets is
+         about fifty-five units. It could not shrink that far without going under the floor,
+         so it was dropped — and a column with no name at all is exactly the thing the floor
+         exists to prevent. Wrapping at the last space costs a line and keeps the word.
+
+         SVG does not wrap, so it is two tspans at an explicit dy, and everything below the
+         heading — the sub-line, the click target, the dodge box — moves down by that line. */
+      let head2=0;
+      if(!fitText(t,0.62) || t.getComputedTextLength()>room){
+        const sp=s.title[0].lastIndexOf(' ');
+        if(sp>0){
+          t.style.fontSize=''; t.textContent='';
+          const a=mk('tspan',{x:cx.toFixed(1),dy:'-0.42em'}); a.textContent=s.title[0].slice(0,sp);
+          const b=mk('tspan',{x:cx.toFixed(1),dy:'1.05em'}); b.textContent=s.title[0].slice(sp+1);
+          t.append(a,b);
+          if(!t.parentNode) gRingTop.appendChild(t);
+          head2=11;
+          // still too wide split? then it genuinely does not fit and the old rule applies
+          const wid=Math.max(a.getComputedTextLength(),b.getComputedTextLength());
+          if(wid>room){ const px=parseFloat(getComputedStyle(t).fontSize)*room/wid;
+            if(px<parseFloat(getComputedStyle(t).fontSize)*0.62) t.remove();
+            else t.style.fontSize=px.toFixed(2)+'px'; }
+        }
+      }
       if(s.title[1]){
-        const t2=mk('text',{class:'ringsub',x:cx.toFixed(1),y:(ty+12).toFixed(1),
+        const t2=mk('text',{class:'ringsub',x:cx.toFixed(1),y:(ty+12+head2).toFixed(1),
           fill:cv('--ink2'),'fill-opacity':.9});
         t2.textContent=s.title[1]; gRingTop.appendChild(t2); fitText(t2,0.64);
       }
       const c2=mk('text',{class:'ringcount',x:cx.toFixed(1),y:(s.base+31).toFixed(1),
         fill:s.col,'fill-opacity':.75});
       c2.textContent=s.n; gRingTop.appendChild(c2);
-      ringBoxes.push({x0:s.x,x1:s.x+s.w,ty:ty-4,h:s.title[1]?28:16});
+      ringBoxes.push({x0:s.x,x1:s.x+s.w,ty:ty-4,h:(s.title[1]?28:16)+head2});
       if(s.key){
         // SVG text is only clickable where a glyph is actually painted, so a press landing
         // in the gap between two letters — or on the second line, or just above the word —
         // hit nothing. A transparent rect over the whole heading block is the target, which
         // is also a hand-sized one rather than a 6px-tall strip of type.
-        const hit=mk('rect',{class:'hdhit',x:(s.x+2).toFixed(1),y:(ty-11).toFixed(1),
-          width:(s.w-4).toFixed(1),height:(s.title[1]?26:15).toFixed(1),
+        const hit=mk('rect',{class:'hdhit',x:(s.x+2).toFixed(1),y:(ty-11-head2*0.5).toFixed(1),
+          width:(s.w-4).toFixed(1),height:((s.title[1]?26:15)+head2).toFixed(1),
           fill:'transparent',tabindex:'0',role:'button'});
         hit.setAttribute('aria-label',s.title[0]+' — what this column is');
         const open=e=>{ e.stopPropagation(); arm(); groupPanel(s.key); };
@@ -1492,9 +1518,7 @@ function gutters(){
   const u=W/innerWidth, wide=innerWidth>820;
   // The right-hand side is one column or two: the controls always, and an open skill
   // beside them once there is room for it. Measure whichever reaches furthest left, or
-  // node names get laid out underneath it. The left gutter is free again now that the
-  // trail has moved across — measuring it there was about to withdraw every label on the
-  // map, because the trail's right edge is now the far side of the screen.
+  // node names get laid out underneath it.
   let edge=innerWidth;
   if(wide){
     edge=Math.min(edge,$('panel').getBoundingClientRect().left);
@@ -1507,7 +1531,21 @@ function gutters(){
       edge=Math.min(edge,d.getBoundingClientRect().left);
   }
   SAFE_R = wide ? (edge-14)*u : W-8;
-  SAFE_L = 10;
+  /* And the left, which was the number 10 and had been since the left gutter held nothing but
+     a trail canvas. It now holds the layout menu, the findings button and the build stamp —
+     opaque cards, 186px of them — and the map was being laid out underneath.
+
+     On the board that meant the first two columns were behind the menu and could not be
+     panned out from under it: panning is clamped so the board's left edge cannot pass the
+     left edge of the safe strip, and the strip started at 10. Two columns you could neither
+     read nor reach.
+
+     Measured, not assumed, and only while it is showing — below 980px the column is hidden
+     and the whole width is the map's again. */
+  let lx=0;
+  if(wide){ const lc=$('leftcol');
+    if(lc && getComputedStyle(lc).display!=='none') lx=lc.getBoundingClientRect().right; }
+  SAFE_L = wide ? (lx+14)*u : 8;
   // The flat views are clipped to this strip, and the strip narrows when a skill panel
   // opens beside the controls. Nothing re-ran the clip when the panel closed again, so the
   // board stayed cropped to the narrower strip and a slice of it was simply missing until
