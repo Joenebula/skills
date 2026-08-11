@@ -3760,6 +3760,11 @@ function frameSelection(id){
 // Deselecting goes back to the default view rather than to wherever the last frame left
 // you — after two or three selections "where I was" is not a place anyone remembers.
 function unframe(){ autoFrom=null;
+  /* A flat view stays where you left it. This reset to zoom 1 at pan 0,0 — which is not even
+     where the board starts, so closing a skill threw it back to an origin it had never been
+     at. Where you have scrolled to is yours; the same rule a background click already
+     follows. */
+  if(FLAT()) return;
   if(userZoomed) return;                       // unless you set the zoom yourself
   if(zoom!==1||panX!==0||panY!==0) setView(1,0,0,true); }
 function updateZoomLabel(){ if(!$('zlabel')) return; const b=$('zlabel'); if(b) b.textContent=Math.round(zoom*100)+'%'; }
