@@ -742,6 +742,12 @@ const arc=(cx,cy,r,a0,a1)=>{const s=P(cx,cy,r,a0),e=P(cx,cy,r,a1);
 const SLOW=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let W=1000,H=740,CX=500,CY=370,MAXR=340,SAFE_L=10,SAFE_R=990,SAFE_B=0;
+/* Where the map can still be SEEN, as opposed to where it is laid out. They are the same
+   until an open skill panel takes its own column over a flat view: the board keeps its
+   width, because its width is its layout and re-flowing it on every click would be worse
+   than the problem, but the part of it you can look at is now narrower. Panning and the
+   nudge below both work in this, not in SAFE_R. */
+let VIS_R=990;
 // What the key does now lives in PICKS, further down with the handlers that drive it.
 let query='', sel=null, hover=null, cur=-1, res=[], hits=null;
 
@@ -1467,6 +1473,10 @@ function gutters(){
       edge=Math.min(edge,d.getBoundingClientRect().left);
   }
   SAFE_R = wide ? (edge-14)*u : W-8;
+  { const d=$('detail');
+    const hidden = wide && FLAT() && d.classList.contains('on')
+                && getComputedStyle(d).position==='fixed';
+    VIS_R = hidden ? Math.max(SAFE_L+80,(d.getBoundingClientRect().left-14)*u) : SAFE_R; }
   /* And the left, which was the number 10 and had been since the left gutter held nothing but
      a trail canvas. It now holds the layout menu, the findings button and the build stamp —
      opaque cards, 186px of them — and the map was being laid out underneath.
@@ -1552,7 +1562,8 @@ function clampPanX(px,z){
   // Pan until an edge of the board meets the matching edge of the visible strip and no
   // further. Allowing the midpoint to reach either edge, as this first did, let the whole
   // board be dragged into the half of the screen you cannot see.
-  const lo=SAFE_R-FLATX[1]*zz, hi=SAFE_L-FLATX[0]*zz;
+  // against the visible strip, so a column can always be pulled out from under an open panel
+  const lo=VIS_R-FLATX[1]*zz, hi=SAFE_L-FLATX[0]*zz;
   return lo>hi ? (lo+hi)/2 : Math.max(lo,Math.min(hi,px));
 }
 const VIEWS={
@@ -2032,7 +2043,9 @@ function dodge(){
     const sx=n.sx, sy=n.sy, srad=n.srad;
     const rEdge=sx+srad+8+est, lEdge=sx-srad-8-est;
     const left = sx<CX ? (lEdge > (n._left===false ? SAFE_L+DEAD : SAFE_L))
-                       : (rEdge > (n._left===true  ? SAFE_R-DEAD : SAFE_R));
+                       // against the visible strip: a name has room on the right only if
+                       // there is screen there, not merely layout there
+                       : (rEdge > (n._left===true  ? VIS_R-DEAD : VIS_R));
     n._left=left;
     // A bigger standoff is what buys the room: the labels were starting 8 units from the
     // dot, so a row of three nodes 15 units apart had its three names overlapping before
@@ -2110,7 +2123,7 @@ function dodge(){
     for(const k of kept)
       if(s.x0<k.x1 && k.x0<s.x1 && Math.abs(s.ty-k.ty)<PITCH*0.92){ clash=true; break; }
     const far = clash || Math.abs(s.ty-s.n.sy)>OFF ||
-                s.x0<SAFE_L-40 || s.x1>SAFE_R+40 || s.n.sy<-20 || s.n.sy>H+20;
+                s.x0<SAFE_L-40 || s.x1>VIS_R+40 || s.n.sy<-20 || s.n.sy>H+20;
     s.el.classList.toggle('toofar',far);
     if(far){ s.n._ldy=0; t.setAttribute('y',3); ld.style.opacity=0; continue; }
     kept.push(s);
@@ -2953,7 +2966,28 @@ function frameSelection(id){
      off the frame, and the destination is what you selected it to see. Same conclusion from
      two directions, so it is one rule now rather than one view opting out of the other's
      behaviour. */
-  if(FLAT()) return;
+  if(FLAT()){
+    /* No zoom, no reframing — but if the node you just picked is behind the panel that
+       opened to describe it, slide the board the shortest distance that brings it out.
+       Selecting something and having it disappear under the thing describing it is the one
+       case where holding perfectly still is worse than moving. */
+    const n=IDX[id]!==undefined?N[IDX[id]]:null;
+    if(!n) return;
+    /* The right needs room for the dot AND the name beside it, because the panel is what it
+       would be hiding behind and the name is what you came to read. The left needs room for
+       the dot only: there is no panel there, and a name near the left edge is drawn on its
+       right anyway. Padding both the same made a node at the left of the field ask to move
+       when nothing was covering it. */
+    const padR=Math.min(150,(n.id.length+2)*LBLU*0.635+34), padL=n.rad*zoom+10;
+    const sx=n.x*zoom+panX;
+    let want=panX;
+    if(sx>VIS_R-padR) want=panX-(sx-(VIS_R-padR));
+    else if(sx<SAFE_L+padL) want=panX+((SAFE_L+padL)-sx);
+    want=clampPanX(want,zoom);
+    if(Math.abs(want-panX)>0.5){ if(!autoFrom) autoFrom={zoom,panX,panY};
+      setView(zoom,want,panY,true); }
+    return;
+  }
   // Selecting the root frames the organisation ring — the surfaces the enterprise root
   // actually owns. It used to light repository instructions too: a hundred nodes in the
   // two densest bands, which cannot carry names at any zoom that still shows them all.
