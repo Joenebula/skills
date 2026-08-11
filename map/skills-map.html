@@ -946,18 +946,13 @@ const VIA={
  'critical-thinking-partner':['read'],
  'knowledge-system-setup':['read','doc'],
  'session-start-hook':['read','disk'],
- 'init':['doc'],
- 'impeccable':['git','place','doc']
+ 'init':['doc']
 };
 
 /* ---- Each fix carries how well its premise is established, and a step number so the set
    can be worked in dependency order. Several fixes edit the same paragraph; run them in the
    listed order and they cannot collide. */
 const BASIS={
- /* A demo, so the open state can be seen while everything real is settled. Delete these
-    four lines — the BASIS, NEEDS, WHERE and FIXES entries keyed 'impeccable' — and the map
-    goes back to 15 findings, all closed. Nothing else refers to it. */
- 'impeccable':['confirmed',0],
  'CLAUDE.md':['done',1],'security':['done',3],'refactoring':['done',2],
  'security-route-auditor':['done',4],'security-review':['done',5],
  'simplify':['done',6],'artifact-design':['done',7],'frontend-design':['done',8],
@@ -984,7 +979,7 @@ const BASIS_ORDER=['scripted','prepared','corrected','confirmed','unverified','p
 // BASIS says how good my evidence is. NEEDS says what it still costs you — which is the
 // question "why is the number the same" was really asking.
 const NEEDS={
- 'impeccable':'decide','CLAUDE.md':'push','security':'command','security-route-auditor':'command',
+ 'CLAUDE.md':'push','security':'command','security-route-auditor':'command',
  'ecommerce-security-audit':'command','ask-dont-guess':'command',
  'artifact-design':'decide','frontend-design':'script','session-start-hook':'script',
  'security-review':'read','simplify':'read','accessibility':'read',
@@ -1001,7 +996,7 @@ const NEEDS_ORDER=['script','push','paste','command','read','decide'];
 /* ---- where each step has to be run from. The brief opens with an orientation step that
    works this out, so the agent reports "run this elsewhere" instead of failing silently. */
 const WHERE={
- 'impeccable':'repo','CLAUDE.md':'workspace + repo','security':'workspace','security-route-auditor':'workspace + repo',
+ 'CLAUDE.md':'workspace + repo','security':'workspace','security-route-auditor':'workspace + repo',
  'security-review':'workspace + repo','simplify':'workspace + repo','artifact-design':'account',
  'frontend-design':'account','accessibility':'workspace + account','ecommerce-security-audit':'both libraries',
  'ask-dont-guess':'workspace','critical-thinking-partner':'account',
@@ -1058,7 +1053,6 @@ const PREAMBLE=[
 "---"
 ].join("\n");
 const FIXES={
- 'impeccable':"DEMO — this one is not real. It exists so the open state can be seen while every genuine finding is settled. Delete the four 'impeccable' entries in skills-data.js (BASIS, NEEDS, WHERE, FIXES) and it goes.\n\nWhat a real finding looks like, using a real question as the example:\n\nBASIS: confirmed. impeccable arrived on 9 Aug and nothing in BUILD-PLAN.md section 10 places it, so the map guessed its column from its description — nearest match mydesignskill, which put it in Front-end design. The guess is on the node itself and says so.\n\nThat is a real open question rather than an error: the map cannot know which build step a skill belongs to, only which skills it reads like. Naming it in section 10 replaces the guess with your answer.\n\nSo the shape of every finding is the same three parts. What was observed, how good the evidence is, and what would close it — with the last one being something you can act on or argue with, not a task list.",
  'CLAUDE.md':"BASIS: done \u2014 the library was pushed on 8 Aug. github.com/Joenebula/skills holds 31 skills, 5 agents, the workspace CLAUDE.md and 16 commits of history, at df2b3f2.\n\nThat was the whole of G-008: the one directory with a proven loss record (G-001, twice) had the weakest backup in the workspace. It now has a copy that is not on the machine.\n\nIt settled five other items as a side effect. Every claim about what a skill *contains* had been inferred from its name; all 49 skills and agents are now read from the files. The map's unverified count went from 34 to 0.\n\nTwo of those inferences turned out to be wrong in opposite directions \u2014 recorded as G-009.",
  'refactoring':"BASIS: done — applied in this repo on 6 Aug. Section 10's Always row listed four skills; CLAUDE.md listed three.\n\nSection 10 now matches CLAUDE.md, with refactoring moved to a new On demand row so it is not lost. Recorded as D-008, which also sets the general rule: CLAUDE.md wins on session behaviour, section 10 wins on build planping.\n\nNothing to do unless you disagree with the direction — the alternative was adding refactoring to CLAUDE.md's always-on list, which would have changed what loads every session to settle a documentation argument.",
  'security':"BASIS: done \u2014 and the answer was neither of the two I offered.\n\nThe skill is present: skills/security/SKILL.md, 63 lines, five laws. So section 10's claim that it was deleted from the working tree is false, and my correction \u2014 that a folder listing proves nothing \u2014 was right about the method and wrong about this file.\n\nBut the note's conclusion only half dies with its premise, which is why it was rewritten rather than deleted:\n\n\u2022 service_role (non-negotiable 2) IS owned now. Law 4 keeps secrets out of client bundles, Law 2 forbids a service credential from ever gating, and project-setup and ecommerce-security-audit name service_role and NEXT_PUBLIC_ directly.\n\n\u2022 Default-deny RLS (non-negotiable 1) is NOT. RLS and row-level security appear nowhere in the library \u2014 not in 31 skills, not in 5 agents, not in the workspace CLAUDE.md.\n\nThat is probably correct rather than a gap: the library is stack-agnostic and RLS is a Postgres and Supabase mechanism. Either way the RLS line in this repo's CLAUDE.md is load-bearing and stays. Recorded as D-011.",
@@ -1256,7 +1250,7 @@ const GROUP_NAME={
    have open. Clicking a heading says what the column is for and what being in it implies. */
 const GROUP_ABOUT={
   agreement:'<code>CLAUDE.md</code> is the project agreement, and it is not a skill. It loads before every session and decides which skills do — it names the always-on three, points at the four ledgers, and hands the step-by-step assignments to <code>BUILD-PLAN.md</code>. Everything else on this board is downstream of it.',
-  always:'Loaded on every request, before any task is chosen, because <code>CLAUDE.md</code> names them by hand. They cost you context in every single session, so the bar for adding one is high — and <code>refactoring</code> is here on the build plan\u2019s say-so while <code>CLAUDE.md</code> lists only three, which is one of the open items.',
+  always:'Loaded on every request, before any task is chosen, because <code>CLAUDE.md</code> names them by hand. They cost you context in every single session, so the bar for adding one is high — and <code>refactoring</code> is here on the build plan\u2019s say-so while <code>CLAUDE.md</code> lists only three. That mismatch was raised and settled; the finding on <code>refactoring</code> has the detail.',
   A:'Build step 1 of the plan: the skeleton and the deploy pipeline. Repo, Next.js app, Supabase projects, Vercel, DNS, CI — the empty page that is live and deploying before any feature exists.',
   B:'Build step 2: the database and its migrations. Every table, RLS on before data goes in, and every schema change as a SQL file in the repo rather than a click in the dashboard.',
   C:'Build step 3: the admin area. The only authenticated surface in stage 1 — auth, CRUD, forms, the CMS and the design system it is all built out of.',
