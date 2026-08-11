@@ -1006,13 +1006,10 @@ const DECO=[];
    their geometry off SCAF, which homes() has just rebuilt, so the backdrop follows the
    chart automatically rather than carrying a second copy of its measurements. */
 function decoTargets(){
-  const cols = SCAF.filter(s=>s.t==='col'), ticks = SCAF.filter(s=>s.t==='tick');
+  const cols = SCAF.filter(s=>s.t==='col');
   const hubs = SCAF.filter(s=>s.t==='hub');
   const board = VIEW==='board' && cols.length;
-  const arc   = VIEW==='arc'   && ticks.length;
   const flow  = VIEW==='flow'  && hubs.length;
-  const rowY  = arc ? ticks[0].y : 0;
-  const AL=FLATX[0]+40, AR=FLATX[1]-40, ARCH=Math.max(40,rowY-FLATY[0]-14);
   for(const d of DECO){
     if(flow){
       // four soft streams lying along the four destinations, widest where the ribbons leave
@@ -1035,16 +1032,6 @@ function decoTargets(){
         ? c.top - 16 + (c.base+22-(c.top-16))*(d.v*.86+d.b*.028)
         : c.headTop-56 + (H-c.headTop+40)*d.v;
       d.tc = d.kind==='band' ? c.col : '#8FB0E8';
-    } else if(arc){
-      // nested domes over the row, which is the shape the links themselves draw
-      const t = d.kind==='band' ? d.u : d.v;
-      const x = AL + (AR-AL)*t;
-      const rise = Math.sin(Math.PI*t) * ARCH * (d.kind==='band' ? .30+d.b*.088 : .06+d.v*.98);
-      d.tx = x;
-      d.ty = rowY - rise + (d.kind==='band' ? d.j*3 : 0);
-      d.tc = d.kind==='band'
-        ? (ticks.reduce((p,q)=>Math.abs(q.x-x)<Math.abs(p.x-x)?q:p, ticks[0]).col)
-        : '#8FB0E8';
     } else {
       // the original circle: five arcs banded by sector, and a scatter of stars beyond them
       if(d.kind==='band'){
@@ -1331,31 +1318,27 @@ function scaffold(){
         t.removeAttribute('tabindex'); t.removeAttribute('role');
       }
     } else if(s.t==='lane'){
-      // A hairline behind each build step, and its name turned on its side under the field.
-      // Horizontal names would need the width the streams are using.
+      // A hairline behind each build step, and its name written along the bottom.
+      //
+      // The names used to be turned on their side, on the argument that horizontal ones
+      // would need the width the streams are using. True of one row; not true of three.
+      // Staggered across three rows, first-fit, they read as text rather than as a barcode,
+      // and a tick above each one says which column it belongs to.
       gRing.appendChild(mk('line',{x1:s.x.toFixed(1),y1:s.top.toFixed(1),
         x2:s.x.toFixed(1),y2:s.bot.toFixed(1),
         stroke:s.col,'stroke-opacity':.20,'stroke-width':.7}));
-      /* All the names share one baseline under the field. Hanging each one off the end of
-         its own line put them at seventeen different heights, which reads as a second data
-         series and is not one.
-
-         Set in its own class rather than borrowing the column heading's. Turned on its side
-         at 11px and three-quarter opacity, in colours several of which are deliberately
-         muted, half of them could not be read at all — and a name you cannot read is not a
-         label. Bigger, at full strength, with the same dark halo the node names carry. */
-      const ly=s.base;
-      const t=mk('text',{class:'lanelbl',x:s.x.toFixed(1),y:ly.toFixed(1),
-        fill:s.col,'text-anchor':'end',
-        transform:`rotate(-90 ${s.x.toFixed(1)} ${ly.toFixed(1)})`});
+      const ly=s.base+s.row*13, lx=s.lx!==undefined?s.lx:s.x;
+      // a leader from the column down and across to wherever its name landed
+      gRing.appendChild(mk('path',{d:`M${s.x.toFixed(1)},${(s.bot+3).toFixed(1)}`
+        +`V${(s.base-14).toFixed(1)}L${lx.toFixed(1)},${(ly-9).toFixed(1)}`,
+        fill:'none',stroke:s.col,'stroke-opacity':.28,'stroke-width':.7}));
+      const t=mk('text',{class:'lanelbl',x:lx.toFixed(1),y:ly.toFixed(1),
+        fill:s.col,'text-anchor':'middle'});
       t.textContent=s.label; gRingTop.appendChild(t);
       if(s.key){
-        // The hit target is a rect in the text's own rotated frame, sized from the glyphs
-        // that were actually laid out — a name turned on its side is a 6-unit-wide strip of
-        // type, and nobody hits that.
-        const len=t.getComputedTextLength()||40, tr=t.getAttribute('transform');
-        const hit=mk('rect',{class:'hdhit',x:(s.x-len-4).toFixed(1),y:(s.base-11).toFixed(1),
-          width:(len+8).toFixed(1),height:15,rx:4,fill:'transparent',transform:tr});
+        const len=t.getComputedTextLength()||40;
+        const hit=mk('rect',{class:'hdhit',x:(lx-len/2-4).toFixed(1),y:(ly-11).toFixed(1),
+          width:(len+8).toFixed(1),height:15,rx:4,fill:'transparent'});
         hit.setAttribute('aria-label',s.label+' — '+s.n+' skills, show them');
         pickable(hit,'g:'+s.key);
         hit.classList.toggle('pick',PICKS.has('g:'+s.key));
@@ -1389,16 +1372,6 @@ function scaffold(){
       hit.classList.toggle('pick',PICKS.has('r:'+s.key));
       previewable(hit,'r:'+s.key,[g,c,l]);
       gRingTop.appendChild(hit);
-    } else if(s.t==='tick'){
-      const dy=17+s.row*15;
-      gRing.appendChild(mk('line',{x1:(s.x-5).toFixed(1),y1:(s.y+13).toFixed(1),
-        x2:(s.x-5).toFixed(1),y2:(s.y+dy+7).toFixed(1),
-        stroke:s.col,'stroke-opacity':.45,'stroke-width':.9}));
-      if(s.label){
-        const t=mk('text',{class:'collbl',x:(s.x-1).toFixed(1),y:(s.y+dy+16).toFixed(1),
-          fill:s.col,'fill-opacity':.85,'text-anchor':'start'});
-        t.textContent=s.label; gRingTop.appendChild(t);
-      }
     }
   });
   // fresh elements, so the cached base sizes went with the old ones — and any preview was
@@ -1561,7 +1534,7 @@ function gutters(){
    the homes and waking the field animates from one layout to the next. */
 let VIEW='radial', AX=500, AY=370, SCAF=[], FLATX=[0,1000], FLATY=[0,740], FLATROW=[0,740], COLGAP=16, HUB={};
 // the two layouts that are laid out along one axis and centred on the other
-const FLAT=()=>VIEW==='board'||VIEW==='arc'||VIEW==='flow';
+const FLAT=()=>VIEW==='board'||VIEW==='flow';
 /* Zoom in a flat view is bounded at both ends, and the bounds come from the layout rather
    than from a number someone picked.
 
@@ -1616,7 +1589,6 @@ function clampPanX(px,z){
 const VIEWS={
   radial:  {name:'Radial',      hint:'where it lives'},
   board:   {name:'Phase board', hint:"what it's for"},
-  arc:     {name:'Arc',         hint:'how tangled'},
   flow:    {name:'Flow',        hint:'where it all lands'}
 };
 const PHASE_ORDER=['always','A','B','C','D','E','F','G','H','S2','never','unmapped','builtin'];
@@ -1658,8 +1630,7 @@ function homes(){
   SCAF=[];
   if(VIEW==='radial') return homesRadial();
   if(VIEW==='board') return homesBoard();
-  if(VIEW==='flow')  return homesFlow();
-  return homesArc();
+  return homesFlow();
 }
 
 /* ---- flow: everything on the left, where it lands on the right -------------------------
@@ -1679,8 +1650,14 @@ function homesFlow(){
   // 20% is what those names need. Pushed further right they ran under the panel and read
   // "Not in the..." — a view whose whole point is four labelled totals, with the labels cut.
   const W0=SAFE_R-SAFE_L;
-  const L=SAFE_L+54, HUBX=SAFE_L+W0*0.80;
-  const FIELD_R=SAFE_L+W0*0.40;                // the empty middle is where the streams read
+  /* The hub sits wherever its own label ends at the right edge of the strip, not at a
+     fraction of it. At 80% the names ran off the side on a narrow window — and this is a
+     view whose entire subject is four labelled totals, so a label off the screen is the
+     whole thing failing. The widest of the four decides for all of them. */
+  const lblW=Math.max(...RINGS.map(R=>R.label.length))*4.6+16;
+  const HUBX=Math.max(SAFE_L+W0*0.55, SAFE_R-lblW-14);
+  const L=SAFE_L+54;
+  const FIELD_R=SAFE_L+(HUBX-SAFE_L)*0.50;     // the empty middle is where the streams read
   const groups={}; N.forEach(n=>(groups[groupOf(n)]??=[]).push(n));
   Object.values(groups).forEach(g=>g.sort(byRank));
   const cols=GROUP_ORDER.filter(p=>groups[p]).concat(
@@ -1712,13 +1689,46 @@ function homesFlow(){
     // is a whisper: eight of the seventeen names were effectively unreadable while the
     // coloured ones were fine. Fall back to the body ink instead — grey still says "no
     // colour of its own", and it can be read while saying it.
-    SCAF.push({t:'lane',key:p,x,top:midY-half-11,bot:midY+half+11,base:0,
+    SCAF.push({t:'lane',key:p,x,top:midY-half-11,bot:midY+half+11,base:0,row:0,
                label:phaseTitle(p)[0],n:list.length,col:SECTOR[p]||cv('--ink2')});
   });
-  // One baseline for every name, just under the deepest column — not under the field's
-  // nominal floor, which after the columns were centred was a long way below anything drawn.
+  /* The names sit under the deepest column, not under the field's nominal floor, which after
+     the columns were centred was a long way below anything drawn.
+
+     Three rows, first-fit by x. Width is estimated from the character count rather than
+     measured, because nothing is in the document yet — an over-estimate costs a row and an
+     under-estimate costs a collision, so it errs wide. A name with room on none of the three
+     is dropped rather than printed through its neighbour: the tick and the colour still say
+     which column it is, and a smear says nothing. */
   const deepest=midY+(tallest-1)/2*pitch;
-  SCAF.forEach(x=>{ if(x.t==='lane') x.base=deepest+22; });
+  /* The names run along the bottom of the whole strip, not along the bottom of the field.
+     Under the field there is room for about eight of the seventeen and the rest were being
+     dropped; across the full width, on three rows, they all fit. They stay in column order,
+     so the leader from each column to its name fans out and never crosses another.
+
+     Width is estimated from the character count rather than measured, because nothing is in
+     the document yet — an over-estimate costs a row and an under-estimate costs a collision,
+     so it errs wide. */
+  const lanes=SCAF.filter(x=>x.t==='lane');
+  const NL=SAFE_L+8, NR=SAFE_R-8, step=(NR-NL)/Math.max(1,lanes.length);
+  /* How many rows the names need, rather than three because three was enough once. Three
+     holds them on a wide window and overlaps five of them at 1200px, where the strip is 416
+     units and the names want 1120. Derive it from the two numbers, add one row of slack for
+     the first-fit's waste, and cap it so a very narrow window loses the map rather than the
+     labels eating it. */
+  const totalW=lanes.reduce((a,x)=>a+x.label.length*6.4+10,0);
+  const NROWS=Math.max(3,Math.min(6,Math.ceil(totalW/(NR-NL))+1));
+  const rowEnd=new Array(NROWS).fill(-1e9);
+  lanes.forEach((x,i)=>{
+    x.base=deepest+26;
+    // held inside the strip: the first and last names are wider than the slot they were
+    // centred in, so both ran off their end of it
+    const w=x.label.length*6.4+10;
+    x.lx = Math.max(NL+w/2, Math.min(NR-w/2, NL+step*(i+0.5)));
+    const r=rowEnd.findIndex(e=>x.lx-w/2>e);
+    x.row = r<0 ? NROWS-1 : r;                 // the last row rather than nothing
+    rowEnd[Math.max(0,r)]=x.lx+w/2;
+  });
   // The destinations are spaced by share, not evenly: a ring holding a third of the library
   // is given a third of the height, so the gaps between the hubs ARE the proportions and the
   // streams arrive at the angle their size earns.
@@ -1735,10 +1745,14 @@ function homesFlow(){
   HUB={}; SCAF.filter(s=>s.t==='hub').forEach(s=>HUB[s.key]={x:s.x,y:s.y});
   // Everything in this view flows from the agreement, so it sits at the head of the field
   // rather than off the edge of it.
-  AX=SAFE_L+22; AY=(top+bot)/2;
+  /* The agreement sits at the head of the field. Its name is set centred underneath it and
+     is wider than the marker, so putting it hard against the left edge pushed the name off
+     the strip. Half a name's width of clearance, measured from the name. */
+  AX=SAFE_L+Math.max(30, ANCHOR.id.length*3.6+10); AY=(top+bot)/2;
   FLATX=[SAFE_L+4,SAFE_R-4];
   // top of the tallest column and the hub block, down past the rotated names under the field
-  FLATY=[Math.min(midY-(tallest-1)/2*pitch, HTOP)-20, deepest+22+74];
+  // the top of the tallest column or the hub block, down to the last of the three name rows
+  FLATY=[Math.min(midY-(tallest-1)/2*pitch, HTOP)-20, deepest+26+(NROWS-1)*13+14];
   FLATROW=FLATY;
 }
 
@@ -1796,38 +1810,6 @@ function homesBoard(){
       n.hx=mid+(inRow-(rowN-1)/2)*COLGAP; n.hy=base-row*rowH;
     });
   });
-}
-
-/* One row, every declared overlap arced above it. Density is the whole point. */
-function homesArc(){
-  const gi=g=>{const i=GROUP_ORDER.indexOf(g); return i<0?99:i;};
-  const order=[...N].sort((a,b)=>gi(groupOf(a))-gi(groupOf(b))||byRank(a,b));
-  // The picture is the row plus everything above and below it, so centring the row leaves
-  // the arcs crammed into the top half and a void underneath. Centre the whole thing: the
-  // tallest arc rises ARCH above the row and three staggered label rows drop LABELS below.
-  const ARCH=H*0.62, LABELS=64;
-  const L=SAFE_L+34, R=SAFE_R-34, y=(H-ARCH-LABELS)/2+ARCH;
-  const step=(R-L)/Math.max(1,order.length-1);
-  order.forEach((n,i)=>{ n.hx=L+step*i; n.hy=y; });
-  FLATX=[L-40,R+40];
-  FLATY=[y-ARCH-14,y+LABELS+10];          // the tallest arc down to the last label row
-  FLATROW=[y-70,y+LABELS+10];             // the row and its names, without the fan above it
-  AX=L-step*1.4; AY=y;
-  // A phase name under sixty nodes has about fifteen units of width and needs forty, so
-  // they printed through each other. Two staggered rows, and the lettered phases lose the
-  // word "phase" — the tick colour already says what kind of label it is.
-  // Two rows were not enough and picking "the emptier one" as a fallback still overlapped:
-  // ACCOUNTS has two nodes and EXCLUDED has one, so three headings landed inside forty
-  // units and two of them shared a row. Three rows, first-fit, and a heading with room on
-  // none of them is dropped rather than printed through its neighbour — the tick mark still
-  // marks the boundary, and the phase is on the node itself.
-  let last=null; const rowEnd=[-1e9,-1e9,-1e9];
-  order.forEach((n,i)=>{ const g=groupOf(n); if(g===last) return; last=g;
-    const t=phaseTitle(g)[0];
-    const x=L+step*i, w=t.length*4.6+10;
-    const row=rowEnd.findIndex(e=>x>e);
-    if(row>=0) rowEnd[row]=x+w;
-    SCAF.push({t:'tick',x,y,label:row>=0?t:'',col:SECTOR[n.phase]||cv('--ink3'),row:Math.max(0,row)}); });
 }
 
 function setLayout(v){
@@ -2100,11 +2082,7 @@ function dodge(){
      eighteen-node rings; 34 drops none, and every set tested — 4, 5, 14, 18 — comes out with
      nothing withdrawn and nothing overlapping. */
   const OFF=LBLOFF*Math.max(1,Math.min(4,34/Math.max(1,items.length)));
-  // Names stack downward everywhere except the arc, where below the row is where the phase
-  // headings already are — three staggered rows of them — so a skill name pushed down lands
-  // on top of one. Above the row there is only the fan of arcs, which the name can cross.
-  const PUSH = VIEW==='arc' ? -1 : 1;
-  if(PUSH<0) items.reverse();          // nearest the row first, so the stack grows outward
+  const PUSH = 1;                     // names stack downward
   const placed=ringBoxes.slice();     // ring titles are fixed obstacles, never moved
   // Obstacles carry their own required clearance: a fat disc needs more room above and
   // below it than a text row does, so a flat pitch left labels sitting on the big nodes.
@@ -2230,11 +2208,7 @@ function paint(){
     const b=e.b===ANCHOR.id?{x:AX,y:AY}:N[IDX[e.b]];
     const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
     let qx,qy;
-    if(VIEW==='arc'){
-      // on a single row a straight line between two nodes is the row itself — the whole
-      // view depends on the link leaving it, and how far it rises is how far it reaches
-      qx=mx; qy=my-Math.min(H*.62,Math.abs(b.x-a.x)*.82);
-    } else if(e.kind==='overlap' && VIEW!=='board'){ qx=mx+(AX-mx)*.45; qy=my+(AY-my)*.45; }
+    if(e.kind==='overlap' && VIEW!=='board'){ qx=mx+(AX-mx)*.45; qy=my+(AY-my)*.45; }
     else { qx=mx; qy=my; }                      // control point at the midpoint == straight
     edgeEl[i].setAttribute('d',`M${a.x.toFixed(1)},${a.y.toFixed(1)}Q${qx.toFixed(1)},${qy.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)}`); });
   dodge();
