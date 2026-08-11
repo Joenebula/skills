@@ -572,10 +572,6 @@
      reachable whatever is open over the map */
   #bar{position:fixed;left:16px;bottom:13px;z-index:12;display:flex;align-items:center;
     gap:6px;-webkit-user-select:none;user-select:none}
-  #barwrap{display:flex;align-items:center;gap:6px;
-    transition:transform .30s var(--ease),opacity .22s var(--ease)}
-  #bar.stow #barwrap{transform:translateX(-9px);opacity:0;pointer-events:none}
-  @media(prefers-reduced-motion:reduce){#barwrap{transition:none}}
   #viewmenu{display:flex;gap:5px}
   #bar button{appearance:none;border:0;outline:0;cursor:pointer;font-family:inherit;
     font-size:13px;font-weight:600;letter-spacing:.01em;color:var(--ink3);
@@ -707,19 +703,18 @@
      different part of the map. The map is the subject; the controls are a strip along one
      edge, sized like tags. -->
 <div id="bar">
-  <!-- The one open/close. It stays put while everything else goes, because a control that
-       hides itself cannot bring itself back. Everything after it is in a sleeve that does. -->
-  <button id="stowbtn" type="button" aria-controls="barwrap controls" aria-expanded="true"
+  <!-- The open/close for the controls column. It leads the bar because that is where the
+       thing it opens starts from; the chart names and the build stamp beside it stay put
+       whatever is open — they are how you get between the three views. -->
+  <button id="stowbtn" type="button" aria-controls="controls" aria-expanded="true"
           data-tip="" aria-label="Hide the controls"><svg viewBox="0 0 22 16" aria-hidden="true">
     <rect class="sb-frame" x="1" y="1" width="20" height="14" rx="2.5"/>
     <path class="sb-col" d="M14.5 1v14"/>
     <path class="sb-arrow" d="M6.4 5.6 9.8 8l-3.4 2.4"/>
   </svg></button>
-  <div id="barwrap">
-    <div id="viewmenu"></div>
-    <button id="findbtn" type="button"></button>
-    <div id="stamp"></div>
-  </div>
+  <div id="viewmenu"></div>
+  <button id="findbtn" type="button"></button>
+  <div id="stamp"></div>
 </div>
 </div>
 <div id="hint">scroll to zoom · drag to pan · click a node for its links · esc to clear · / to search</div>
@@ -4165,7 +4160,6 @@ function setStow(on){
   const p=$('panel');
   if(p.classList.contains('stow')===on){ syncStowBtn(); return; }
   p.classList.toggle('stow',on);
-  $('bar').classList.toggle('stow',on);
   syncStowBtn();
 }
 /* Lay the map out again into whatever space is now left. Whichever way the furniture just
