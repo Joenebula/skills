@@ -111,7 +111,8 @@ For each task in the queue:
 3. Build it. Make surgical edits — do not rewrite existing files wholesale as a
    shortcut.
 4. Check it (below).
-5. Log what happened, tagging anything the report has to lift out (see Files to maintain).
+5. Log what happened, tagging anything the report has to lift out (see Files to maintain),
+   then **rewrite `REPORT.html`** so the finished task leaves *What's next*.
 6. Commit inside the scope fence, one commit per finished task, with a message a
    non-developer can read. Commits are save points and need no permission — they are
    local and publish nothing. **Never push, never touch remotes, never rewrite history.**
@@ -244,10 +245,24 @@ the chat summary, the log, and every stop message.
 
 ### The HTML report — `keep-going/REPORT.html`
 
-Write it **once, at every stop** (and on "status"), not per task — rendering it after each
-task eats the run for no gain. `LOG.md` is written per task as usual; the report is built
-from it at the stop. Copy `report-template.html` from beside this file on the first run,
-then fill it. Never restyle it: two runs that look different are two things to learn.
+**Rewrite it at the end of every task**, as part of the same step that marks the task done
+— plus at every stop and on "status". Copy `report-template.html` from beside this file on
+the first run, then fill it. Never restyle it: two runs that look different are two things
+to learn.
+
+An earlier version of this rule said "once, at every stop, not per task — rendering it
+after each task eats the run." **That was wrong and it shipped a report that lied.**
+Pre-flight is a stop, so the report was written before any work started and then never
+again; the user refreshed a frozen "0 done, 4 queued" page for the rest of the run and
+reasonably concluded their finished work had not registered. One file write per task costs
+nothing next to that. **If `REPORT.html` is older than `LOG.md`, the report is wrong** —
+that is a mechanical check, and worth running before you claim the report is current.
+
+**A finished task leaves *What's next* and becomes a collapsed row under *Done*.** No tick,
+no "completed" label, no strikethrough — disappearing from the active list *is* the
+indication. What survives in the Done row is the evidence: the commands that actually ran
+and anything that broke. That is what separates a real "done" from a claimed one, and the
+Done count climbing is the progress bar.
 
 Order is the whole point. **Issues at the top, evidence at the bottom** — the user should
 never scroll to find what needs them. Sections, fixed: Needs you → Not checked → What's

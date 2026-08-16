@@ -27,7 +27,17 @@
   4. NOTHING IS EVER DELETED FROM LOG.md. It is append-only. Items disappear from this
      page only.
 
-  5. EVERY SECTION STAYS, EVEN WHEN EMPTY. An empty section gets its one-line empty state
+  5. REWRITE THIS FILE AT THE END OF EVERY TASK, not only when the run stops. Pre-flight
+     is a stop, so a report written only at stops is written BEFORE any work exists and
+     then frozen — the user refreshes a "0 done" page all run and concludes their finished
+     work never registered. That happened. Mechanical check: if REPORT.html is older than
+     LOG.md, this file is wrong.
+
+     A finished task LEAVES "What's next" and becomes a collapsed row under "Done". No
+     tick, no "completed" label — vanishing from the active list IS the indication. The
+     Done row keeps the evidence: the commands that actually ran, and anything that broke.
+
+  6. EVERY SECTION STAYS, EVEN WHEN EMPTY. An empty section gets its one-line empty state
      (in the snippets below) so the page's shape never changes and the user always knows
      where to look. An absent section reads as an oversight; an explicit "Nothing needs
      you" reads as an answer.
