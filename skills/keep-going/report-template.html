@@ -66,7 +66,7 @@
   *{box-sizing:border-box;border:0}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
        font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:940px;margin:0 auto;padding:0 24px 120px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px 120px}
 
   header.mast{padding:48px 0 8px}
   .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
@@ -91,11 +91,13 @@
   .score.amber{background:var(--amber-bg)} .score.amber .n{color:var(--amber)}
   .score.green{background:var(--green-bg)} .score.green .n{color:var(--green)}
 
+  /* NEVER let this scroll sideways. It wraps to a second line instead — a nav you have to
+     drag is a nav whose last item nobody finds. */
   nav.jump{position:sticky;top:0;z-index:50;background:var(--bg);margin-top:26px;
-           display:flex;gap:4px;overflow-x:auto;padding:10px 0;
+           display:flex;flex-wrap:wrap;gap:2px;padding:10px 0;
            box-shadow:0 10px 14px -12px rgba(26,26,24,.18)}
   nav.jump a{flex:0 0 auto;text-decoration:none;color:var(--ink-2);font-size:13.5px;
-             font-weight:550;padding:6px 12px;border-radius:99px;white-space:nowrap}
+             font-weight:550;padding:6px 11px;border-radius:99px;white-space:nowrap}
   nav.jump a:hover{background:var(--panel);color:var(--ink)}
   nav.jump a .c{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;
                 padding:1px 7px;border-radius:99px;background:var(--grey-bg);color:var(--ink-2)}
@@ -123,7 +125,7 @@
   .tag.next{background:var(--accent)}
 
   .item h3{display:inline;font-size:16.5px;font-weight:620;margin:0;letter-spacing:-.005em}
-  .item .body{margin:10px 0 0;font-size:15px;color:var(--ink-2)}
+  .item .body{margin:10px 0 0;font-size:15px;color:var(--ink-2);max-width:76ch}
   .item .body strong{color:var(--ink);font-weight:600}
   .meta{margin-top:11px;font-size:13px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 16px}
   .meta code, .item code{font-family:var(--mono);font-size:12.5px;background:rgba(26,26,24,.055);
@@ -171,7 +173,7 @@
   .inner{padding:2px 20px 22px}
   .inner h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
             margin:20px 0 8px;font-weight:650}
-  .inner p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2)}
+  .inner p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2);max-width:78ch}
   .inner p strong{color:var(--ink)}
   pre.out{background:var(--code-bg);border-radius:9px;padding:13px 15px;
           font-family:var(--mono);font-size:12.5px;line-height:1.6;
