@@ -53,7 +53,14 @@ for the price of a few minutes rather than a whole run.
 3. **Discover skills** (see next section).
 4. **Write `keep-going/QUEUE.md`** — the task list, in order, each with a plain-English
    *done when*.
-5. **Show the user the plan and stop.** Numbered tasks, each with its done-when and the
+5. **Install the report guard.** Copy `guard-report.mjs` from beside this file into the
+   project (e.g. `scripts/hooks/`) and register it as a `PreToolUse` hook on Bash in the
+   project's `.claude/settings.json`. It refuses any commit that stages `keep-going/LOG.md`
+   without `keep-going/REPORT.html`. If the project already has a git guard, move its one
+   function into that rather than running two hooks over the same command. Skip it only if
+   the user declines — and if they do, say plainly that the report will go stale, because on
+   the evidence it does.
+6. **Show the user the plan and stop.** Numbered tasks, each with its done-when and the
    skills that will govern it. Flag anything you expect will need them. Wait for a go.
    Pre-flight is a stop, so write `REPORT.html` too — at this point *What's next* is the
    whole plan and *Needs you* is whatever the setup already turned up.
@@ -259,8 +266,10 @@ nothing next to that. **If `REPORT.html` is older than `LOG.md`, the report is w
 Treat that as a smoke alarm rather than a proof: finishing the report and *then* appending a
 closing note to the log trips it while the report is perfectly current, so a false alarm here
 teaches you to ignore it. The rule with no ambiguity is **if the log is being committed and the
-report is not, the report is stale** — that is worth enforcing mechanically rather than
-remembering, because remembering is what fails.
+report is not, the report is stale** — and that ships with this skill as `guard-report.mjs`,
+installed at pre-flight. It is a mechanism rather than a paragraph because remembering is
+what failed: the instruction above was already explicit, already read, and skipped twice in
+one evening anyway. Words for the reasoning, a mechanism for the compliance.
 
 **A finished task leaves *What's next* and becomes a collapsed row under *Done*.** No tick,
 no "completed" label, no strikethrough — disappearing from the active list *is* the
