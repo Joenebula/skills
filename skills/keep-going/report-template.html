@@ -30,8 +30,13 @@
   5. REWRITE THIS FILE AT THE END OF EVERY TASK, not only when the run stops. Pre-flight
      is a stop, so a report written only at stops is written BEFORE any work exists and
      then frozen — the user refreshes a "0 done" page all run and concludes their finished
-     work never registered. That happened. Mechanical check: if REPORT.html is older than
-     LOG.md, this file is wrong.
+     work never registered. That happened.
+
+     A modification time is a SMOKE ALARM, not a proof: if REPORT.html is older than LOG.md
+     something is probably wrong, but finishing the report and THEN appending a closing note
+     to the log trips it while the report is perfectly current. A gate that cries wolf gets
+     ignored. The rule with no ambiguity: IF THE LOG IS BEING COMMITTED AND THE REPORT IS
+     NOT, THE REPORT IS STALE. Worth enforcing mechanically rather than remembering.
 
      A finished task LEAVES "What's next" and becomes a collapsed row under "Done". No
      tick, no "completed" label — vanishing from the active list IS the indication. The
@@ -41,6 +46,23 @@
      (in the snippets below) so the page's shape never changes and the user always knows
      where to look. An absent section reads as an oversight; an explicit "Nothing needs
      you" reads as an answer.
+
+  7. "NEEDS YOU" MEANS THE READER, AND NOBODY ELSE. The commonest way this page misleads
+     is not going stale - it is listing OTHER PEOPLE'S actions as the reader's outstanding
+     work. An item waiting on a client, a colleague or an account holder is NOT outstanding
+     for the person reading; their part is finished. Left in "Needs you" it makes a moving
+     project look stuck, and it makes finishing something look identical to ignoring it,
+     because the item sits in the same column either way.
+
+     Anything handed over goes to its own section, NAMED FOR WHOEVER HOLDS IT - "With
+     Sarah", "With the client", "With IT". Low weight: a compact table, NO copy-prompts,
+     because none of it is the readers to action. It is there to be seen, not done.
+
+     And the work that PRODUCED the handover belongs in "Done", written up like any other
+     finished task. Writing three emails is finished work even though sending them is not.
+
+     Ask of every item before placing it: OUTSTANDING FOR WHOM? If the answer is not the
+     person reading, it does not belong in their list.
 -->
 <html lang="en">
 <head>
@@ -181,6 +203,15 @@
   pre.out .pass{color:var(--green);font-weight:700}
   pre.out .fail{color:var(--red);font-weight:700}
 
+  /* Handed-over work. Deliberately the quietest block on the page: no tag, no colour, no
+     buttons. It is there to be seen, not done. */
+  table.handover{width:100%;border-collapse:collapse;font-size:14.5px;margin:0;
+                 background:var(--panel);border-radius:var(--radius);overflow:hidden}
+  table.handover td{padding:10px 14px;color:var(--ink-2);vertical-align:top}
+  table.handover tr:nth-child(odd) td{background:rgba(26,26,24,.028)}
+  table.handover td:first-child{color:var(--ink);font-weight:560;white-space:nowrap}
+  table.handover td:last-child{max-width:62ch}
+
   .legend{background:var(--panel);border-radius:var(--radius);padding:8px 22px}
   .legend dl{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;margin:16px 0}
   .legend dt{margin:0}
@@ -247,6 +278,9 @@
       that section has at least one item — otherwise the chip stays grey. ==-->
 <nav class="jump">
   <a href="#needs" class="has-red">Needs you <span class="c">0</span></a>
+  <!-- one entry per holder: #with-sarah, #with-client. NO count chip colour — handed-over
+       work is not urgent for the reader. Rename the anchor and label to the real person. -->
+  <a href="#with-them">With &lt;whoever&gt; <span class="c">0</span></a>
   <a href="#unchecked" class="has-amber">Not checked <span class="c">0</span></a>
   <a href="#next">What's next <span class="c">0</span></a>
   <a href="#done">Done <span class="c">0</span></a>
@@ -267,7 +301,21 @@
 
 </section>
 
-<!-- ============ 2. NOT CHECKED ============ -->
+<!-- ============ 2. WITH &lt;WHOEVER ELSE&gt; — handed over, NOT the reader's to do ============ -->
+<section id="with-them">
+  <!--== FILL: name it for whoever actually holds it. "With Sarah". "With the client".
+        "With IT". One section per holder if there are genuinely two. If nobody holds
+        anything, keep the section and use its empty state. ==-->
+  <h2>With &lt;whoever&gt;</h2>
+  <p class="sub">Handed over and out of your hands — listed so you can see it is moving, not
+     so you can do it. <strong>Nothing here is yours to action</strong>, which is why none of
+     it has a button.</p>
+
+  <!--== FILL: the handover table. Copy from the snippet library. ==-->
+
+</section>
+
+<!-- ============ 3. NOT CHECKED ============ -->
 <section id="unchecked">
   <h2>Built, but not properly checked</h2>
   <p class="sub">Things that are finished in code and pass the automatic gate, but that nobody
@@ -278,7 +326,7 @@
 
 </section>
 
-<!-- ============ 3. WHAT'S NEXT — the pending queue, in order ============ -->
+<!-- ============ 4. WHAT'S NEXT — the pending queue, in order ============ -->
 <section id="next">
   <h2>What's next</h2>
   <p class="sub">The remaining queue, in order. Each one can be run on its own from a fresh chat
@@ -288,7 +336,7 @@
 
 </section>
 
-<!-- ============ 4. DONE — collapsed one-liners, full evidence inside ============ -->
+<!-- ============ 5. DONE — collapsed one-liners, full evidence inside ============ -->
 <section id="done">
   <h2>Done</h2>
   <p class="sub">Click any row for the full evidence — what changed, which rules it was built
@@ -298,7 +346,7 @@
 
 </section>
 
-<!-- ============ 5. NOTICED — the no-drift list ============ -->
+<!-- ============ 6. NOTICED — the no-drift list ============ -->
 <section id="ideas">
   <h2>Noticed along the way</h2>
   <p class="sub">Spotted but deliberately not done, so the pile of changes stays reviewable.
@@ -308,7 +356,7 @@
 
 </section>
 
-<!-- ============ 6. FULL LOG ============ -->
+<!-- ============ 7. FULL LOG ============ -->
 <section id="log">
   <h2>Full log</h2>
   <p class="sub">Everything above comes from here. This is the complete record, in the order it
@@ -323,7 +371,7 @@
      <b>LOG.md</b> — items only disappear from <em>this page</em>.</p>
 </section>
 
-<!-- ============ 7. LEGEND — fixed, never edit ============ -->
+<!-- ============ 8. LEGEND — fixed, never edit ============ -->
 <section id="legend">
   <h2>What the words mean</h2>
   <p class="sub">Five labels, and the rule for each. If something doesn't match one of these
@@ -676,9 +724,34 @@ suite      -> <span class="pass">ALL PASS</span></pre>
   </div>
 
 
+  ---- WITH &lt;WHOEVER&gt; — handed over. A TABLE, not cards. No tag, no buttons. --------
+
+  <table class="handover">
+    <tr><td>WHAT WAS HANDED OVER</td>
+        <td>What they have to do with it, and anything they need from you to do it. Say when
+            it went to them — "sent 19 Aug" — so a thing that has been sitting for a month
+            looks different from a thing that went yesterday.</td></tr>
+    <tr><td>THE NEXT ONE</td>
+        <td>Same shape. Keep the left column short enough not to wrap.</td></tr>
+  </table>
+
+  Placement rules, because this is the one people get wrong:
+
+    - It goes in the section named for the HOLDER, never in "Needs you".
+    - The work that PRODUCED it goes in "Done". Three emails written is a finished task;
+      three emails sent is somebody else's. Both facts are true and they live in different
+      sections.
+    - If YOU still owe them something before they can move — an answer, a file, a decision —
+      then THAT part is genuinely yours and belongs in "Needs you" as its own item, with a
+      prompt. Split it; do not file the whole thing under one owner and hope.
+    - No copy-prompt here, ever. A button on somebody else's work invites the reader to do
+      it themselves, which is how two people end up sending the same email.
+
+
   ---- EMPTY STATES — one per section, never omit the section -----------------------
 
   Needs you:    <div class="empty">Nothing needs you. Say <b>keep going</b> to continue.</div>
+  With <whoever>: <div class="empty neutral">Nothing is waiting on anyone else.</div>
   Not checked:  <div class="empty">Everything built so far has been checked and seen to pass.</div>
   What's next:  <div class="empty">The queue is empty — this run is finished.</div>
   Done:         <div class="empty neutral">Nothing finished yet.</div>

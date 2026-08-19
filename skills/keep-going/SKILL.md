@@ -255,8 +255,12 @@ after each task eats the run." **That was wrong and it shipped a report that lie
 Pre-flight is a stop, so the report was written before any work started and then never
 again; the user refreshed a frozen "0 done, 4 queued" page for the rest of the run and
 reasonably concluded their finished work had not registered. One file write per task costs
-nothing next to that. **If `REPORT.html` is older than `LOG.md`, the report is wrong** —
-that is a mechanical check, and worth running before you claim the report is current.
+nothing next to that. **If `REPORT.html` is older than `LOG.md`, the report is wrong.**
+Treat that as a smoke alarm rather than a proof: finishing the report and *then* appending a
+closing note to the log trips it while the report is perfectly current, so a false alarm here
+teaches you to ignore it. The rule with no ambiguity is **if the log is being committed and the
+report is not, the report is stale** — that is worth enforcing mechanically rather than
+remembering, because remembering is what fails.
 
 **A finished task leaves *What's next* and becomes a collapsed row under *Done*.** No tick,
 no "completed" label, no strikethrough — disappearing from the active list *is* the
@@ -265,10 +269,10 @@ and anything that broke. That is what separates a real "done" from a claimed one
 Done count climbing is the progress bar.
 
 Order is the whole point. **Issues at the top, evidence at the bottom** — the user should
-never scroll to find what needs them. Sections, fixed: Needs you → Not checked → What's
-next → Done → Noticed → Full log → What the words mean. Every section stays even when
-empty, with its one-line empty state; a missing section reads as an oversight, an explicit
-*Nothing needs you* reads as an answer.
+never scroll to find what needs them. Sections, fixed: Needs you → With &lt;whoever else&gt;
+→ Not checked → What's next → Done → Noticed → Full log → What the words mean. Every
+section stays even when empty, with its one-line empty state; a missing section reads as an
+oversight, an explicit *Nothing needs you* reads as an answer.
 
 **Write the verdict first — one sentence, at the top.** What the run did, and the single
 biggest thing that is not proven. It is the hardest line on the page and the one most worth
@@ -282,6 +286,23 @@ and seen to pass, red when work has halted.
 **Drop dead tiles from the scoreboard.** *In progress: 0* on a finished run is a number that
 teaches the reader to skim the row. Four to six tiles; *Needs you* and *Not checked* always
 present even at zero; the last one is the run's own headline number.
+
+**"Needs you" means the reader, and nobody else.** The commonest way this page misleads is
+not going stale — it is listing *other people's* actions as the reader's outstanding work. An
+item waiting on a client, a colleague, or an account holder is **not** outstanding for the
+person reading; their part is finished. Left in *Needs you* it makes a moving project look
+stuck, and it makes finishing something look identical to ignoring it, because the item sits in
+the same column either way. That happened here: a decision was made, recorded, and still sat in
+the outstanding column, so the user reasonably asked why nothing had moved.
+
+So anything handed over gets its own section, named for whoever holds it — *With Sarah*, *With
+the client*, *With IT*. Keep it **low-weight**: a compact table, no copy-prompts, because none
+of it is the reader's to action. It is there to be seen, not done. And the work that *produced*
+the handover belongs in **Done**, written up like any other finished task — writing three emails
+is finished work even though sending them is not.
+
+Ask of every item before placing it: **outstanding for whom?** If the answer is not the person
+reading, it does not belong in their list.
 
 **It is a worklist, not a record.** It shows only what is still outstanding. When an item
 is dealt with, **delete it from the file** — no tick, no strikethrough, no "resolved"
