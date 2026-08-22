@@ -335,7 +335,20 @@ deleted, the mistake already made twice, the gate that decides done. The chat it
 has never seen this run, so anything left implicit is lost.
 
 **Discuss** comes first and is always there — its prompt talks the item through and changes
-nothing. **Act** is secondary, and is only added where there is one unambiguous action:
+nothing. **Act** is secondary, and is only added where **both** of these hold: there is one
+unambiguous action, **and** the prompt transcribes something already agreed rather than
+inventing it.
+
+**Transcription versus invention is the test that matters**, because until it existed the two
+looked identical on the page. A prompt built from the queue's task, its done-when verbatim and
+the gotchas already in the log is a *transcription* — the user approved that at pre-flight, so
+an act button just runs an agreed plan. A prompt where the approach was decided at the moment
+of writing is an *invention*: one pass, by the session that had just done the work, reviewed by
+nobody. Inventions get **Discuss only**, exactly like a `DECIDE`.
+
+Nothing the user never agreed to should be one click from running. A proposal is not a plan.
+
+Assuming the prompt is a transcription:
 
 | Item | Buttons |
 |---|---|
@@ -359,15 +372,32 @@ read `QUEUE.md` and `LOG.md` **before acting** and say if it has been overtaken.
 be the first line — a warning underneath the instruction is read after the reader has
 already decided what they are doing.
 
-**Every prompt ends with the discuss-first block** — the verbatim text is in the template.
-It makes the receiving session state the job, list every file it would change, say what it
-thinks is *wrong* in the queue or log, name the undo, and then **wait for "go"**. No
-exceptions, including resume prompts for tasks already agreed: what needs agreeing is the
-plan, not the task.
+The stamp also carries a **Basis line**: one sentence saying what this prompt actually rests
+on. Either *"queue task 2's done-when verbatim, plus the three gotchas in LOG.md"* or,
+honestly, *"my own reading; nothing in the queue covers this"*. Write the honest one — it is
+the single most useful thing the reader can be told, it is what decides whether the item gets
+an act button at all, and it makes writing an invention feel like what it is.
 
-That third point — invite the next session to disagree — is not politeness. It is the only
-independent read this run gets, and a report's items are often corrections of a previous
-session's own mistakes.
+**Every prompt ends with the discuss-first block** — the verbatim text is in the template.
+It makes the receiving session state the job, list every file it would change, criticise the
+prompt, say what it thinks is *wrong* in the queue or log, name the undo, and then **wait for
+"go"**. No exceptions, including resume prompts for tasks already agreed: what needs agreeing
+is the plan, not the task.
+
+**The block audits two different things, and the newer one is the prompt itself.** For a long
+time nothing did. Every prompt on the page is written in one pass, at the end of a task, by the
+same session that just did the work, and reviewed by nobody — then sits there looking exactly
+as authoritative as a plan the user actually approved. A first draft is reliably worse than the
+same draft after one challenge, so the block now asks the receiving session to **name at least
+one thing it would do differently, or say explicitly that it checked and found nothing**.
+
+That either/or is not padding. Silence reads as approval; forcing an answer makes it visible at
+a glance whether the check actually ran — the same reason a check that did not run is never
+reported as passed.
+
+The other audit — invite the next session to disagree with the queue and the log — is not
+politeness either. It is the only independent read this run gets, and a report's items are
+often corrections of a previous session's own mistakes.
 
 Say plainly if asked: this is a disposition, not a lock. A session can still barrel past
 it. What actually prevents an edit is the user's approval settings.

@@ -478,13 +478,29 @@ function copyPrompt(btn){
      Substitute the real timestamp — the SAME one in the masthead:
 
 --- 8< ---
-[Copied from a keep-going report written DAY DATE, TIME. If time has passed, this may
-already be out of date: read keep-going/QUEUE.md and keep-going/LOG.md FIRST and tell me
-if this has already been done or overtaken. Do not act on a stale instruction.]
+[Copied from a keep-going report written DAY DATE, TIME.
+Basis: WHAT THIS PROMPT RESTS ON - either "queue task N's done-when verbatim, plus the
+three gotchas recorded in LOG.md" or, honestly, "my own reading; nothing in the queue
+covers this".
+If time has passed this may already be out of date: read keep-going/QUEUE.md and
+keep-going/LOG.md FIRST and tell me if this has already been done or overtaken. Do not
+act on a stale instruction.]
 --- >8 ---
 
      It has to be first. A warning underneath the instruction is read after the reader has
      already decided what they are doing.
+
+     THE BASIS LINE is the other half, and it is the one that is tempting to fudge. It says
+     in one line what this prompt actually rests on. A prompt that TRANSCRIBES something
+     already agreed - the queue's task, its done-when verbatim, the gotchas in the log - is
+     trustworthy, because the user approved that at pre-flight. A prompt where the approach
+     was INVENTED at the moment of writing is a fresh, unreviewed proposal, and until this
+     line existed the two looked identical on the page.
+
+     Write the honest one. "My own reading; nothing in the queue covers this" is not an
+     admission of weakness, it is the single most useful thing the reader can be told. It
+     also makes writing an invention feel like what it is, which is a quiet check on the
+     session doing the writing.
 
 
   ---- THE DISCUSS-FIRST BLOCK — goes at the END of EVERY prompt, verbatim -----------
@@ -497,17 +513,35 @@ if this has already been done or overtaken. Do not act on a stale instruction.]
 Before doing any of it, stop and tell me:
   1. what you understand the job to be, in one line
   2. exactly what you would change - every file, and what happens to each
-  3. anything in the queue or the log you think is WRONG - check it, don't take it
+  3. what is WRONG with this prompt itself - it was written in one pass by a session
+     with less context than you have now, and nobody reviewed it. Name at least one
+     thing you would do differently, or say explicitly that you checked and found
+     nothing worth changing
+  4. anything in the queue or the log you think is wrong - check it, don't take it
      on trust, it was written by a previous session that made mistakes
-  4. what could go wrong, and what the undo is
+  5. what could go wrong, and what the undo is
 
 Then WAIT. Do not edit, delete, build, install or commit until I reply "go".
 If I reply "go" with conditions attached, those conditions win over anything above.
 --- >8 ---
 
-     Why point 3 earns its place: the receiving session is the only independent reader
-     this run gets. Several items in a typical report ARE corrections of the previous
-     session's own mistakes, so inviting the next one to disagree is free review.
+     Why points 3 and 4 earn their place: the receiving session is the only independent
+     reader this run gets, and points 3 and 4 aim it at two different targets.
+
+     Point 4 audits the SOURCE - the queue and the log, written by earlier sessions that
+     made mistakes. Several items in a typical report ARE corrections of those.
+
+     Point 3 audits THIS PROMPT, and it is the newer of the two because for a long time
+     nothing did. Every prompt on the page was written in one pass, at the end of a task,
+     by the same session that had just done the work, and reviewed by nobody. It then sat
+     there looking exactly as authoritative as a plan the user had actually approved. A
+     first draft is reliably worse than the same draft after one challenge; point 3 is
+     where that challenge happens.
+
+     "Name at least one thing OR say you checked and found nothing" is deliberate and not
+     padding. Silence currently reads as approval. Forcing an explicit answer either way
+     makes it visible at a glance whether the check actually ran - the same reason a check
+     that did not run is never reported as passed.
 
      Honest limit, and say it plainly if the user asks: this is a disposition, not a
      lock. A session can still barrel past it. The thing that actually stops an edit is
@@ -527,7 +561,21 @@ If I reply "go" with conditions attached, those conditions win over anything abo
                  "Check it", "Run task 4" — never a generic "Copy prompt". A generic
                  label is how the wrong button gets clicked.
 
-     ACT is only added where there IS one unambiguous action:
+     ACT is only added where BOTH of these hold:
+
+       (a) there is one unambiguous action, and
+       (b) the prompt TRANSCRIBES something already agreed rather than inventing it.
+
+     Test (b) with the Basis line. If it honestly reads "queue task N's done-when verbatim"
+     the user approved that plan at pre-flight and an ACT button just runs it. If it reads
+     "my own reading; nothing in the queue covers this" then the approach was invented in
+     one pass and reviewed by nobody - so it gets DISCUSS ONLY, exactly like a DECIDE.
+
+     The principle is the same one that keeps DECIDE button-less: nothing the reader never
+     agreed to should be one click from running. An invention is a proposal. Proposals get
+     discussed; agreed plans get run.
+
+     By item type, assuming (b) holds:
 
        DECIDE      DISCUSS ONLY. The decision has not been made, so no action can be
                    pre-written. This is deliberate: the item that deletes the most is
