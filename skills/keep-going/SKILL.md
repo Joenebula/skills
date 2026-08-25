@@ -55,11 +55,12 @@ for the price of a few minutes rather than a whole run.
    *done when*.
 5. **Install the report guard.** Copy `guard-report.mjs` from beside this file into the
    project (e.g. `scripts/hooks/`) and register it as a `PreToolUse` hook on Bash in the
-   project's `.claude/settings.json`. It refuses any commit that stages `keep-going/LOG.md`
-   without `keep-going/REPORT.html`. If the project already has a git guard, move its one
-   function into that rather than running two hooks over the same command. Skip it only if
-   the user declines — and if they do, say plainly that the report will go stale, because on
-   the evidence it does.
+   project's `.claude/settings.json`. It refuses two commits: one that stages
+   `keep-going/LOG.md` without `keep-going/REPORT.html`, and one that adds a task entry to
+   the log with no spec block for that task number. If the project already has a git guard,
+   move its two functions into that rather than running two hooks over the same command.
+   Skip it only if the user declines — and if they do, say plainly that the report will go
+   stale, because on the evidence it does.
 6. **Show the user the plan and stop.** Numbered tasks, each with its done-when and the
    skills that will govern it. Flag anything you expect will need them. Wait for a go.
    Pre-flight is a stop, so write `REPORT.html` too — at this point *What's next* is the
