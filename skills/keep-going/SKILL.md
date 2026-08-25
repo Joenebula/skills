@@ -115,18 +115,76 @@ For each task in the queue:
 
 1. Mark it `in progress` in `QUEUE.md`.
 2. Read the governing skills in full, now.
-3. Build it. Make surgical edits — do not rewrite existing files wholesale as a
+3. **Write the spec into `LOG.md`** — before any edit (below).
+4. **Prove the check can fail** — run it and watch it come back red (below).
+5. Build it. Make surgical edits — do not rewrite existing files wholesale as a
    shortcut.
-4. Check it (below).
-5. Log what happened, tagging anything the report has to lift out (see Files to maintain),
-   then **rewrite `REPORT.html`** so the finished task leaves *What's next*.
-6. Commit inside the scope fence, one commit per finished task, with a message a
+6. Check it (below).
+7. Log what happened — **including where it diverged from the spec** — tagging anything
+   the report has to lift out (see Files to maintain), then **rewrite `REPORT.html`** so
+   the finished task leaves *What's next*.
+8. Commit inside the scope fence, one commit per finished task, with a message a
    non-developer can read. Commits are save points and need no permission — they are
    local and publish nothing. **Never push, never touch remotes, never rewrite history.**
-7. Mark it `done` and move to the next. Do not stop to report.
+9. Mark it `done` and move to the next. Do not stop to report.
 
 **Every few tasks, re-read the plan** against what has actually been learned. This
 catches an early wrong assumption before it is baked into six more tasks.
+
+### The spec — written before any edit
+
+Into `LOG.md`, before the work, **never a separate file**. The log then reads: what I said I
+would do → what I did → where those differed. Divergence becomes visible; today it is not.
+
+Use this shape exactly, so a later session can find it by pattern rather than by reading:
+
+```markdown
+### Spec — task 4
+**Basis:** invention — nothing in the queue covers how to split this; the approach is mine.
+
+**Touching:** `Source/RackGraph.cpp` — deleted · `Source/Parameters.cpp` — 27 dials removed
+**Not touching:** `Resonator.*` — ColourChain and FxGrid both include it
+**Check that proves it:** the suite prints ALL PASS and the 48 names are gone from the
+  published-parameter list — chosen now, before any edit
+**If it goes wrong:** an over-cut swallows an unrelated function · **Undo:** `git checkout` it
+```
+
+**Basis** uses the same two words as the copy-prompts — *transcription* (the queue's task and
+done-when verbatim, gotchas already recorded) or *invention* (the approach was chosen just
+now). That one word decides whether a spec-review agent runs.
+
+**Choosing the check now is the part that earns the section.** Picking it after building biases
+it toward passing, and that is not hypothetical here: three checks have shipped that looked
+correct and did nothing, plus one tick later removed as false.
+
+**This is not an approval gate.** Writing it does not mean waiting — a spec you have to get
+signed is the stop-start pattern wearing a hat. One thing changes: a stop-condition found while
+*writing* the spec fires before any code moves, rather than halfway through a build.
+
+Pre-flight needs no spec of its own. The queue **is** that spec, and you already stop for
+approval on it.
+
+This is the discuss-first block turned inward. The skill has always made a *fresh* session state
+its plan before acting. It has never asked the *running* session to do the same.
+
+### Prove the check can fail
+
+A check never seen to fail has not been shown to work. Which action that means depends on what
+the task does, and getting this wrong makes the rule impossible to follow:
+
+- **Adding behaviour** — write the check first, run it, **watch it come back red**, then build
+  until it goes green.
+- **Removing or refactoring** — the check is already green and must *stay* green, so it cannot
+  be made to fail by waiting. Prove it discriminates instead: **break something on purpose,
+  watch it go red, put it back.** A suite that would have passed either way is not evidence that
+  the removal was safe.
+- **No check is possible** — three drafted emails have none. Say so in the spec **in those
+  words**: *"no automatic check can prove this; it needs a human read."* The task then ships
+  tagged `UNCHECKED`.
+
+That last one is a deliberate escape hatch with a visible price: it costs an amber item on the
+report. A run that ends with every task `UNCHECKED` proved nothing, and the report says so out
+loud rather than looking finished.
 
 ### Checking
 
@@ -135,8 +193,11 @@ Two tiers, deliberately:
 - **After every task** — check thoroughly, but only what that task touched: build,
   types, the relevant tests, and any governing skill's checks. Fast enough not to eat
   the run.
-- **Before you stop** — run the complete set across everything, then write
-  `REPORT.html`. Same safety as checking everything every time, far more actually built.
+- **Before you stop** — run the complete set across everything, run [[preflight]], then
+  write `REPORT.html`. Same safety as checking everything every time, far more actually
+  built. *"Nothing is being deployed"* is **not** a reason to skip preflight: its trigger
+  is any deploy, merge, **or "it is done" claim**, and this skill claims done once per
+  task all night. A previous run rejected it on exactly that mistaken ground.
 
 Running the full suite after every small change sounds safer but eats the run and
 creates pressure to cut corners to show progress. Don't.
@@ -147,6 +208,44 @@ would reassure the user about work nobody verified.
 
 Record the actual commands run and their results, so "tests passed" is checkable rather
 than asserted.
+
+### Subagents — where they earn their cost
+
+Discover the available agents fresh every run and read only their frontmatter, exactly as you
+do with skills, and for the same reason: the user edits them constantly, and a list hardcoded
+here would be silently reassuring. **Never name one in this file.**
+
+**One spec-review agent, and only when the spec's Basis says *invention*.** A transcription was
+approved at pre-flight; reviewing it again spends the run on a question already settled. An
+invention is a first draft nobody has read, and a first draft is reliably worse than the same
+draft after one challenge. Hand it the spec, the queue and the log, and ask it to **argue
+against** — not to approve.
+
+**What comes back must land in `LOG.md`**, under the spec, each finding marked *adopted* (and
+the spec visibly amended) or *rejected with a reason*. A finding that disappears means the agent
+was theatre and the run paid for it anyway.
+
+**An agent disagreeing is not a stop.** Two *skills* contradicting each other is, because
+neither can be interrogated. An agent can be: weigh it, decide, record why. Silent dismissal is
+the thing to prevent, not disagreement.
+
+**The armed auditors run before you stop, not per task** — through [[preflight]], armed by what
+the whole run's diff touches. Per task is where the cost gets away from you.
+
+Three rules that stop an agent becoming a new way to be wrong:
+
+- **An auditor's findings are evidence. Its clean verdict is not.** "Looks good" from an agent is
+  exactly the confident nothing this skill exists to distrust. Never write *"the auditor passed
+  it"* as though a check had run.
+- **An auditor that could not run is DECLARED**, never silently dropped — and the same goes for
+  any part of preflight that does not fit this project. Much of its arming table is web-shaped;
+  on a plugin or a CLI, whole rows will not apply. Say which, rather than reporting a pass that
+  half-ran.
+- **Agents never build.** Read-only, which is what these already are. An agent that edits loses
+  the surgical-edit control and would need every governing skill read into it.
+
+Say plainly what this costs: every agent shortens the run, and a run can already end on usage
+limits rather than on anything being wrong.
 
 ### When a task blocks
 
