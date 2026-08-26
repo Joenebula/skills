@@ -7,7 +7,32 @@ description: Use BEFORE building or changing ANY UI (page, screen, component, fo
 
 A UI built without a system always gets redone. Hand-picked colours drift, one-off classes multiply, two screens that should match don't, and the day you decide to "make it consistent" you rewrite all of it. The fix is to make consistency the path of least resistance: every screen is assembled from a small set of documented components and tokens, and there is a place you can SEE them all. This skill is the UI authority — the "components" stage of the [[engineering-standards]] build pipeline defers to it.
 
-**RULE ZERO — NEVER invent a class or hand-pick a pixel / colour / spacing value. Build only from documented components and design tokens.** If the value you want isn't a token and the thing you want isn't a documented component, STOP and resolve that (find it, or follow STEP 5) before you write a line of UI. An unsystematic build is not "faster" — it is a debt you pay back by redoing it. The generic **AI-default look** (thick borders, purple→blue gradients, glassmorphism, emoji — see *No generic / AI-default design* in STEP 4) is the most common form of this, and it is banned outright.
+**RULE ZERO — NEVER invent a class or hand-pick a pixel / colour / spacing value, and NEVER hand-copy one either. Build only from documented components and design tokens — and take every value from the source mechanically, not by eye.** If the value you want isn't a token and the thing you want isn't a documented component, STOP and resolve that (find it, or follow STEP 5) before you write a line of UI.
+
+> **A token whose NAME reads right is not a token whose VALUE is right.**
+>
+> A primary button was hand-transcribed from a vendored design system. The source said `color:#fff`. A check banned raw hex, so a token was reached for instead — `--vh-on-accent`, which reads exactly like "text on an accent button" and resolves to `#0a0012`, near-black. **The button shipped with black text and the check went green**, because a token had been used. The user found it on screen.
+>
+> Re-checked afterwards, the same transcription had also drifted on border width, line height, padding and two font sizes. None of it showed in a diff: every line looked like a reasonable token choice.
+>
+> **Hand-copying values is guessing with extra steps.** See *EXTRACT, NEVER TRANSCRIBE* below.
+
+An unsystematic build is not "faster" — it is a debt you pay back by redoing it. The generic **AI-default look** (thick borders, purple→blue gradients, glassmorphism, emoji — see *No generic / AI-default design* in STEP 4) is the most common form of this, and it is banned outright.
+
+---
+
+## EXTRACT, NEVER TRANSCRIBE
+
+When the system is a **vendored artefact** — an export, a package, a copied folder — its values are already written down somewhere. Retyping them into your own stylesheet is a copy that starts drifting the moment either side changes, and every drift looks like a reasonable decision in the diff.
+
+- **Lift the values mechanically.** Most exports ship their CSS inline in each component file. `extract-design-css.mjs`, beside this skill, pulls each component's CSS out verbatim into one generated stylesheet, and `--check` fails the build the moment the copy and the source disagree. Copy it into the project (e.g. `scripts/`), wire `--check` into the verify script, and **mutation-test it both ways** — change the source, watch it fail; hand-edit the generated file, watch it fail.
+- **Then use the system's own class names** (`vh-btn vh-btn--primary`), so components are thin wrappers and *no value is authored at all*.
+- **Never rewrite the vendored copy** to fix a problem — that forks it, and the next re-export arrives as a diff made entirely of your own edits. Fix it upstream, or wrap it.
+- **If the system cannot be extracted** (values are computed, or scattered), say so out loud, and treat every hand-written value as a known risk with a named owner. Do not report it as "built from the design system".
+
+> **A gate that bans the literal without supplying the real value pushes you into inventing a substitute.** Banning `#fff` in components is right. Banning it with no mechanical path to the real value is how a wrong token gets chosen — and passes.
+
+This is why an automated check can report green on a UI that visibly does not match: it can prove a value came from *somewhere approved*, not that it came from *the right place*. Extraction is what closes that gap.
 
 ---
 
@@ -134,6 +159,9 @@ Build in this order even under deadline — primitives-from-tokens is cheaper th
 
 ## VERIFY
 
+**Run these after each COMPONENT, not after the screen.** Ten components deep, a wrong value is buried in a diff nobody re-reads, and the cost of finding it moves from seconds to a user noticing it on screen. The end-of-screen pass is for composition; per-component is for values.
+
+- **Run the extractor's `--check`** if the system is vendored — it is the only one of these that can prove a value matches its source.
 - **Scan the diff for undocumented classes and literals** — raw colour values, raw pixel spacing, class names absent from the stylesheet. Any hit is a RULE ZERO violation — fix before shipping.
 - **Confirm forms validate inline** (per-field error, focus-first-invalid, server mirror) per STEP 3.
 - **Delegate the diff to the design-system-auditor agent** to catch what a search can't: wrong component for the need, a second accent, a hard-coded close destination, a missing catalogue/gallery entry.
