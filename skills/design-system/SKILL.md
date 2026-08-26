@@ -30,6 +30,14 @@ When the system is a **vendored artefact** — an export, a package, a copied fo
 - **Never rewrite the vendored copy** to fix a problem — that forks it, and the next re-export arrives as a diff made entirely of your own edits. Fix it upstream, or wrap it.
 - **If the system cannot be extracted** (values are computed, or scattered), say so out loud, and treat every hand-written value as a known risk with a named owner. Do not report it as "built from the design system".
 
+### When you must change a vendored value
+
+Sooner or later the export is wrong for the real screen — type too small to read, a colour that fails contrast in context. Two bad answers: edit the vendored copy (the next export silently overwrites it, and nothing shows the change ever existed), or remember to re-apply it every time (works until the once it does not).
+
+- **Put local changes in their own stylesheet**, loaded after the extracted one, and let nothing else in the project hand-write a value.
+- **Record, per block, which component it overrides and a fingerprint of that component as it was when the override was written.** A re-export cannot overwrite the override — it does not live in the design system. But when the design system CHANGES UNDER one, the fingerprint stops matching and **the build fails**, naming what moved. The override might now be redundant, or it might be fighting a deliberate upstream decision; a person decides, rather than nobody noticing. `extract-design-css.mjs` does this, and `--accept-overrides` re-records the fingerprints after a human has looked.
+- **Every override states WHY, and is a debt** — it is meant to be pushed back into the design system and deleted. Without that, the override file quietly becomes a second design system.
+
 > **A gate that bans the literal without supplying the real value pushes you into inventing a substitute.** Banning `#fff` in components is right. Banning it with no mechanical path to the real value is how a wrong token gets chosen — and passes.
 
 This is why an automated check can report green on a UI that visibly does not match: it can prove a value came from *somewhere approved*, not that it came from *the right place*. Extraction is what closes that gap.

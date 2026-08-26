@@ -52,11 +52,14 @@
  */
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const args = process.argv.slice(2);
 const CHECK_ONLY = args.includes('--check');
+const ACCEPT = args.includes('--accept-overrides');
 const SOURCE = valueOf('--source') ?? 'design-system';
 const OUT = valueOf('--out') ?? 'app/design-system.generated.css';
+const OVERRIDES = valueOf('--overrides') ?? 'app/design-system.overrides.css';
 
 function valueOf(flag) {
   const i = args.indexOf(flag);
@@ -157,6 +160,102 @@ const body = blocks
 
 const generated = `${header}\n${body}`;
 
+/** A component's current CSS, keyed the way an override names it. */
+const cssByName = new Map(
+  blocks.map(({ file, css }) => [relative(SOURCE, file).replace(/\\/g, '/'), css]),
+);
+
+const shaOf = (text) => createHash('sha256').update(text).digest('hex').slice(0, 16);
+
+/**
+ * Read the `@overrides` / `@source-sha` pairs out of the overrides stylesheet.
+ * Parsed line by line so a formatter reflowing the file cannot break it.
+ */
+function readOverrides(file) {
+  if (!existsSync(file)) return [];
+  const lines = readFileSync(file, 'utf8').split('\n');
+  const found = [];
+  let pending = null;
+  lines.forEach((line, i) => {
+    const target = line.match(/@overrides\s+(\S+)/);
+    if (target) {
+      pending = { name: target[1], line: i + 1, sha: null };
+      found.push(pending);
+      return;
+    }
+    const sha = line.match(/@source-sha\s+([0-9a-f]+)/);
+    if (sha && pending && !pending.sha) pending.sha = sha[1];
+  });
+  return found;
+}
+
+const overrides = readOverrides(OVERRIDES);
+const overrideProblems = [];
+
+for (const o of overrides) {
+  const css = cssByName.get(o.name);
+  if (css === undefined) {
+    overrideProblems.push(
+      `${OVERRIDES}:${o.line} overrides "${o.name}", which the design system no longer has.\n` +
+        `    Either it was renamed upstream, or the override is stale. A person has to decide.`,
+    );
+    continue;
+  }
+  const current = shaOf(css);
+  if (!o.sha) {
+    overrideProblems.push(
+      `${OVERRIDES}:${o.line} overrides "${o.name}" but records no @source-sha.\n` +
+        `    Without one, a re-export can change that component and nothing will say so.\n` +
+        `    Fix: node scripts/extract-design-css.mjs --accept-overrides`,
+    );
+    continue;
+  }
+  if (o.sha !== current) {
+    overrideProblems.push(
+      `"${o.name}" HAS CHANGED IN THE DESIGN SYSTEM since this override was written.\n` +
+        `    ${OVERRIDES}:${o.line}   recorded ${o.sha}, now ${current}\n` +
+        `    The override still applies, so it may now be redundant, or it may be fighting a\n` +
+        `    deliberate upstream decision. Read both, then either delete the override or run:\n` +
+        `      node scripts/extract-design-css.mjs --accept-overrides`,
+    );
+  }
+}
+
+if (ACCEPT) {
+  if (!existsSync(OVERRIDES)) {
+    console.error(`✗ No overrides file at ${OVERRIDES} — nothing to accept.`);
+    process.exit(1);
+  }
+  const lines = readFileSync(OVERRIDES, 'utf8').split('\n');
+  let current = null;
+  let changed = 0;
+  const updated = lines.map((line) => {
+    const target = line.match(/@overrides\s+(\S+)/);
+    if (target) {
+      current = target[1];
+      return line;
+    }
+    const sha = line.match(/@source-sha\s+([0-9a-f]+)/);
+    if (sha && current && cssByName.has(current)) {
+      const fresh = shaOf(cssByName.get(current));
+      if (fresh !== sha[1]) changed += 1;
+      return line.replace(sha[1], fresh);
+    }
+    return line;
+  });
+  writeFileSync(OVERRIDES, updated.join('\n'));
+  writeFileSync(OUT, generated);
+  console.log(`✓ Re-recorded ${changed} fingerprint(s) in ${OVERRIDES}, and regenerated ${OUT}.`);
+  console.log('  This says a person looked. It does not say the overrides are still right.');
+  process.exit(0);
+}
+
+if (overrideProblems.length > 0) {
+  console.error('\n✗ THE DESIGN SYSTEM MOVED UNDER A LOCAL OVERRIDE.\n');
+  for (const p of overrideProblems) console.error(`  • ${p}\n`);
+  process.exit(1);
+}
+
 if (CHECK_ONLY) {
   if (!existsSync(OUT)) {
     console.error(`\n✗ ${OUT} does not exist. Run the extractor without --check.\n`);
@@ -171,6 +270,11 @@ if (CHECK_ONLY) {
     process.exit(1);
   }
   console.log(`✓ ${OUT} matches the design system (${blocks.length} components).`);
+  if (overrides.length) {
+    console.log(
+      `✓ ${overrides.length} local override(s) still match the design system they were written against.`,
+    );
+  }
   process.exit(0);
 }
 
@@ -179,6 +283,41 @@ console.log(`✓ Wrote ${OUT} — ${blocks.length} components lifted verbatim.`)
 if (noCss.length) {
   console.log(`  ${noCss.length} component(s) carry no CSS block; named in the file header.`);
 }
+
+/**
+ * ── LOCAL OVERRIDES, AND THE WARNING THIS EXISTS TO GIVE ──
+ *
+ * The design system is exported from a design tool. The build sometimes needs a
+ * value the export does not have yet — a button font that is too small to read
+ * on a real screen, say. Two bad ways to handle that:
+ *
+ *   · Edit the vendored copy. The next export silently overwrites it, and the
+ *     change is gone with nothing to show it ever existed.
+ *   · Keep the change only in a person's head, and re-apply it after every
+ *     export. That works until the once it does not.
+ *
+ * So local changes live in their own stylesheet, loaded after the generated one,
+ * and each block RECORDS A FINGERPRINT of the component's CSS as it was when the
+ * override was written:
+ *
+ *     ¤ @overrides  components/buttons/Button.jsx
+ *     ¤ @source-sha 3f2a1b…
+ *     ¤ @why        the exported button font is too small to read
+ *
+ * A re-export cannot overwrite the override, because the override is not in the
+ * design system. And when the design system CHANGES UNDER an override, the
+ * fingerprint stops matching and the build FAILS — saying which component moved
+ * and that the override needs re-reading. It might now be redundant, or it might
+ * now be fighting a deliberate upstream decision. Either way a person decides,
+ * rather than nobody noticing.
+ *
+ * After re-reading it: `--accept-overrides` re-records the fingerprints.
+ *
+ * ⚠ THE FINGERPRINT IS NOT A SAFETY NET FOR THE OVERRIDE'S CORRECTNESS. It only
+ * proves nobody re-exported underneath it unnoticed. Whether the override is
+ * still the right thing is a human question, which is exactly why this stops the
+ * build instead of printing a note.
+ */
 
 /**
  * MUTATION TEST — run when wiring this up, and after any change to this file.
@@ -193,6 +332,13 @@ if (noCss.length) {
  * Then the other direction, which is the one that matters:
  *   6. Hand-edit a value in the GENERATED file
  *   7. --check  -> MUST exit 1, naming it as drift
+ *
+ * And the override guard:
+ *   8. Change the CSS of a component that an override targets
+ *   9. --check  -> MUST exit 1, naming the component and the override
+ *  10. --accept-overrides, then --check -> MUST pass
+ *  11. Point an override at a component that does not exist
+ *  12. --check  -> MUST exit 1
  *
  * If step 2 or step 7 passes, this script is decorative and the whole reason it
  * exists is gone.
