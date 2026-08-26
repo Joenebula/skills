@@ -165,6 +165,30 @@ const cssByName = new Map(
   blocks.map(({ file, css }) => [relative(SOURCE, file).replace(/\\/g, '/'), css]),
 );
 
+/**
+ * What an override may point at.
+ *
+ * Components are keyed above by their extracted CSS. But not everything in a
+ * design system is a component: `ui_kits/admin/admin.css` is a plain stylesheet,
+ * imported directly rather than extracted — no copy at all, so no drift is
+ * possible, which is strictly better than extracting it.
+ *
+ * It can still be WRONG, though, and it still moves under an override when the
+ * design system is re-exported. So an override may name ANY file under the
+ * design system, and one that is not a component is fingerprinted by its own
+ * contents.
+ *
+ * Without this the mechanism would guard only the parts that happen to be
+ * components — and would be silently absent exactly where somebody assumed it
+ * was present.
+ */
+function trackedContent(name) {
+  if (cssByName.has(name)) return cssByName.get(name);
+  const path = join(SOURCE, name);
+  if (!existsSync(path) || statSync(path).isDirectory()) return undefined;
+  return readFileSync(path, 'utf8');
+}
+
 const shaOf = (text) => createHash('sha256').update(text).digest('hex').slice(0, 16);
 
 /**
@@ -177,7 +201,7 @@ function readOverrides(file) {
   const found = [];
   let pending = null;
   lines.forEach((line, i) => {
-    const target = line.match(/@overrides\s+(\S+)/);
+    const target = line.match(/@(?:overrides|tracked)\s+(\S+)/);
     if (target) {
       pending = { name: target[1], line: i + 1, sha: null };
       found.push(pending);
@@ -193,11 +217,12 @@ const overrides = readOverrides(OVERRIDES);
 const overrideProblems = [];
 
 for (const o of overrides) {
-  const css = cssByName.get(o.name);
+  const css = trackedContent(o.name);
   if (css === undefined) {
     overrideProblems.push(
       `${OVERRIDES}:${o.line} overrides "${o.name}", which the design system no longer has.\n` +
-        `    Either it was renamed upstream, or the override is stale. A person has to decide.`,
+        `    Either it was renamed upstream, or the override is stale. A person has to decide.` +
+        `    (An override may name any file under ${SOURCE}/, not only a component.)`,
     );
     continue;
   }
@@ -230,19 +255,41 @@ if (ACCEPT) {
   let current = null;
   let changed = 0;
   const updated = lines.map((line) => {
-    const target = line.match(/@overrides\s+(\S+)/);
+    const target = line.match(/@(?:overrides|tracked)\s+(\S+)/);
     if (target) {
       current = target[1];
       return line;
     }
     const sha = line.match(/@source-sha\s+([0-9a-f]+)/);
-    if (sha && current && cssByName.has(current)) {
-      const fresh = shaOf(cssByName.get(current));
+    const tracked = current ? trackedContent(current) : undefined;
+    if (sha && tracked !== undefined) {
+      const fresh = shaOf(tracked);
       if (fresh !== sha[1]) changed += 1;
       return line.replace(sha[1], fresh);
     }
     return line;
   });
+
+  // ⚠ A NAME THAT CANNOT BE RESOLVED MUST NOT PASS QUIETLY.
+  // --check tells people to run --accept-overrides. If a name is simply
+  // mistyped, this loop leaves it untouched, prints a cheerful tick, exits 0,
+  // and --check then fails identically - a documented recovery path that
+  // cannot recover. The name space is every path in the design system, so a
+  // typo is routine rather than unlikely.
+  const unresolved = readOverrides(OVERRIDES)
+    .filter((o) => trackedContent(o.name) === undefined)
+    .map((o) => `${OVERRIDES}:${o.line}  ${o.name}`);
+  if (unresolved.length > 0) {
+    console.error('');
+    console.error('CANNOT ACCEPT - these names do not exist in the design system:');
+    console.error('');
+    for (const u of unresolved) console.error(`  ${u}`);
+    console.error('');
+    console.error('Check the spelling, or delete the block. Nothing was written.');
+    console.error('');
+    process.exit(1);
+  }
+
   writeFileSync(OVERRIDES, updated.join('\n'));
   writeFileSync(OUT, generated);
   console.log(`✓ Re-recorded ${changed} fingerprint(s) in ${OVERRIDES}, and regenerated ${OUT}.`);
