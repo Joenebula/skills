@@ -46,8 +46,12 @@ const slice = (src,label) => {
 // data and the shell are now their own files; skills-map.html is only ever an output.
 if (!fs.existsSync(DATA))  throw new Error('missing '+path.relative(ROOT,DATA));
 if (!fs.existsSync(SHELL)) throw new Error('missing '+path.relative(ROOT,SHELL));
-const body  = fs.readFileSync(DATA,'utf8');
-const shell = slice(fs.readFileSync(SHELL,'utf8'),'shell.html');
+// Read with line endings normalised to \n. The swaps below are matched literally, several
+// needles span more than one line and are written with \n, and Git checks these files out
+// with \r\n on Windows — so without this they all miss and the build dies on the first one.
+const read  = f => fs.readFileSync(f,'utf8').replace(/\r\n/g,'\n');
+const body  = read(DATA);
+const shell = slice(read(SHELL),'shell.html');
 const map   = {body};
 
 // the real data, on the better shell
