@@ -37,6 +37,21 @@ tasks 4–7 (settings page, then the save button)* — then start. Do not wait f
 This gives the user a chance to redirect before you get going without turning every
 resume into another approval gate.
 
+⚠ **One thing a resume MUST re-check: that the guards are firing.** Run the project's
+guard check — the one pre-flight step 5 leaves behind — before the first task, and say the
+answer in that opening line. If it reports they are not firing, that is a **stop**: say so
+and hand back, because everything after it is unguarded.
+
+This is here because it was missing, and the cost is measured. Pre-flight already confirms
+the folder and proves the guards refuse. **Resume did neither** — and a run started in the
+wrong folder resumes just as happily as one started in the right one, with the queue, the
+log and the report all reading exactly the same. So a project went a week with three
+correct, registered, never-invoked guards, and the sessions that could have caught it were
+all resumes.
+
+Nothing about a resume is safer than a first run. It skips re-planning, which is the point.
+It must not skip re-checking the machinery, which is not the same thing.
+
 ---
 
 ## Pre-flight (first run only)
@@ -44,8 +59,22 @@ resume into another approval gate.
 Do not write any project code during pre-flight. The point is to catch a misread plan
 for the price of a few minutes rather than a whole run.
 
-1. **Agree the scope fence.** One named project folder. Everything outside it is off
-   limits for the whole run. Confirm the exact path with the user.
+1. **Agree the scope fence, and check it is the folder the session was STARTED in.** One
+   named project folder; everything outside it is off limits for the whole run. Confirm the
+   exact path with the user.
+
+   ⚠ **Then confirm the tool is actually pointed at it.** Claude Code reads a project's
+   `.claude/settings.json` — hooks included — from the directory it was started in, not from
+   whichever directory the work happens in. Start it one level up, in a parent or a shared
+   skills folder, and the project's settings are never read: **every hook installed below is
+   silently inert, and the project's own `CLAUDE.md` never loads either.**
+
+   That is not hypothetical. It cost a real project a week: three guards registered, all
+   three scripts correct, none ever invoked, and the report carrying "the guards are not
+   running" as an unexplained suspicion the whole time. Every symptom pointed somewhere else,
+   because absence is exactly what nothing reports.
+
+   If the two differ, say so before doing anything else — the whole of step 5 depends on it.
 2. **Snapshot.** Ensure a clean starting save point exists in that folder (commit any
    pending work, or note the current commit) so "put it back how it was" is always one
    instruction away. If the folder is not version-controlled, say so and offer to
@@ -53,12 +82,63 @@ for the price of a few minutes rather than a whole run.
 3. **Discover skills** (see next section).
 4. **Write `keep-going/QUEUE.md`** — the task list, in order, each with a plain-English
    *done when*.
-5. **Install the report guard.** Copy `guard-report.mjs` from beside this file into the
-   project (e.g. `scripts/hooks/`) and register it as a `PreToolUse` hook on Bash in the
-   project's `.claude/settings.json`. It refuses two commits: one that stages
+5. **Install the report guard.** Copy `guard-report.mjs` **and `heartbeat.mjs`** from beside
+   this file into the project (e.g. `scripts/hooks/`) and register the guard as a
+   `PreToolUse` hook on Bash in the project's `.claude/settings.json`. Both files, together —
+   the guard imports the other one, and the pair is what makes the *"did it fire"* half below
+   possible without every project reinventing it and re-springing the trap described there. It refuses two commits: one that stages
    `keep-going/LOG.md` without `keep-going/REPORT.html`, and one that adds a task entry to
    the log with no spec block for that task number. If the project already has a git guard,
    move its two functions into that rather than running two hooks over the same command.
+   ⚠ **Then prove it refuses, before trusting it.** Installing a guard is not the same as
+   having one, and this skill demands that distinction of every check it writes while
+   historically exempting the guard it installs itself. Stage `LOG.md` without `REPORT.html`,
+   attempt the commit, and **watch it be refused**. Undo the test commit if one gets through.
+
+   A guard nobody has seen refuse anything is indistinguishable from no guard — which is the
+   exact sentence this skill uses about tests, and it applies here with more force, because a
+   test that never runs goes red and a hook that never runs goes quiet.
+
+   Better still, leave behind a check that re-proves it: feed the guard the payload the tool
+   would send and assert it denies what it must and **allows what it must not refuse** — a
+   guard that refuses everything passes a one-sided check and is useless. Wire that into the
+   project's own verify step so it is re-proved on every run rather than once at setup.
+
+   ⚠ **Then make it prove the hook FIRED, not just that the script works.** An earlier
+   version of this paragraph said the second half was impossible — *"it proves the SCRIPT,
+   never that the tool is calling it"* — and that was wrong. It was only true because
+   nothing had ever left a trace.
+
+   Have every hook write a note **as its first action**, recording the session it ran in
+   (Claude Code exposes `CLAUDECODE` and `CLAUDE_CODE_SESSION_ID`). The check then compares
+   that note against the session it is itself running in. The check runs through the shell,
+   so a live `PreToolUse` hook stamps the note seconds before the check reads it. Same
+   session, it fired. Different session or no note, it did not — and the build stops with
+   the cause and the fix in the message.
+
+   Use the session id, not a timestamp. A timestamp needs a staleness window and picking one
+   is guessing: too tight and a slow build cries wolf, too loose and a dead guard reads as
+   alive.
+
+   Outside the tool — CI, a plain terminal — there is no hook to fire, so **skip that half
+   loudly and say it was skipped.** A check that quietly passes when it did not run is the
+   thing this whole section exists to prevent.
+
+   ⚠⚠ **AND THE FIRST VERSION OF THIS LIED.** Written exactly as above, it reported *"hooks
+   are firing"* and exited clean on a machine where they provably were not. The reason: the
+   check proves a guard discriminates by **spawning it nine times**, and every one of those
+   spawns ran the stamping code. **The check wrote the evidence it then read.** It was caught
+   only because the true answer happened to be known already, which is not a method.
+
+   So: **mark the test invocations as tests** — an environment flag the stamping code checks
+   and returns on — and prove the check three ways before trusting it: no note (must fail), a
+   note from an older session (must fail), a note from this session (must pass). A check that
+   can produce the thing it measures passes by running, and passing by running is
+   indistinguishable from passing by working.
+
+   The hook's own note-writing must **fail silently on every error**. A hook runs in front of
+   the user's work; no proof is survivable, a blocked command is not.
+
    Skip it only if the user declines — and if they do, say plainly that the report will go
    stale, because on the evidence it does.
 6. **Show the user the plan and stop.** Numbered tasks, each with its done-when and the

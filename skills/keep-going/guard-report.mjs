@@ -53,6 +53,17 @@
  *   rather than running two hooks that both parse the same command.
  */
 import { execSync } from 'node:child_process';
+import { stamp } from './heartbeat.mjs';
+
+/**
+ * ⚠ THE FIRST THING THIS DOES IS PROVE IT RAN.
+ *
+ * Both rules below are worthless if nothing ever calls this file — and on a real
+ * project nothing did, for a week, and nothing said so. Copy `heartbeat.mjs` in
+ * beside this one; step 5 of the skill explains what the project's verify step
+ * then does with it.
+ */
+stamp('guard-report');
 
 const LOG = 'keep-going/LOG.md';
 const REPORT = 'keep-going/REPORT.html';
