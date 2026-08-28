@@ -88,6 +88,13 @@ A NO-GO is a result, not a failure. Shipping red is the failure. Where this gaun
 - **Coverage grows with every feature.** A NEW user-facing feature ships WITH a new test for it, in the SAME change. Coverage that lags features is coverage that is already wrong.
 - **Every bug fix ships with the test that would have caught it** — failing before the fix, passing after ([[debugging]]). A bug that can ship twice was never really fixed.
 - **Never claim verification you didn't run.** If you couldn't run Layer C, say "Layer C not run" plainly — that is the honesty rule.
+- **A check must not be able to produce the thing it measures.** Where a check exercises the code that emits its evidence, **mark the exercise as an exercise** — an env flag the emitter honours and returns on. Ask it of every check: _if this passed by RUNNING rather than by WORKING, could anyone tell?_ If not, it is not a check.
+
+  > Paid for on 28 Aug 2026. A guard-liveness check proved the guard discriminates by spawning it nine times — and every spawn ran the stamping code the check then read. It wrote its own evidence, printed **"hooks ARE firing"**, and exited 0 on a machine where they provably had not: minutes earlier the same guard had let the exact command it blocks run untouched. Caught only because the true answer happened to be known already, which is not a method.
+
+- **An unchanged result is not evidence.** Before concluding anything from a mutation — "I broke it and the check still passed, so the check is weak" — **confirm the mutation landed.** Diff the file.
+
+  > Same day: a `perl -pi -e '… if $. == 176'` matched nothing on a minified line, the file was untouched, the check went green, and the green was _honest_. `git diff --stat` is what said so. A mutation nobody verified is a conclusion about nothing.
 
 ---
 

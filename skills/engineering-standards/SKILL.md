@@ -64,6 +64,7 @@ Before building an interaction, check whether one of these already exists and **
 - **(f) Scope leaks in a large/monolithic module.** One inner scope cannot see another's locals; a shared global is visible to both. Bridge across scopes **explicitly** — a syntax check won't catch a scope break; only running it will.
 - **(g) Fixture/demo data leaking onto a live surface.** Showcase/sample arrays must be stripped wherever real data is present, or fabricated content shows to real users. Guard every render for the empty (real) case.
 - **(h) Env-var timing confusion.** A build-time public value (inlined into the bundle when it's built) and a runtime server secret (read fresh from the host's secure store) are two different lifecycles conflated as one "env var." Changing a build-time value needs a **rebuild/redeploy** to take effect; a missing runtime secret should disable its feature gracefully, never crash boot. Concrete key map: [[project-setup]].
+- **(i) Writing a file through a shell heredoc.** Two distinct failures, both real. It **truncates silently** at length — a 250-line write landed 190 lines with the rest gone and no error. And its **content is parsed by anything reading the command string**: a command guard refused a document that merely *quoted* the command it blocks. **Write files with a file tool**, and keep the shell for running things. When a tool genuinely cannot, write the body to a temp file first and `cat` it into place — the `cat` carries no content to misread.
 
 ## The data-reconciliation rule
 

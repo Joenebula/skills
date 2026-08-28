@@ -39,6 +39,12 @@ Launch every armed auditor **concurrently** — they are independent and read-on
 
 An auditor that cannot run is **DECLARED**, never silently dropped. An auditor's ISSUES are resolved (fixed, or explicitly accepted by the user) before the verdict — not argued away.
 
+⚠ **DECLARED IS NOT THE SAME AS REPLACED, and on its own it is not enough.** A session that cannot spawn agents at all declares the same sentence on every task, and after the third one it has become a footer nobody reads while the largest work in the run ships unreviewed.
+
+**When the auditors cannot run, stand in for them before the verdict, in writing:** take each armed dimension and make the case *against* the diff on that dimension — the reading under which it is wrong. Name **at least one thing you would do differently**, or state explicitly that you looked and found nothing. Then declare both: that the auditor did not run, **and** that this stood in for it.
+
+It is weaker than an independent read and it is not pretending otherwise. It is stronger than a sentence saying nobody looked.
+
 ## Step 3 — Climb the layers
 
 Run the layers the diff armed, in order, per [[regression-testing]]:

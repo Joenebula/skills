@@ -32,6 +32,9 @@ For anything touching live data, [[engineering-standards]] (data-gotchas + recon
 | **Backfill safely** | New non-null column → add nullable, backfill in batches, then enforce. A single mass `UPDATE` can lock the table. |
 | **Enums are append-only at first** | Never query a value a not-yet-applied change adds — it errors the whole query. Add the value, deploy, *then* use it (gotcha c in [[engineering-standards]]). |
 | **One concern per migration** | Small, named, ordered. A migration that does five things can't be partly rolled back. |
+| **Gate the children, not just the parent** | Row-level rules are **per table**. Gating a table does nothing for the join tables and child rows that point at it — and those are written in the same migration, so the omission never looks like one. **List what points AT every gated table and rule each one separately** ([[security]] Law 4). |
+
+> **The join row that looked like it carried nothing.** 28 Aug 2026: `events` was correctly hidden unless published; `event_artists` and `event_genres`, created in the same file, were `using (true)`. The result was that a draft event's title, date and venue were private and **its entire line-up was public** — the one fact a promoter most wants held until they announce it. The fix defers rather than restates: the child asks whether its parent is published, so if the parent's rule changes the children follow. A second copy of `status = 'published'` in each child is two more places to forget.
 
 ## Law 4 — Destructive changes are confirmed, never casual
 

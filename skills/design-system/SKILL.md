@@ -17,6 +17,14 @@ A UI built without a system always gets redone. Hand-picked colours drift, one-o
 >
 > **Hand-copying values is guessing with extra steps.** See *EXTRACT, NEVER TRANSCRIBE* below.
 
+> **And a token is a SOURCE, not a RESULT.** Using one proves the value came from the system. It never proves the value *does anything*. Where a token is carrying a visible difference — a state, a highlight, an emphasis, a hover — **measure the difference**, and if it is imperceptible, say so and choose again rather than ship a rule that looks like a decision.
+>
+> 28 Aug 2026: a field's "filled in" state was tinted with the next surface token up. Correct by every rule in this file. Measured against the field it sat on: **1.03 contrast** — a rounding error, invisible. Two rules were about to ship doing nothing at all, which is worse than none, because they read as a decision somebody made. The palette had no token for that job; the honest answer was to drop the state, not to invent a colour to rescue the plan.
+
+> **List the states that only exist for SOME people, and style them on purpose.** Browser-autofilled, password-manager-filled, spellcheck-underlined, browser-translated, forced-colours / high-contrast, print. **None of them appear on the developer's screen. All of them appear on somebody's.**
+>
+> Same day, same project: browser autofill paints its own background on the `<input>` — which is not the field. It stopped 13px short down each side and squared off four corners the field had rounded. A search for "autofill" across the app **and the whole vendored design system** returned nothing: the state had never been styled anywhere, by anyone. Five screens shipped before a user pointed at it, because it only appears once somebody has a saved password.
+
 An unsystematic build is not "faster" — it is a debt you pay back by redoing it. The generic **AI-default look** (thick borders, purple→blue gradients, glassmorphism, emoji — see *No generic / AI-default design* in STEP 4) is the most common form of this, and it is banned outright.
 
 ---

@@ -39,6 +39,9 @@ Validate **server-side** against an explicit schema; reject by default, allow by
 - Secrets live in **environment/secret storage**, never in code, the repo, the database, logs, or client bundles. Rotate on exposure. ([[project-setup]] maps where each key goes.)
 - **In transit**: TLS everywhere. **At rest**: encrypt sensitive fields; hash passwords with a slow algorithm (never reversible encryption).
 - **Never leak** secrets, PII, stack traces, or raw upstream errors in a response or client-visible log — see [[observability]] for safe logging.
+- **A gate on a parent does nothing for its children.** For every gated table or resource, **list what points AT it and check each one separately.** Row-level rules are per table; a join row looks like it carries no information of its own and carries the whole fact. See [[data-modelling]] Law 3.
+
+  > Found 28 Aug 2026 by a test, not by review. `events` was correctly hidden unless published. `event_artists` and `event_genres` — written in the **same migration**, by someone with the rule in mind — were `using (true)`. So an anonymous reader could not learn a draft event's title, date or venue, and could ask a different table for **the full line-up of an unannounced show**. One `SELECT`, no exploit. What leaks is not "a UUID": it is the booking nobody has announced yet.
 
 ## Law 5 — Dependencies, abuse, and audit
 

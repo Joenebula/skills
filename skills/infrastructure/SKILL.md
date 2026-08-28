@@ -14,6 +14,9 @@ First-time **bootstrap** (which services, where each key goes) is [[project-setu
 - **Dev / staging / production** are distinct, with **no shared state** — production data never flows casually into dev; dev keys never touch production.
 - **Staging mirrors production** as closely as possible (same config shape, same migrations) so "works on staging" means something.
 - **Promote** a build through environments; don't rebuild per environment. The artefact that passed staging is the one that ships.
+- **A stated environment invariant that nothing checks is a belief.** Assert it **mechanically** — one command that names the environments that actually exist — and run it in the verify step. "Two projects, dev and prod" must fail the build the day there is one.
+
+  > 28 Aug 2026: a project's non-negotiables said "two databases, dev and prod, never shared". There was **one**, and it was the one the live site read from. It had been written down, agreed, and never once checked — and it was found by accident, while working out whether a migration was safe to run. Every "it's only dev" judgement made that month had rested on it.
 
 ## Law 2 — Configuration per environment, secrets out of code
 
