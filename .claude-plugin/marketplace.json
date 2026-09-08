@@ -1,0 +1,14 @@
+{
+  "name": "joenebula",
+  "owner": {
+    "name": "Joe"
+  },
+  "description": "Personal Claude Code plugins and skills.",
+  "plugins": [
+    {
+      "name": "shunt-lite",
+      "source": "./plugins/shunt-lite",
+      "description": "Routes bulk file reading to a cheaper model."
+    }
+  ]
+}

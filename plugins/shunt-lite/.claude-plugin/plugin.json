@@ -1,0 +1,10 @@
+{
+  "name": "shunt-lite",
+  "displayName": "Shunt Lite",
+  "description": "Routes bulk file reading to a cheaper model by blocking oversized direct reads and redirecting them to the Explore subagent.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Joe"
+  },
+  "keywords": ["tokens", "delegation", "audit"]
+}

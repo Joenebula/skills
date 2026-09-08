@@ -7,3 +7,5 @@
 !/map/
 !/scripts/
 !/.github/
+!/.claude-plugin/
+!/plugins/
