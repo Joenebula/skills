@@ -1,0 +1,766 @@
+<!doctype html>
+<!--
+  RUN REPORT — the shell.
+
+  YOU NEVER EDIT THIS FILE except for one block: the JSON at the very bottom, between
+  the two BEGIN/END markers. Everything else — the styling, the layout, the buttons —
+  is fixed, so every report you ever make looks the same.
+
+  HOW IT WORKS
+    1. You give your raw run notes to a chat assistant, along with PROMPT.md.
+    2. It replies with a block of JSON and nothing else.
+    3. You paste that JSON between the two markers at the bottom of this file.
+    4. You save, and double-click the file. Done.
+
+  THE SEVEN RULES THIS PAGE IS BUILT ON, and why each one exists.
+
+  1. THIS PAGE IS A WORKLIST, NOT A RECORD. It shows only what is still outstanding.
+     When an item is dealt with, DELETE it from the JSON. Do not tick it, do not strike
+     it through, do not move it to a "resolved" section. The length of the page is how
+     much is left to do.
+
+  2. AN ITEM IS ONLY REMOVED WHEN ITS RESOLUTION WAS OBSERVED. The decision was answered;
+     the check actually ran and was seen to pass; the assumption was confirmed. NEVER
+     remove one because you have grown confident it is probably fine. That would turn
+     "not checked" into a lie, which is the exact thing the label exists to prevent.
+
+  3. EVERY REMOVAL IS RECORDED IN YOUR NOTES FILE, one line, dated:
+        > REMOVED: browser round-trip check - ran it, all three tabs correct (9 Aug)
+     The page stays clean; the audit trail lives off-page. Without this, "I dealt with it"
+     and "it was quietly dropped" look identical.
+
+  4. NOTHING IS EVER DELETED FROM THE NOTES FILE. It is append-only. Items disappear from
+     this page only.
+
+  5. REBUILD THIS PAGE AT THE END OF EVERY TASK, not only when the run stops. A page
+     written once at the start and then frozen shows "0 done" all run, and the reader
+     concludes their finished work never registered.
+
+  6. EVERY SECTION STAYS, EVEN WHEN EMPTY. An empty section shows its one-line empty
+     state, so the page's shape never changes and you always know where to look. An
+     absent section reads as an oversight; an explicit "Nothing needs you" reads as an
+     answer.
+
+  7. "NEEDS YOU" MEANS THE READER, AND NOBODY ELSE. The commonest way this page misleads
+     is not going stale — it is listing OTHER PEOPLE'S actions as the reader's outstanding
+     work. An item waiting on a client or a colleague is NOT outstanding for the person
+     reading; their part is finished. Left in "Needs you" it makes a moving project look
+     stuck. Anything handed over goes to its own section, named for whoever holds it —
+     "With Sarah", "With the client" — as a compact table with no buttons, because none
+     of it is the reader's to action.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>Run report</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f5f1; --panel:#ffffff; --ink:#1a1a18; --ink-2:#5a5a53; --ink-3:#8d8d84;
+    --red:#b23b2b; --red-bg:#fbeeea;
+    --amber:#96650a; --amber-bg:#fbf3e2;
+    --green:#256b4b; --green-bg:#ebf4ee;
+    --grey-bg:#efeeea;
+    --code-bg:#f4f3ef; --code-ink:#3a3a36;
+    --accent:#1a1a18;
+    --radius:12px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;border:0}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px 120px}
+
+  header.mast{padding:48px 0 8px}
+  .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);
+          font-weight:600;margin:0 0 10px}
+  h1{font-size:34px;line-height:1.15;margin:0 0 8px;letter-spacing:-.02em}
+  .stamp{color:var(--ink-2);font-size:14px;margin:0;max-width:70ch}
+  .stamp b{color:var(--ink);font-weight:600}
+  .verdict{margin:22px 0 0;padding:18px 22px;border-radius:var(--radius);
+           background:var(--amber-bg);font-size:17px;line-height:1.5;color:var(--ink);
+           max-width:none;font-weight:500}
+  .verdict b{font-weight:680}
+  .verdict.clean{background:var(--green-bg)}
+  .verdict.stopped{background:var(--red-bg)}
+
+  .scoreboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(126px,1fr));
+              gap:10px;margin:28px 0 4px}
+  .score{background:var(--panel);padding:14px 16px;border-radius:var(--radius)}
+  .score .n{font-size:25px;font-weight:650;letter-spacing:-.02em;display:block;line-height:1.2}
+  .score .l{font-size:11.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;
+            font-weight:600}
+  .score.red{background:var(--red-bg)} .score.red .n{color:var(--red)}
+  .score.amber{background:var(--amber-bg)} .score.amber .n{color:var(--amber)}
+  .score.green{background:var(--green-bg)} .score.green .n{color:var(--green)}
+
+  /* NEVER let this scroll sideways. It wraps to a second line instead — a nav you have to
+     drag is a nav whose last item nobody finds. */
+  nav.jump{position:sticky;top:0;z-index:50;background:var(--bg);margin-top:26px;
+           display:flex;flex-wrap:wrap;gap:2px;padding:10px 0;
+           box-shadow:0 10px 14px -12px rgba(26,26,24,.18)}
+  nav.jump a{flex:0 0 auto;text-decoration:none;color:var(--ink-2);font-size:13.5px;
+             font-weight:550;padding:6px 11px;border-radius:99px;white-space:nowrap}
+  nav.jump a:hover{background:var(--panel);color:var(--ink)}
+  nav.jump a .c{display:inline-block;margin-left:6px;font-size:11px;font-weight:700;
+                padding:1px 7px;border-radius:99px;background:var(--grey-bg);color:var(--ink-2)}
+  nav.jump a.has-red .c{background:var(--red);color:#fff}
+  nav.jump a.has-amber .c{background:var(--amber);color:#fff}
+
+  section{padding-top:42px;scroll-margin-top:64px}
+  h2{font-size:21px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink-2);font-size:14.5px;margin:0 0 18px;max-width:66ch}
+
+  .item{background:var(--panel);border-radius:var(--radius);padding:17px 20px;margin-bottom:10px}
+  .item.decide,.item.blocked{background:var(--red-bg)}
+  .item.assumed,.item.unchecked{background:var(--amber-bg)}
+  .item.idea{background:var(--grey-bg)}
+  .empty{background:var(--green-bg);border-radius:var(--radius);padding:15px 20px;
+         font-size:15px;color:var(--green);font-weight:550}
+  .empty.neutral{background:var(--grey-bg);color:var(--ink-2);font-weight:400}
+
+  .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:700;
+       letter-spacing:.1em;padding:3px 7px;border-radius:5px;vertical-align:2px;margin-right:9px;
+       color:#fff}
+  .tag.decide,.tag.blocked{background:var(--red)}
+  .tag.assumed,.tag.unchecked{background:var(--amber)}
+  .tag.idea{background:var(--ink-3)}
+  .tag.next{background:var(--accent)}
+
+  .item h3{display:inline;font-size:16.5px;font-weight:620;margin:0;letter-spacing:-.005em}
+  .item .body{margin:10px 0 0;font-size:15px;color:var(--ink-2);max-width:76ch}
+  .item .body strong{color:var(--ink);font-weight:600}
+  .meta{margin-top:11px;font-size:13px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px 16px}
+  .meta code, .item code{font-family:var(--mono);font-size:12.5px;background:rgba(26,26,24,.055);
+             padding:1px 5px;border-radius:4px;color:var(--code-ink)}
+  .amber-txt{color:#96650a;font-weight:600}
+  .green-txt{color:#256b4b;font-weight:600}
+  .grey-txt{color:#8d8d84;font-weight:600}
+
+  .copyrow{margin-top:14px;display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+  .copyrow+.copyrow{margin-top:9px}
+  button.copy{font-family:var(--sans);font-size:13.5px;font-weight:600;cursor:pointer;
+              background:var(--accent);color:#fff;border-radius:8px;padding:8px 15px;
+              flex:0 0 auto;min-width:118px}
+  button.copy:hover{opacity:.86}
+  button.copy.secondary{background:rgba(26,26,24,.075);color:var(--ink-2)}
+  button.copy.secondary:hover{background:rgba(26,26,24,.12);opacity:1}
+  button.copy.ok{background:var(--green);color:#fff}
+  button.copy.fail{background:var(--red);color:#fff}
+  .hint{font-size:13px;color:var(--ink-3);flex:1 1 auto;min-width:140px}
+  .peek{font-size:13px;color:var(--ink-3);cursor:pointer;user-select:none;
+        text-decoration:underline;text-underline-offset:3px;background:none;
+        font-family:var(--sans);padding:0}
+  .peek:hover{color:var(--ink-2)}
+  pre.prompt{display:none;margin:13px 0 0;background:var(--code-bg);
+             border-radius:9px;padding:15px 17px;font-family:var(--mono);font-size:12.5px;
+             line-height:1.6;color:var(--code-ink);white-space:pre-wrap;word-break:break-word;
+             max-height:340px;overflow:auto}
+  pre.prompt.open{display:block}
+
+  details.task{background:var(--panel);border-radius:var(--radius);margin-bottom:8px;overflow:hidden}
+  details.task>summary{cursor:pointer;padding:14px 20px;list-style:none;display:flex;
+                       align-items:center;gap:12px;font-size:15.5px}
+  details.task>summary::-webkit-details-marker{display:none}
+  details.task>summary::after{content:"\203A";margin-left:auto;color:var(--ink-3);font-size:20px;
+                              transform:rotate(90deg);transition:transform .15s}
+  details.task[open]>summary::after{transform:rotate(-90deg)}
+  details.task>summary:hover{background:var(--code-bg)}
+  .pill{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+        padding:3px 9px;border-radius:99px;flex:0 0 auto}
+  .pill.done{background:var(--green-bg);color:var(--green)}
+  .pill.prog{background:var(--amber-bg);color:var(--amber)}
+  .pill.pend{background:var(--grey-bg);color:var(--ink-3)}
+  .tnum{font-family:var(--mono);font-size:13px;color:var(--ink-3);flex:0 0 auto}
+  .tname{font-weight:560}
+  .inner{padding:2px 20px 22px}
+  .inner h4{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+            margin:20px 0 8px;font-weight:650}
+  .inner p{margin:0 0 10px;font-size:14.5px;color:var(--ink-2);max-width:78ch}
+  .inner p strong{color:var(--ink)}
+  pre.out{background:var(--code-bg);border-radius:9px;padding:13px 15px;
+          font-family:var(--mono);font-size:12.5px;line-height:1.6;
+          color:var(--code-ink);overflow-x:auto;margin:0 0 10px}
+  pre.out .pass{color:var(--green);font-weight:700}
+  pre.out .fail{color:var(--red);font-weight:700}
+
+  /* Handed-over work. Deliberately the quietest block on the page: no tag, no colour, no
+     buttons. It is there to be seen, not done. */
+  table.handover{width:100%;border-collapse:collapse;font-size:14.5px;margin:0;
+                 background:var(--panel);border-radius:var(--radius);overflow:hidden}
+  table.handover td{padding:10px 14px;color:var(--ink-2);vertical-align:top}
+  table.handover tr:nth-child(odd) td{background:rgba(26,26,24,.028)}
+  table.handover td:first-child{color:var(--ink);font-weight:560;white-space:nowrap}
+  table.handover td:last-child{max-width:62ch}
+
+  .legend{background:var(--panel);border-radius:var(--radius);padding:8px 22px}
+  .legend dl{display:grid;grid-template-columns:auto 1fr;gap:10px 18px;margin:16px 0}
+  .legend dt{margin:0}
+  .legend dd{margin:0;font-size:14px;color:var(--ink-2);align-self:center}
+  .legend dd strong{color:var(--ink)}
+
+  .note{font-size:13.5px;color:var(--ink-3);background:var(--grey-bg);border-radius:var(--radius);
+        padding:14px 18px;margin:16px 0}
+  .note b{color:var(--ink-2)}
+  footer{margin-top:64px;padding-top:22px;font-size:13px;color:var(--ink-3);
+         box-shadow:inset 0 1px 0 rgba(26,26,24,.09)}
+  footer code{font-family:var(--mono);font-size:12.5px}
+  a.file{color:var(--ink-2);font-family:var(--mono);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap" id="report"></div>
+
+<script>
+/* ------------------------------------------------------------------------------
+   RENDERER — fixed. Do not edit. It turns the JSON at the bottom of this file into
+   the page. Editing it is how two reports stop looking alike.
+   ------------------------------------------------------------------------------ */
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+/* Text fields take a tiny bit of markdown: **bold** and `code`. Nothing else. */
+function fmt(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+}
+/* Command output colours PASS green and FAIL red, and nothing else. */
+function outp(s){
+  return esc(s).replace(/\b(ALL PASS|PASS|PASSED|FAIL|FAILED|ERROR)\b/g, function(w){
+    return '<span class="' + (/^(FAIL|FAILED|ERROR)$/.test(w) ? 'fail' : 'pass') + '">' + w + '</span>';
+  });
+}
+
+/* ---- one card in Needs you / Not checked / What's next / Noticed ---- */
+function itemEl(it){
+  var tone = it.tone || 'next';
+  var h = '<div class="item' + (tone === 'next' ? '' : ' ' + tone) + '">';
+  h += '<span class="tag ' + tone + '">' + esc(it.tag || 'TASK') + '</span>';
+  h += '<h3>' + fmt(it.title);
+  if (it.status) h += ' <span class="' + (it.status.tone || 'amber') + '-txt">' + esc(it.status.text) + '</span>';
+  h += '</h3>';
+  if (it.body) h += '<div class="body">' + fmt(it.body) + '</div>';
+  if (it.meta && it.meta.length) {
+    h += '<div class="meta">' + it.meta.map(function(m){ return '<span>' + fmt(m) + '</span>'; }).join('') + '</div>';
+  }
+  (it.buttons || []).forEach(function(b){
+    var k = (b.kind === 'act') ? 'act' : 'discuss';
+    h += '<div class="copyrow">'
+      +    '<button class="copy' + (k === 'act' ? ' secondary' : '') + '" data-for="' + k + '" onclick="copyPrompt(this)">' + esc(b.label) + '</button>'
+      +    '<span class="hint">' + esc(b.hint || '') + '</span>'
+      +    '<button class="peek" data-for="' + k + '" onclick="togglePrompt(this)">show prompt</button>'
+      +  '</div>'
+      +  '<pre class="prompt" data-id="' + k + '">' + esc(b.prompt || '') + '</pre>';
+  });
+  return h + '</div>';
+}
+
+/* ---- one collapsed row in Done, and in Full log ---- */
+function taskEl(d){
+  var pill = d.pill || 'done';
+  var label = pill === 'prog' ? 'In progress' : pill === 'pend' ? 'Setup' : 'Done';
+  var h = '<details class="task"><summary><span class="pill ' + pill + '">' + label + '</span>';
+  if (d.num) h += '<span class="tnum">' + esc(d.num) + '</span>';
+  h += '<span class="tname">' + fmt(d.name) + '</span></summary><div class="inner">';
+  (d.sections || []).forEach(function(s){
+    h += '<h4>' + esc(s.h) + '</h4>';
+    if (s.pre) h += '<pre class="out">' + outp(s.pre) + '</pre>';
+    if (s.p)   h += '<p>' + fmt(s.p) + '</p>';
+  });
+  return h + '</div></details>';
+}
+
+/* ---- handed-over work. A table. No tag, no colour, no buttons, on purpose. ---- */
+function handoverEl(rows){
+  return '<table class="handover">' + (rows || []).map(function(r){
+    return '<tr><td>' + fmt(r.what) + '</td><td>' + fmt(r.detail) + '</td></tr>';
+  }).join('') + '</table>';
+}
+
+function emptyEl(text, neutral){
+  return '<div class="empty' + (neutral ? ' neutral' : '') + '">' + fmt(text) + '</div>';
+}
+function sectionEl(id, h2, sub, inner){
+  return '<section id="' + id + '"><h2>' + fmt(h2) + '</h2>'
+       + (sub ? '<p class="sub">' + fmt(sub) + '</p>' : '') + inner + '</section>';
+}
+
+function renderReport(){
+  var raw = document.getElementById('report-data').textContent;
+  var d;
+  try { d = JSON.parse(raw); }
+  catch (e) {
+    document.getElementById('report').innerHTML =
+      '<header class="mast"><h1>The data block is not valid JSON</h1>'
+      + '<p class="verdict stopped"><b>Nothing else on this page can be trusted.</b> '
+      + 'Paste the JSON again between the two markers at the bottom of this file, or ask '
+      + 'the assistant to re-emit it.</p><pre class="out">' + esc(e.message) + '</pre></header>';
+    return;
+  }
+
+  var needs = d.needsYou || [], unchecked = d.unchecked || [], next = d.next || [];
+  var done = d.done || [], ideas = d.ideas || [], groups = d.withThem || [], log = d.log || [];
+  var withCount = groups.reduce(function(n, g){ return n + (g.rows || []).length; }, 0);
+
+  document.title = (d.project ? d.project + ' — ' : '') + 'run report';
+
+  /* ---- masthead ---- */
+  var h = '<header class="mast">';
+  h += '<p class="kicker">' + esc(d.kicker || 'Run report') + '</p>';
+  h += '<h1>' + fmt(d.headline || d.project || 'Run report') + '</h1>';
+  var bits = [];
+  if (d.updated)     bits.push('Last updated <b>' + esc(d.updated) + '</b>');
+  if (d.resumed)     bits.push('run resumed <b>' + esc(d.resumed) + '</b> times');
+  if (d.branch)      bits.push('branch <b>' + esc(d.branch) + '</b>');
+  if (d.startedFrom) bits.push('started from save point <b>' + esc(d.startedFrom) + '</b>');
+  h += '<p class="stamp">' + bits.join(' &middot; ') + '<br>'
+    +  'This page shows <b>what is still outstanding</b>. Anything dealt with is removed from it.</p>';
+
+  var v = d.verdict || {};
+  var vtone = v.tone === 'green' ? ' clean' : v.tone === 'red' ? ' stopped' : '';
+  h += '<p class="verdict' + vtone + '">' + (v.lead ? '<b>' + fmt(v.lead) + '</b> ' : '') + fmt(v.text || '') + '</p>';
+
+  h += '<div class="scoreboard">' + (d.scoreboard || []).map(function(s){
+    return '<div class="score' + (s.tone ? ' ' + s.tone : '') + '">'
+         + '<span class="n">' + esc(s.n) + '</span><span class="l">' + esc(s.l) + '</span></div>';
+  }).join('') + '</div></header>';
+
+  /* ---- sticky nav. Counts come from the data, so they cannot disagree with it. ---- */
+  function chip(href, label, n, tone){
+    var cls = (n > 0 && tone) ? ' class="has-' + tone + '"' : '';
+    return '<a href="#' + href + '"' + cls + '>' + esc(label) + ' <span class="c">' + n + '</span></a>';
+  }
+  h += '<nav class="jump">';
+  h += chip('needs', 'Needs you', needs.length, 'red');
+  if (groups.length) {
+    groups.forEach(function(g, i){ h += chip('with-' + i, 'With ' + g.holder, (g.rows || []).length, null); });
+  } else {
+    h += chip('with-0', 'With whoever else', 0, null);
+  }
+  h += chip('unchecked', 'Not checked', unchecked.length, 'amber');
+  h += chip('next', "What's next", next.length, null);
+  h += chip('done', 'Done', done.length, null);
+  h += chip('ideas', 'Noticed', ideas.length, null);
+  h += '<a href="#log">Full log</a><a href="#legend">What the words mean</a></nav>';
+
+  /* ---- 1. Needs you ---- */
+  h += sectionEl('needs', 'Needs you',
+    (d.needsYouSub || 'Riskiest first.') + ' Each has a ready-made prompt — copy it and paste it into a '
+    + 'new chat to deal with just that item. **Once one is dealt with it vanishes from this page**, so '
+    + "what's left here is always what's still open.",
+    needs.length ? needs.map(itemEl).join('') : emptyEl('Nothing needs you.'));
+
+  /* ---- 2. With whoever else ---- */
+  var withSub = 'Handed over and out of your hands — listed so you can see it is moving, not so you can '
+    + 'do it. **Nothing here is yours to action**, which is why none of it has a button.';
+  if (groups.length) {
+    groups.forEach(function(g, i){
+      h += sectionEl('with-' + i, 'With ' + g.holder, i === 0 ? withSub : '', handoverEl(g.rows));
+    });
+  } else {
+    h += sectionEl('with-0', 'With whoever else', withSub,
+      emptyEl('Nothing is waiting on anyone else.', true));
+  }
+
+  /* ---- 3. Not checked ---- */
+  h += sectionEl('unchecked', 'Built, but not properly checked',
+    'Things that are finished and pass the automatic gate, but that nobody has actually watched work. '
+    + 'Listed so a tidy "done" list does not invite you to assume more than is true. Each one disappears '
+    + 'once it has genuinely been checked.',
+    unchecked.length ? unchecked.map(itemEl).join('')
+                     : emptyEl('Everything built so far has been checked and seen to pass.'));
+
+  /* ---- 4. What's next ---- */
+  h += sectionEl('next', "What's next",
+    'The remaining queue, in order. Each one can be run on its own from a fresh chat with the prompt '
+    + 'below it. Finished tasks move down to *Done*.',
+    next.length ? next.map(itemEl).join('') : emptyEl('The queue is empty — this run is finished.'));
+
+  /* ---- 5. Done ---- */
+  h += sectionEl('done', 'Done',
+    'Click any row for the full evidence — what changed, which rules it was built against, and the real '
+    + 'output of every command that was run.',
+    done.length ? done.map(taskEl).join('') : emptyEl('Nothing finished yet.', true));
+
+  /* ---- 6. Noticed ---- */
+  h += sectionEl('ideas', 'Noticed along the way',
+    'Spotted but deliberately not done, so the pile of changes stays reviewable. Nothing here is urgent.',
+    ideas.length ? ideas.map(itemEl).join('') : emptyEl('Nothing noticed in passing.', true));
+
+  /* ---- 7. Full log ---- */
+  var note = '';
+  if (d.notesFile) {
+    note = '<p class="note">The entries above under <b>Done</b> are the rest of the log — the same text, '
+         + 'shown there so you do not read it twice. The plain-text original is always on disk: '
+         + '<a class="file" href="' + esc(d.notesFile) + '">' + esc(d.notesFile) + '</a>. '
+         + 'Nothing is ever deleted from it — items only disappear from <em>this page</em>.</p>';
+  }
+  h += sectionEl('log', 'Full log',
+    'Everything above comes from here. This is the complete record, in the order it happened, including '
+    + 'the setup.',
+    (log.length ? log.map(taskEl).join('') : emptyEl('No log entries yet.', true)) + note);
+
+  /* ---- 8. Legend. Fixed wording — the five labels and the rule for each. ---- */
+  h += '<section id="legend"><h2>What the words mean</h2>'
+    + '<p class="sub">Five labels, and the rule for each. If something does not match one of these rules '
+    + 'it does not go at the top of the page.</p><div class="legend"><dl>'
+    + '<dt><span class="tag decide">DECIDE</span></dt><dd>Work has <strong>stopped</strong> and cannot '
+    + 'continue until you answer. Something destructive, a new dependency, or a genuine fork in the road.</dd>'
+    + '<dt><span class="tag blocked">BLOCKED</span></dt><dd>One task got stuck, so it was parked and the '
+    + 'rest of the run carried on around it.</dd>'
+    + '<dt><span class="tag assumed">ASSUMED</span></dt><dd>A call was made without asking, because it was '
+    + 'cheap and reversible. Each one says how easily it can be undone.</dd>'
+    + '<dt><span class="tag unchecked">UNCHECKED</span></dt><dd>Built, but something was not verified — and '
+    + 'why. <strong>A check that did not run is never reported as passed.</strong></dd>'
+    + '<dt><span class="tag idea">IDEA</span></dt><dd>Noticed and deliberately not done, so the run does not '
+    + 'drift and the changes stay reviewable.</dd>'
+    + '</dl></div></section>';
+
+  h += '<footer>Built from the run notes and overwritten each time. It shows only what is still '
+    + 'outstanding — anything dealt with is removed from the page rather than ticked off, so the length of '
+    + 'this page is how much is left to do. The permanent record stays in your notes file, which is '
+    + 'append-only, plus the project’s save history.</footer>';
+
+  document.getElementById('report').innerHTML = h;
+}
+
+/* ---- the copy buttons. Fixed. ---- */
+function promptFor(btn){
+  return btn.closest('.item').querySelector('pre.prompt[data-id="' + btn.dataset.for + '"]');
+}
+function togglePrompt(btn){
+  var open = promptFor(btn).classList.toggle('open');
+  btn.textContent = open ? 'hide prompt' : 'show prompt';
+}
+function legacyCopy(text){
+  try{
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly','');
+    ta.style.cssText = 'position:absolute;left:-9999px;top:0';
+    document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0, text.length);
+    var ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){ return false; }
+}
+function flash(btn, msg, cls){
+  if(!btn.dataset.label) btn.dataset.label = btn.textContent;
+  btn.textContent = msg; btn.classList.add(cls);
+  setTimeout(function(){ btn.textContent = btn.dataset.label; btn.classList.remove(cls); }, 2600);
+}
+function revealForManualCopy(btn){
+  var pre = promptFor(btn);
+  var peek = btn.closest('.copyrow').querySelector('.peek[data-for="' + btn.dataset.for + '"]');
+  pre.classList.add('open');
+  if(peek) peek.textContent = 'hide prompt';
+  var r = document.createRange(); r.selectNodeContents(pre);
+  var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+  pre.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+function copyPrompt(btn){
+  var text = promptFor(btn).textContent;
+  var ok = function(){ flash(btn, 'Copied ✓', 'ok'); };
+  var no = function(){ flash(btn, 'Press Ctrl+C', 'fail'); revealForManualCopy(btn); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(ok).catch(function(){ legacyCopy(text) ? ok() : no(); });
+  } else {
+    legacyCopy(text) ? ok() : no();
+  }
+}
+</script>
+
+<!-- ================= BEGIN REPORT DATA — replace everything between the markers ================= -->
+<script type="application/json" id="report-data">
+{
+  "project": "Harbour",
+  "headline": "Harbour — rebuilding the booking flow",
+  "kicker": "Run report",
+  "updated": "Wednesday 26 August 2026, 17:20",
+  "resumed": 2,
+  "branch": "booking-v2",
+  "startedFrom": "a91c4f0",
+  "notesFile": "notes/RUN-NOTES.md",
+  "verdict": {
+    "tone": "red",
+    "lead": "STOPPED AT TASK 5:",
+    "text": "Four tasks are finished and all 188 tests pass, but the run has halted waiting for a yes on deleting `legacy/` — and nothing built in this run has been opened in a browser, or run against production data."
+  },
+  "scoreboard": [
+    {
+      "n": "4",
+      "l": "Done",
+      "tone": "green"
+    },
+    {
+      "n": "1",
+      "l": "Left",
+      "tone": ""
+    },
+    {
+      "n": "2",
+      "l": "Needs you",
+      "tone": "red"
+    },
+    {
+      "n": "2",
+      "l": "Not checked",
+      "tone": "amber"
+    },
+    {
+      "n": "188",
+      "l": "Tests passing",
+      "tone": "green"
+    }
+  ],
+  "needsYou": [
+    {
+      "tag": "DECIDE",
+      "tone": "decide",
+      "title": "Task 5 deletes the whole `legacy/` booking engine, and it cannot be undone from the running app",
+      "body": "The queue marked task 5 destructive at setup, so the run stopped rather than running it. **The size has not been measured** — the notes say \"roughly 6,000 lines\" and explicitly say that number was never counted, so treat it as unknown until somebody counts it. **Undo:** recoverable from the save history, but *not* from the running app once it ships. That is the whole reason this is a stop rather than an assumption.",
+      "meta": [
+        "Blocks: `task 5`",
+        "Undo: save history only",
+        "Must NOT touch: `payments/`"
+      ],
+      "buttons": [
+        {
+          "kind": "discuss",
+          "label": "Discuss it",
+          "hint": "lays out the options, changes nothing",
+          "prompt": "[Copied from a run report written Wednesday 26 August 2026, 17:20.\nBasis: the queue's task 5 entry plus the destructive-work rule agreed at setup on 24 Aug.\nIf time has passed this may already be out of date: read notes/RUN-NOTES.md FIRST and tell me if this\nhas already been done or overtaken. Do not act on a stale instruction.]\n\nProject: C:\\Work\\harbour   Branch: booking-v2\nRead notes/RUN-NOTES.md in full before you answer anything.\n\nTask 5 in the queue deletes the legacy/ booking engine. It was marked destructive when the\nqueue was agreed on 24 Aug, so the run stopped here rather than running it.\n\nI want to decide, not to do it. Tell me:\n  - the ACTUAL line and file count of legacy/, measured, not estimated. The notes say\n    \"roughly 6,000\" and say plainly that nobody counted it. Count it.\n  - what still imports from legacy/, if anything\n  - what breaks in the running app if this goes out and we are wrong\n  - the options, including the boring one: leave it, and delete it in a later run\n\nHard rule carried over from setup: payments/ must not be touched by anything in this queue.\n\nDo not edit, delete, build, install or commit anything in this reply.\n\nBefore doing any of it, stop and tell me:\n  1. what you understand the job to be, in one line\n  2. exactly what you would change - every file, and what happens to each\n  3. what is WRONG with this prompt itself - it was written in one pass by a session\n     with less context than you have now, and nobody reviewed it. Name at least one\n     thing you would do differently, or say explicitly that you checked and found\n     nothing worth changing\n  4. anything in the notes you think is wrong - check it, don't take it on trust, it\n     was written by a previous session that made mistakes\n  5. what could go wrong, and what the undo is\n\nThen WAIT. Do not edit, delete, build, install or commit until I reply \"go\".\nIf I reply \"go\" with conditions attached, those conditions win over anything above."
+        }
+      ]
+    },
+    {
+      "tag": "ASSUMED",
+      "tone": "assumed",
+      "title": "The availability cache expires after 60 seconds, and nobody agreed that number",
+      "body": "The queue did not say, so 60 seconds was chosen during task 2 to keep the run moving. The notes first recorded Ravi as confirming it, then corrected that in the same entry — he said he would look at it. **So it is still open.** **Undo:** cheap. One number in `config/cache.ts`, no migration, no rebuild of anything else.",
+      "meta": [
+        "Made at: `task 2`, 24 Aug",
+        "Undo: cheap — one number in `config/cache.ts`"
+      ],
+      "buttons": [
+        {
+          "kind": "discuss",
+          "label": "Discuss it",
+          "hint": "what 60 seconds costs, changes nothing",
+          "prompt": "[Copied from a run report written Wednesday 26 August 2026, 17:20.\nBasis: the task 2 entry in the notes, including its own correction.\nIf time has passed this may already be out of date: read notes/RUN-NOTES.md FIRST and tell me if this\nhas already been done or overtaken. Do not act on a stale instruction.]\n\nProject: C:\\Work\\harbour   Branch: booking-v2\nRead notes/RUN-NOTES.md first.\n\nDuring task 2 the availability cache was given a 60 second lifetime. Nothing in the queue\nspecified one. The notes record Ravi confirming it and then correct themselves in the same\nentry - he said he would look at it, which is not a yes.\n\nTell me what 60 seconds actually costs: how stale a slot can look to a customer, what a\ndouble-booking window looks like at that setting, and what the sensible values either side\nof it would be. Show me where the number lives.\n\nDo not edit, delete, build, install or commit anything in this reply.\n\nBefore doing any of it, stop and tell me:\n  1. what you understand the job to be, in one line\n  2. exactly what you would change - every file, and what happens to each\n  3. what is WRONG with this prompt itself - it was written in one pass by a session\n     with less context than you have now, and nobody reviewed it. Name at least one\n     thing you would do differently, or say explicitly that you checked and found\n     nothing worth changing\n  4. anything in the notes you think is wrong - check it, don't take it on trust, it\n     was written by a previous session that made mistakes\n  5. what could go wrong, and what the undo is\n\nThen WAIT. Do not edit, delete, build, install or commit until I reply \"go\".\nIf I reply \"go\" with conditions attached, those conditions win over anything above."
+        },
+        {
+          "kind": "act",
+          "label": "Change it",
+          "hint": "…and this one changes the number",
+          "prompt": "[Copied from a run report written Wednesday 26 August 2026, 17:20.\nBasis: the task 2 entry in the notes; the new value is not agreed, so this prompt asks for it first.\nIf time has passed this may already be out of date: read notes/RUN-NOTES.md FIRST and tell me if this\nhas already been done or overtaken. Do not act on a stale instruction.]\n\nProject: C:\\Work\\harbour   Branch: booking-v2\nRead notes/RUN-NOTES.md first.\n\nI want the availability cache lifetime changed from 60 seconds. Ask me what to, if I have\nnot already said in this message.\n\nIt is one number in config/cache.ts. After changing it:\n  - run npm test and show me the real output, not a summary\n  - run npm run test:calendar as well, because the cache broke the calendar once already\n  - the rule adopted during task 2 still stands: EVERY CACHE KEY INCLUDES THE USER ID.\n    Do not touch the key shape while you are in there.\n\nDo not touch payments/ - it is out of bounds for this whole queue.\n\nBefore doing any of it, stop and tell me:\n  1. what you understand the job to be, in one line\n  2. exactly what you would change - every file, and what happens to each\n  3. what is WRONG with this prompt itself - it was written in one pass by a session\n     with less context than you have now, and nobody reviewed it. Name at least one\n     thing you would do differently, or say explicitly that you checked and found\n     nothing worth changing\n  4. anything in the notes you think is wrong - check it, don't take it on trust, it\n     was written by a previous session that made mistakes\n  5. what could go wrong, and what the undo is\n\nThen WAIT. Do not edit, delete, build, install or commit until I reply \"go\".\nIf I reply \"go\" with conditions attached, those conditions win over anything above."
+        }
+      ]
+    }
+  ],
+  "withThem": [
+    {
+      "holder": "Ravi",
+      "rows": [
+        {
+          "what": "Three supplier emails",
+          "detail": "Drafts handed over **25 Aug**. He sends them once Dawn supplies the final pricing table. The writing is finished work and sits under *Done* — the sending is his."
+        },
+        {
+          "what": "Yes or no on task 5",
+          "detail": "The `legacy/` deletion is waiting on him. It is also in **Needs you** above, because the measured line count he needs in order to answer is still yours to produce."
+        }
+      ]
+    },
+    {
+      "holder": "Dawn",
+      "rows": [
+        {
+          "what": "2026 rate card",
+          "detail": "Chased **25 Aug**, no reply yet. Ravi cannot send the supplier emails without it. Nothing to do here but wait or chase again."
+        }
+      ]
+    }
+  ],
+  "unchecked": [
+    {
+      "tag": "UNCHECKED",
+      "tone": "unchecked",
+      "title": "\"The new date picker works\" — nobody has opened it in a browser. Not once.",
+      "body": "**What is proven:** it compiles, and all 188 tests pass, and lint is clean. **What is not:** that a person can pick a date with it. No browser session has happened in this entire run. Tests of a date picker do not click a date picker.",
+      "meta": [
+        "From: `task 1`",
+        "Needs: about 20 minutes in a browser on staging"
+      ],
+      "buttons": [
+        {
+          "kind": "discuss",
+          "label": "Discuss it",
+          "hint": "what is and isn't proven, changes nothing",
+          "prompt": "[Copied from a run report written Wednesday 26 August 2026, 17:20.\nBasis: the task 1 entry in the notes, verbatim.\nIf time has passed this may already be out of date: read notes/RUN-NOTES.md FIRST and tell me if this\nhas already been done or overtaken. Do not act on a stale instruction.]\n\nProject: C:\\Work\\harbour   Branch: booking-v2\nRead notes/RUN-NOTES.md first.\n\nTask 1 rebuilt the date picker. The suite passes and lint is clean, and nobody has opened it\nin a browser.\n\nTell me exactly what those 188 tests do and do not cover for this component, and what the\nshortest browser session is that would settle the rest. Be specific about what \"wrong\" would\nlook like on screen.\n\nDo not edit, delete, build, install or commit anything in this reply.\n\nBefore doing any of it, stop and tell me:\n  1. what you understand the job to be, in one line\n  2. exactly what you would change - every file, and what happens to each\n  3. what is WRONG with this prompt itself - it was written in one pass by a session\n     with less context than you have now, and nobody reviewed it. Name at least one\n     thing you would do differently, or say explicitly that you checked and found\n     nothing worth changing\n  4. anything in the notes you think is wrong - check it, don't take it on trust, it\n     was written by a previous session that made mistakes\n  5. what could go wrong, and what the undo is\n\nThen WAIT. Do not edit, delete, build, install or commit until I reply \"go\".\nIf I reply \"go\" with conditions attached, those conditions win over anything above."
+        },
+        {
+          "kind": "act",
+          "label": "Check it",
+          "hint": "…and this one walks you through it — it settles the migration too",
+          "prompt": "[Copied from a run report written Wednesday 26 August 2026, 17:20.\nBasis: task 1 and task 4's notes entries. It transcribes the checks those entries say are missing; it invents no new ones.\nIf time has passed this may already be out of date: read notes/RUN-NOTES.md FIRST and tell me if this\nhas already been done or overtaken. Do not act on a stale instruction.]\n\nProject: C:\\Work\\harbour   Branch: booking-v2\nRead notes/RUN-NOTES.md first.\n\nWalk me through checking the new date picker on STAGING, in a browser, one step at a time.\nThis same session also settles the staging half of the task 4 migration, so cover both.\n\nRules for how you run this:\n  - ONE step per message. Then stop and wait for me.\n  - For each step tell me what to click, what I should see, and what WRONG looks like.\n  - Do not say a step passed until I have told you what I actually saw.\n  - At the end, list what is settled and what is still open. The production half of the\n    migration will still be open. Say so plainly rather than rounding it up to done.\n\nDo not change any code in this session.\n\nBefore doing any of it, stop and tell me:\n  1. what you understand the job to be, in one line\n  2. exactly what you would change - every file, and what happens to each\n  3. what is WRONG with this prompt itself - it was written in one pass by a session\n     with less context than you have now, and nobody reviewed it. Name at least one\n     thing you would do differently, or say explicitly that you checked and found\n     nothing worth changing\n  4. anything in the notes you think is wrong - check it, don't take it on trust, it\n     was written by a previous session that made mistakes\n  5. what could go wrong, and what the undo is\n\nThen WAIT. Do not edit, delete, build, install or commit until I reply \"go\".\nIf I reply \"go\" with conditions attached, those conditions win over anything above."
+        }
+      ]
+    },
+    {
+      "tag": "UNCHECKED",
+      "tone": "unchecked",
+      "title": "\"The bookings migration is safe\" — it has only ever run against a staging copy",
+      "body": "**What is proven:** `npm run migrate:verify` passes against the staging copy of the data. **What is not:** how it behaves on production data, which is bigger and messier. Nothing available today would settle that half without touching production.",
+      "meta": [
+        "From: `task 4`",
+        "Staging half settled by: **Check it** on the card above",
+        "**No button** — nothing you could do today would settle the production half"
+      ],
+      "buttons": [
+        {
+          "kind": "discuss",
+          "label": "Discuss it",
+          "hint": "what it would take to settle this properly, changes nothing",
+          "prompt": "[Copied from a run report written Wednesday 26 August 2026, 17:20.\nBasis: the task 4 entry in the notes.\nIf time has passed this may already be out of date: read notes/RUN-NOTES.md FIRST and tell me if this\nhas already been done or overtaken. Do not act on a stale instruction.]\n\nProject: C:\\Work\\harbour   Branch: booking-v2\nRead notes/RUN-NOTES.md first.\n\nTask 4 migrated the bookings table. It has only ever run against a staging copy.\n\nTell me what would actually settle the production half: a dated restore into staging, a dry\nrun with a row count reconciliation, something else. Give me the cost and the risk of each,\nand say which you would pick. Include the option of not settling it yet.\n\nDo not edit, delete, build, install or commit anything in this reply.\n\nBefore doing any of it, stop and tell me:\n  1. what you understand the job to be, in one line\n  2. exactly what you would change - every file, and what happens to each\n  3. what is WRONG with this prompt itself - it was written in one pass by a session\n     with less context than you have now, and nobody reviewed it. Name at least one\n     thing you would do differently, or say explicitly that you checked and found\n     nothing worth changing\n  4. anything in the notes you think is wrong - check it, don't take it on trust, it\n     was written by a previous session that made mistakes\n  5. what could go wrong, and what the undo is\n\nThen WAIT. Do not edit, delete, build, install or commit until I reply \"go\".\nIf I reply \"go\" with conditions attached, those conditions win over anything above."
+        }
+      ]
+    }
+  ],
+  "next": [
+    {
+      "tag": "TASK 5",
+      "tone": "next",
+      "title": "Delete the `legacy/` booking engine",
+      "status": {
+        "text": "— waiting on a decision",
+        "tone": "grey"
+      },
+      "body": "The last task in the queue. **Done when:** `legacy/` is gone, `npm test` still prints ALL PASS, and nothing imports from it. It cannot start until the `DECIDE` card at the top is answered.",
+      "meta": [
+        "Depends on: tasks 1–4 **✓ all done**",
+        "Must NOT touch: `payments/`",
+        "**No button** — answer the DECIDE card first"
+      ]
+    }
+  ],
+  "done": [
+    {
+      "num": "1",
+      "pill": "done",
+      "name": "The date picker is one component instead of three",
+      "sections": [
+        {
+          "h": "What changed",
+          "p": "Three files became one. 412 lines removed."
+        },
+        {
+          "h": "Commands run, and what they actually printed",
+          "pre": "npm test      -> ALL PASS  (188 tests)\nnpm run lint  -> ALL PASS"
+        },
+        {
+          "h": "Not checked",
+          "p": "Nobody has opened it in a browser. See the first card under **Built, but not properly checked**."
+        }
+      ]
+    },
+    {
+      "num": "2",
+      "pill": "done",
+      "name": "Availability lookups now come from a cache",
+      "sections": [
+        {
+          "h": "What changed",
+          "p": "The availability query sits behind a cache with a 60 second lifetime."
+        },
+        {
+          "h": "Commands run, and what they actually printed",
+          "pre": "npm test  -> ALL PASS"
+        },
+        {
+          "h": "One thing went wrong",
+          "p": "The first attempt keyed the cache on the slot alone, so the test suite returned **another user's availability**. `npm test` caught it — it printed FAILED. Fixed by keying on `userId` too. **Rule adopted: every cache key includes the user id.**"
+        },
+        {
+          "h": "Not checked",
+          "p": "The 60 second lifetime was chosen, not agreed. See the `ASSUMED` card under **Needs you**."
+        }
+      ]
+    },
+    {
+      "num": "3",
+      "pill": "done",
+      "name": "Three supplier notification emails written",
+      "sections": [
+        {
+          "h": "What changed",
+          "p": "All three drafts written and handed to Ravi on 25 Aug. **The writing is finished work.** Sending them is his, and waits on the rate card from Dawn — both of which are under *With Ravi* and *With Dawn*, not in your list."
+        }
+      ]
+    },
+    {
+      "num": "4",
+      "pill": "done",
+      "name": "The bookings table is migrated",
+      "sections": [
+        {
+          "h": "What changed",
+          "p": "Bookings table migrated to the new shape."
+        },
+        {
+          "h": "Commands run, and what they actually printed",
+          "pre": "npm test              -> ALL PASS\nnpm run migrate:verify -> ALL PASS  (staging copy)"
+        },
+        {
+          "h": "Not checked",
+          "p": "Staging data only. It has never touched production. See the second card under **Built, but not properly checked**."
+        }
+      ]
+    }
+  ],
+  "ideas": [
+    {
+      "tag": "IDEA",
+      "tone": "idea",
+      "title": "`utils/date.ts` has two functions that do the same thing",
+      "body": "Spotted during task 4. Left alone deliberately — it is not in the queue and merging them would widen the diff past the point where it is comfortable to review."
+    }
+  ],
+  "log": [
+    {
+      "num": "0",
+      "pill": "pend",
+      "name": "Setup — 24 Aug, 09:12",
+      "sections": [
+        {
+          "h": "What was agreed",
+          "p": "Five tasks, agreed with Ravi. Task 5 marked **destructive — stop and ask before running**. One hard rule carried over from the previous run: **`payments/` must not be touched by anything in this queue.**"
+        }
+      ]
+    },
+    {
+      "num": "—",
+      "pill": "done",
+      "name": "Settled during the run, and removed from the page above",
+      "sections": [
+        {
+          "h": "Removed 25 Aug",
+          "p": "**\"Does the cache break the calendar?\"** — `npm run test:calendar` was run and watched come back ALL PASS. Resolution observed, so the item was deleted from the page. The line stays here, because otherwise \"I dealt with it\" and \"it was quietly dropped\" look identical."
+        }
+      ]
+    }
+  ]
+}
+</script>
+<!-- ================= END REPORT DATA ================= -->
+
+<script>renderReport();</script>
+</body>
+</html>
