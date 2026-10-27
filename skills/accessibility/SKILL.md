@@ -34,6 +34,7 @@ This pairs with [[design-system]] (accessible components built once) and [[forms
 ## Law 3 — Perceivable content
 
 - **Contrast**: ≥ 4.5:1 for normal text, ≥ 3:1 for large text and meaningful UI/graphics. Verify, don't eyeball.
+  - **Measure after animations finish.** An automated contrast scan run while an element fades or slides in reads its half-drawn colours and reports a false failure (or, worse, a pass on a frame that never stays). Wait first — e.g. until `document.getAnimations()` has nothing `running` — then scan.
 - **Images**: meaningful ones get descriptive `alt`; decorative ones get empty `alt` so they're skipped.
 - **Don't rely on colour alone** — pair it with text, icon, or pattern (error states, status, charts).
 - **Resize & reflow**: text scales to **200%** (1.4.4) and content **reflows to a 320px width** (1.4.10) with no loss of content/function and no horizontal scroll. *There is no minimum font size in WCAG — this is the real requirement.*

@@ -62,6 +62,10 @@ Cover the must-pass journeys:
 - **The core loop** — the central create / read / update path of the product.
 - **The gated privileged action** — a high-permission operation works for the entitled actor and is refused for everyone else.
 
+**A test that tampers with a form must tamper just before submit.** To prove the SERVER refuses a forged value, a test edits a hidden field or option by hand. In a framework that owns the form's state, the next re-render (any click, any keystroke) quietly puts its own value back — so an edit made early never reaches the server, the honest value is sent, and the test proves nothing (or fails for the wrong reason). Make the edit as the last step before submitting, assert it is still there, then submit.
+
+> Paid for: a "someone else's page, sent by hand, is refused" test sent a perfectly valid submission — the swapped value had been re-rendered away three steps earlier. It failed only because the save succeeded; moved to just before Send, it proved the refusal.
+
 ---
 
 ## The mandatory preflight gauntlet → GO / NO-GO

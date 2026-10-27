@@ -182,6 +182,14 @@ Build in this order even under deadline — primitives-from-tokens is cheaper th
 - **Confirm forms validate inline** (per-field error, focus-first-invalid, server mirror) per STEP 3.
 - **Delegate the diff to the design-system-auditor agent** to catch what a search can't: wrong component for the need, a second accent, a hard-coded close destination, a missing catalogue/gallery entry.
 - **Run the accessibility-auditor alongside it** — an off-token value is also an unverifiable contrast, and a bespoke widget is a keyboard/focus risk; the two audits pair on every UI diff.
+- **"Centred" and "aligned" are numbers, measured in the browser — never eyeballed.** Three checks, each with a tolerance:
+  1. **Horizontal:** the gap on the left minus the gap on the right ≤ 1px.
+  2. **Icon beside text:** the icon's middle within 1px of the **letters'** middle — not the line box's. Capitals sit above the middle of their line box (by 1–2px in many fonts), so an icon centred on the box reads low. Size the icon to the text (`1em`) and seat it on the letters (inline, a small negative `vertical-align`), then measure.
+  3. **The line in its box:** the text's middle within 1px of its container's middle.
+
+  Two traps that produce "not centred" while the CSS looks right: **loose text inside a flex row** becomes several flex items, each spaced by the gap (wrap it in one element); and a **CSS reset that makes every `svg` a block** drops an "inline" icon onto its own line.
+
+  > Paid for: a slim banner shipped "done" while sitting 24px off centre with its icon low — all three causes at once, none visible in the code, each obvious once measured.
 
 This is the "components" gate of the build pipeline in [[engineering-standards]]; the full pre-ship gauntlet lives in [[regression-testing]] and the release flow in [[releasing]]. When the system itself is ambiguous, don't guess — name the gap and ask. The system carries three concerns that have their own depth: [[accessibility]] (bake it into the tokens/components so screens inherit it), [[responsive-design]] (breakpoints, fluid type, the spacing scale), and [[forms-and-input]] (the validation/error/upload behaviour STEP 3 starts).
 

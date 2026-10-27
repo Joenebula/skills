@@ -37,6 +37,16 @@ Pairs with [[design-system]] (responsive primitives — spacing scale, fluid typ
 
 ## Law 5 — Verify on a matrix
 
+**At the small-phone width (375px), three numbers — measured in the browser, not looked at:**
+
+| Check | Pass | How |
+|---|---|---|
+| No sideways scroll | `document.documentElement.scrollWidth <= window.innerWidth` | one line of script on every page |
+| Targets | every link, button and form control ≥ 44 × 44px (or spaced so neighbours can't be mis-tapped) | read each control's bounding box |
+| Nothing clipped | no element with content wider than its box (`scrollWidth > clientWidth`) unless it scrolls on purpose | loop over elements, list offenders |
+
+"It looked fine on my phone" is not one of the three.
+
 Test, don't assume:
 
 | Axis | Cover |
