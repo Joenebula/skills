@@ -71,6 +71,14 @@ No build guidance remains for the commerce money path (see the note above). This
 |---|---|
 | **[ecommerce-security-audit](ecommerce-security-audit/SKILL.md)** | before deploying any site that **sells or stores customer data** — a concrete, owner-facing audit of the money path and data exposure (price-tampering & fake/simulated payment paths, webhook verification, IDOR / broken access control, exposed keys, injection, security headers, regulated-goods age checks, UK selling law) that produces a plain-English report + fixes for a non-developer owner. It **complements** the generic [security](security/SKILL.md) skill and the [security-route-auditor](../agents/security-route-auditor.md) agent (it cross-links both); run it as part of [preflight](preflight/SKILL.md) on any commerce build. It explicitly does not audit general correctness, performance, or ops — see its own boundary rule. Approval-gated to add/edit like every skill here. |
 
+## Project skills — one named project only
+
+The one place this library names a product. Each skill here fires only in its project and says so in its first words.
+
+| Skill | Use it… |
+|---|---|
+| **[vibehq-update-design-system](vibehq-update-design-system/SKILL.md)** | Vibe HQ: "update the design system" / "redraw Paper" — brings every copy up to date with `develop`: the trace file (PR if changed), parts with no story, the Storybook build, and the Paper file (tokens, then components), checked by screenshot. Never changes how anything looks; never merges. (Joe: "A", 2026-10-31.) |
+
 ## Auditor agents (`../agents/<name>.md`)
 
 Read-only watchers (Read/Grep/Glob[/Bash]) — each maps a diff to risks and required fixes, returns a verdict + numbered issues, and proposes no edits.
