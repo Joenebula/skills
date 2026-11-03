@@ -254,8 +254,17 @@ swap('<button class="loccopy" data-loc="1">Copy link</button>',
 const ACCOUNT_LIB = process.env.HOME ? path.join(process.env.HOME,'.claude/skills') : null;
 const SCAN = path.join(ROOT,'map/scan.json');
 const seen = new Set();
-for (const dir of [ACCOUNT_LIB, path.join(ROOT,'map/restore-skills/skills'),
-                   path.join(SKILLS_REPO,'skills')]) {
+/* map/restore-skills/skills is NOT one of these, and used to be. It is a backup copy kept
+   beside the map, so thirteen skills that had been removed from the library still had a
+   SKILL.md in there — and the build read it, gave them a description, and graded them "file
+   seen on disk · this one is real". The map was asserting that thirteen skills were in a
+   library that no longer held them, which is the one claim it exists not to make.
+
+   gitAdded() already carries this lesson in its own comment: a reference copy of a skill is
+   not the skill. It was fixed there, for dates, and left standing here, for evidence. Reading
+   a backup as the thing it is a backup of defeats the gone-from-the-library check too, since
+   that asks whether a skill still has a description — and the copy was supplying one. */
+for (const dir of [ACCOUNT_LIB, path.join(SKILLS_REPO,'skills')]) {
   if (!dir || !fs.existsSync(dir)) continue;
   for (const d of fs.readdirSync(dir))
     if (fs.existsSync(path.join(dir,d,'SKILL.md'))) seen.add(d);
@@ -411,7 +420,38 @@ function rootDate(){
   } catch { return null; }
 }
 const ROOT_DATE = rootDate();
+/* When each skill was last CHANGED, as opposed to when it arrived. The mirror of gitAdded:
+   the same walk, without the add filter, keeping the newest date per skill instead of the
+   oldest. git log is newest-first, so the first date a skill appears under is its latest.
+
+   This exists because the "Updated" line on every skill panel came from META — a table
+   written by hand, which by definition stops being true the moment anybody edits a skill
+   without also editing the table. It had, and the newest date in it was 6 August: thirteen of
+   its fifteen entries named skills the library no longer holds, and thirty-three of the
+   thirty-five it does hold had no date at all. The map's own stamp says "dates from git"; now
+   both of its dates are. */
+function gitTouched(){
+  const out={};
+  try {
+    if (!fs.existsSync(path.join(SKILLS_REPO,'.git'))) return out;
+    execSync(`git -C ${SKILLS_REPO} rev-parse HEAD`,{stdio:'ignore'});
+    const log = execSync(
+      `git -C ${SKILLS_REPO} log --no-renames --name-only --format=%x00%aI`,
+      {encoding:'utf8', maxBuffer:1<<26});
+    let date=null;
+    for (const line of log.split('\n')){
+      if (line.startsWith('\0')){ date = line.slice(1,11); continue; }
+      if (!line.trim() || !date) continue;
+      const m = /^(?:skills|agents)\/([^/]+)/.exec(line);   // a skill, not a copy of one
+      if (!m) continue;
+      const id = m[1].replace(/\.md$/,'');
+      if (!out[id] || date > out[id]) out[id] = date;       // latest wins
+    }
+  } catch { /* no git, no dates — which is the honest answer */ }
+  return out;
+}
 const ADDED = gitAdded();
+const TOUCHED = gitTouched();
 const IMPORTED = new Set();
 if (ROOT_DATE) for (const id of Object.keys(ADDED))
   if (ADDED[id] <= ROOT_DATE){ IMPORTED.add(id); delete ADDED[id]; }
@@ -558,6 +598,11 @@ const DISCOVERY_BLOCK =
    last wrote a finding for it. ADDED is when it entered the repo, from git history; a null
    means no trustworthy date exists and the skill is therefore never tagged new. */
 const LIVE=${JSON.stringify(LIVE,null,0)};
+/* When each skill was last changed, from git. The panel prefers this over META's hand-written
+   date, because a table nobody remembers to edit reports the library as it was on the day
+   somebody last remembered. */
+const TOUCHED=${JSON.stringify(Object.fromEntries(
+  Object.entries(TOUCHED).filter(([id])=>LIVE[id])),null,0)};
 const NEWTAG=new Set(${JSON.stringify(NEWTAG)});
 const NEW_DAYS=${NEW_DAYS};
 const BUILT=${JSON.stringify(new Date().toISOString().slice(0,10))};

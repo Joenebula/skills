@@ -2888,9 +2888,13 @@ function detail(id){
     <div class="d-name">${n.id}</div>
     ${n.ring?`<div class="d-stamp">${
       VER[id]?`<b>v${VER[id]}</b><span class="dot">·</span>`:''}${
-      META[id]
-        ? `Updated ${niceDate(META[id][0])}<span class="dot">·</span>${META[id][1]}`
-        : `<i>No version or date recorded</i>`}</div>`:''}
+      (()=>{ /* git first, the hand-written table only for where a skill came from */
+        const d=(typeof TOUCHED!=='undefined'&&TOUCHED[id])||(META[id]&&META[id][0]);
+        const src=META[id]&&META[id][1];
+        if(!d) return '<i>No version or date recorded</i>';
+        return `Updated ${niceDate(d)} <i>(${ago(d)})</i>`+
+               (src?`<span class="dot">·</span>${src}`:'');
+      })()}</div>`:''}
     <div class="d-meta">${tags.join('')}${
       NEWTAG.has(id)?'<span class="tag" style="background:rgba(94,200,240,.20);color:var(--r3)">new</span>':''}</div>
     ${NEWTAG.has(id)&&LIVE[id]&&LIVE[id].added

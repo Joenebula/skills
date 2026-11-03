@@ -146,13 +146,9 @@ const VIA={
  'security-review':['read','overlap','infer'],
  'simplify':['read','overlap','infer'],
  'artifact-design':['read','overlap'],
- 'frontend-design':['read','overlap'],
  'accessibility':['read','overlap','infer'],
  'ecommerce-security-audit':['disk','read'],
  'ask-dont-guess':['disk','doc','infer'],
- 'critical-thinking-partner':['read'],
- 'knowledge-system-setup':['read','doc'],
- 'session-start-hook':['read','disk'],
  'init':['doc']
 };
 
@@ -164,8 +160,7 @@ const BASIS={
  'security-route-auditor':['done',4],'security-review':['done',5],
  'simplify':['done',6],'artifact-design':['done',7],'frontend-design':['done',8],
  'accessibility':['done',9],'ecommerce-security-audit':['done',10],
- 'ask-dont-guess':['done',11],'critical-thinking-partner':['done',12],
- 'knowledge-system-setup':['done',13],'session-start-hook':['done',14],
+ 'ask-dont-guess':['done',11],'critical-thinking-partner':['done',12],'session-start-hook':['done',14],
  'init':['done',15]
 };
 const BASIS_LABEL={confirmed:'premise confirmed',unverified:'premise unverified',
@@ -309,17 +304,7 @@ const TAGS={
  'email-and-notifications':['api','content'],
  'internationalization':['content','frontend'],
  'ecommerce-security-audit':['security','testing','review'],
- 'webaudio-plugin-builder':['audio','frontend'],
- 'bootstrap5-migration':['frontend','design','accessibility'],
- 'public-service-website':['design','accessibility','content','frontend'],
- 'mydesignskill':['design','frontend'],
- 'frontend-design':['design','frontend'],
- 'critical-thinking-partner':['review','planning'],
- 'knowledge-system-setup':['planning'],
- 'skill-creator':['planning','testing'],
- 'session-start-hook':['config','infrastructure'],
- 'morning':['planning'],
- 'pdf':['documents'],'docx':['documents'],'pptx':['documents'],'xlsx':['documents','data'],
+ 'webaudio-plugin-builder':['audio','frontend'],'docx':['documents'],'pptx':['documents'],'xlsx':['documents','data'],
  'security-review':['security','testing','review'],
  'simplify':['review'],
  'init':['planning','config'],
@@ -351,22 +336,16 @@ const TAGS={
      manifest, so the rest genuinely have no recorded date, and the panel says so instead
      of inventing one. [updated, source] */
 const VER={};
+/* Where a skill came from. It used to carry the date it was last updated too, and that was
+   the trouble: a date written by hand is true on the day it is written and silently wrong
+   from the next edit onward. The newest date this table ever reached was 6 August, while the
+   library went on changing underneath it. The build reads the date from git now (TOUCHED);
+   what is left here is provenance, which does not change on its own.
+
+   Thirteen entries were also removed: they named skills the library no longer holds. */
 const META={
- 'morning':['2026-08-05','anthropic-example'],
- 'knowledge-system-setup':['2026-07-10','custom'],
- 'critical-thinking-partner':['2026-07-09','custom'],
- 'frontend-design':['2026-06-07','custom'],
  'webaudio-plugin-builder':['2026-07-13','custom'],
- 'mydesignskill':['2026-06-14','custom'],
- 'pdf':['2026-07-10','anthropic'],
- 'public-service-website':['2026-05-28','custom'],
- 'skill-creator':['2026-08-05','anthropic-example'],
- 'bootstrap5-migration':['2026-05-28','custom'],
  'ecommerce-security-audit':['2026-07-16','custom'],
- 'xlsx':['2026-08-03','anthropic'],
- 'docx':['2026-08-03','anthropic'],
- 'pptx':['2026-08-03','anthropic'],
- 'session-start-hook':['2026-08-06','plugin']
 };
 const MONTH=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const niceDate=d=>{ const [y,m,dd]=d.split('-'); return +dd+' '+MONTH[+m-1]+' '+y; };
