@@ -1533,6 +1533,18 @@ const colourOf=n=>statusOf(n)==='never'?'--never'
   :statusOf(n)==='missing'?'--missing':(RINGCOL[n.ring]||'--present');
 const paintOf=n=>colourMode==='cap'&&n.ring?FAMCOL[famOf(n)]:cv(colourOf(n));
 const statusOf=s=>s.phase==='never'?'never':s.status;
+/* What a node's state is CALLED, in one place — it was written out in three, and the three
+   had drifted apart from the counter that is supposed to agree with them.
+
+   The counter was made honest a while ago: it stopped calling a skill available on the
+   strength of a document naming it, and counts only what has been seen on disk or loaded.
+   The per-skill tag was left on the old status field, so a panel could show a green
+   "available" chip directly above a block reading "no matching file was found in your
+   library" — the same contradiction in one card, which is worse than either half alone.
+   So could the briefs you copy out to another session, which is worse again, because there
+   the contradiction travels without the panel around it to argue with. */
+const stateOf=n=> EVIDENCE[n.id]==='named' ? 'unverified'
+  : {present:'available',missing:'missing',never:'excluded'}[statusOf(n)];
 const NS='http://www.w3.org/2000/svg';
 const mk=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
 const $=i=>document.getElementById(i), svg=$('viz');
@@ -3330,7 +3342,7 @@ const DISCUSS =
 
 function fitem(n){
   const [b]=BASIS[n.id]||['unverified'];
-  const st={present:'available',missing:'missing',never:'excluded'}[statusOf(n)]||'anchor';
+  const st=stateOf(n)||'anchor';
   return "# "+n.id+"\n\n"+
     "**State:** "+BASIS_LABEL[b]+" · "+st+" · "+(PHASES[n.phase]||'anchor')+"\n"+
     "**Run from:** "+(WHERE[n.id]||'repo')+
@@ -3535,7 +3547,7 @@ function brief(){
     `parallel. Step 1 may close some of the unverified ones outright.\n\n`+
     PREAMBLE+`\n`+
     rows.map((n,i)=>{
-      const st={present:'available',missing:'missing',never:'excluded'}[statusOf(n)];
+      const st=stateOf(n);
       const [b]=BASIS[n.id]||['unverified'];
       return `## Step ${i+1} — ${n.id}  (${st}, ${PHASES[n.phase]||'anchor'}) — ${BASIS_LABEL[b]}\n\n`+
         `**Run from:** ${WHERE[n.id]||'repo'}  ·  **Needs:** ${NEEDS_LABEL[NEEDS[n.id]]||'—'}\n\n`+
@@ -3594,8 +3606,9 @@ function groupPanel(key){
 function detail(id){
   const n=id===ANCHOR.id?ANCHOR:N[IDX[id]];
   const st=statusOf(n);
-  const lab={present:'available',missing:'missing',never:'excluded'}[st];
-  const col={present:'--present',missing:'--missing',never:'--never',anchor:'--amber'}[st];
+  const lab=stateOf(n);
+  const col=EVIDENCE[id]==='named' ? '--amber'
+    : {present:'--present',missing:'--missing',never:'--never',anchor:'--amber'}[st];
   // Drop any later tag whose text is already contained in an earlier one — otherwise a
   // built-in reads "Built into Claude Code / CLAUDE CODE / built-in", three ways of once.
   const raw = n.ring
