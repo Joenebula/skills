@@ -384,8 +384,20 @@ const RINGS=[
   {key:'builtin', label:'Claude Code',  frac:.975, col:'--r5'}
 ];
 const ringOf=s=>s.ring;
+/* A colour per group. The build plan's own steps had one from the start; the seven groups it
+   never named did not, and fell back to grey — which on the board meant half the columns were
+   the same colour, and on the cluster view meant the three biggest lobes in the library (the
+   setup, front-end design, the auditors) were anonymous.
+
+   Colour here identifies, it does not assert: it says "this lobe is not that lobe" and
+   nothing about what either contains. The hues are spaced so that NEIGHBOURS in GROUP_ORDER
+   are far apart, because those are the ones drawn next to each other — two similar greens at
+   opposite sides of the rosette are never compared, two on adjacent lobes always are.
+   `always` takes the always-on ring's own amber, since it is the same set of skills. */
 const SECTOR={never:'#5E6B8C',G:'#8FD9A8',A:'#5EE0E8',B:'#6BB6F5',C:'#A78BFA',D:'#EC8CE0',E:'#F58A8A',
-  F:'#F5C24E',H:'#6EE7A8',S2:'#7C9BF0'};
+  F:'#F5C24E',H:'#6EE7A8',S2:'#7C9BF0',
+  always:'#F2A03C',design:'#FF7AB6',quality:'#6FE0D0',audit:'#A8E06B',
+  style:'#C9A6FF',docs:'#C2A98B',setup:'#5FD3E8'};
 
 /* ---- what each skill is FOR ------------------------------------------------------------
    The build plan answers "when does this fire", and for half the library the answer is that

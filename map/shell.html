@@ -1069,8 +1069,10 @@ const DECO=[];
 function decoTargets(){
   const cols = SCAF.filter(s=>s.t==='col');
   const hubs = SCAF.filter(s=>s.t==='hub');
+  const lobes= SCAF.filter(s=>s.t==='lobe');
   const board = VIEW==='board' && cols.length;
   const flow  = VIEW==='flow'  && hubs.length;
+  const clust = VIEW==='cluster' && lobes.length;
   for(const d of DECO){
     if(flow){
       // four soft streams lying along the four destinations, widest where the ribbons leave
@@ -1093,6 +1095,17 @@ function decoTargets(){
         ? c.top - 16 + (c.base+22-(c.top-16))*(d.v*.86+d.b*.028)
         : c.headTop-56 + (H-c.headTop+40)*d.v;
       d.tc = d.kind==='band' ? c.col : '#8FB0E8';
+    } else if(clust){
+      // one soft cloud per lobe, in that lobe's own colour, so the ground under a group is
+      // the group — which is the whole of what this view has to say
+      const L=lobes[Math.min(lobes.length-1,Math.floor(d.u*lobes.length))];
+      if(d.kind==='band'){
+        const th=((d.u*lobes.length)%1)*Math.PI*2, rr=L.r*(.52+d.b*.105);
+        d.tx=L.x+Math.cos(th)*rr; d.ty=L.y+Math.sin(th)*rr; d.tc=L.col;
+      } else {
+        const rr=L.r*(1.10+d.v*.55);
+        d.tx=L.x+Math.cos(d.a)*rr; d.ty=L.y+Math.sin(d.a)*rr; d.tc='#8FB0E8';
+      }
     } else {
       // the original circle: five arcs banded by sector, and a scatter of stars beyond them
       if(d.kind==='band'){
@@ -1387,6 +1400,39 @@ function scaffold(){
         previewable(hit,'g:'+s.key,[t]);
         gRingTop.appendChild(hit);
       }
+    } else if(s.t==='lobe'){
+      /* Two layers like a column, for the same reason: a dark plate so the honeycomb stops
+         reading through the lobe and the dots have something to sit on, then the group's own
+         colour over it at a whisper — enough to tell one lobe from the next without turning
+         the map into seventeen coloured discs. */
+      const R=(s.r*1.06).toFixed(1), c={cx:s.x.toFixed(1),cy:s.y.toFixed(1),r:R};
+      gRing.appendChild(mk('circle',{...c,fill:cv('--void2'),'fill-opacity':.72}));
+      gRing.appendChild(mk('circle',{...c,fill:s.col,'fill-opacity':.085}));
+      gRing.appendChild(mk('circle',{...c,fill:'none',stroke:s.col,'stroke-opacity':.26,
+        'stroke-width':.8,'stroke-dasharray':'1.5 6','stroke-linecap':'round'}));
+      /* The name sits outside the lobe, on the side facing away from the centre. Inside, it
+         would be printed over the dots it names; on the inner side it would be crowded
+         against the agreement and the lobes either side of it. Outward, every one of them
+         has the whole rim of the map to itself. */
+      const ux=s.x-AX, uy=s.y-AY, m=Math.hypot(ux,uy)||1;
+      const lx=s.x+ux/m*(s.r*1.06+13), ly=s.y+uy/m*(s.r*1.06+13)+3;
+      const t=mk('text',{class:'collbl hd',x:lx.toFixed(1),y:ly.toFixed(1),
+        fill:cv('--ink'),'fill-opacity':1});
+      t.textContent=s.title[0]; gRingTop.appendChild(t);
+      const c2=mk('text',{class:'ringcount',x:lx.toFixed(1),y:(ly+11).toFixed(1),
+        fill:s.col,'fill-opacity':.8});
+      c2.textContent=s.n; gRingTop.appendChild(c2);
+      const halfw=s.title[0].length*3.4+10;
+      ringBoxes.push({x0:lx-halfw,x1:lx+halfw,ty:ly-2,h:19});
+      // SVG text is only clickable where a glyph is painted, so the target is a rect over
+      // the name and its tally — the same bargain the column headings make.
+      const hit=mk('rect',{class:'hdhit',x:(lx-halfw).toFixed(1),y:(ly-12).toFixed(1),
+        width:(halfw*2).toFixed(1),height:26,rx:5,fill:'transparent'});
+      hit.setAttribute('aria-label',s.title[0]+' — '+s.n+' skills, show them');
+      pickable(hit,'g:'+s.key);
+      hit.classList.toggle('pick',PICKS.has('g:'+s.key));
+      previewable(hit,'g:'+s.key,[t,c2]);
+      gRingTop.appendChild(hit);
     } else if(s.t==='hub'){
       const g=mk('g');
       g.appendChild(mk('circle',{cx:s.x.toFixed(1),cy:s.y.toFixed(1),r:(s.r*2.2).toFixed(1),
@@ -1642,6 +1688,7 @@ function clampPanX(px,z){
 const VIEWS={
   radial:  {name:'Radial',      hint:'where it lives'},
   board:   {name:'Phase board', hint:"what it's for"},
+  cluster: {name:'Clusters',    hint:'all of it at once'},
   flow:    {name:'Flow',        hint:'where it all lands'}
 };
 const PHASE_ORDER=['always','A','B','C','D','E','F','G','H','S2','never','unmapped','builtin'];
@@ -1683,6 +1730,7 @@ function homes(){
   SCAF=[];
   if(VIEW==='radial') return homesRadial();
   if(VIEW==='board') return homesBoard();
+  if(VIEW==='cluster') return homesCluster();
   return homesFlow();
 }
 
@@ -1803,6 +1851,92 @@ function homesFlow(){
   FLATY=[Math.min(midY-(tallest-1)/2*pitch, HTOP)-20,
          deepest+22+Math.max(...lanes.map(x=>x.label.length))*6.6+10];
   FLATROW=FLATY;
+}
+
+/* ---- clusters: one lobe per group, all of it at once ------------------------------------
+   The board answers the same question this does — what is a thing for — by standing the
+   groups in a row. That is the right shape for comparing their heights and the wrong one for
+   seeing the library whole: seventeen columns do not fit the frame at any readable size, so
+   the board pans, and you read it a few columns at a time and never see all of it at once.
+
+   Here each group is a disc of its own, sized by how much it holds, coloured as it is on the
+   board, arranged round the agreement at the centre. Nothing pans and nothing is off the
+   frame, so the shape of the library — which parts are heavy, which are a single skill, how
+   much of it the build plan never mentions — is the picture rather than something you
+   assemble from scrolling.
+
+   The ring gives each lobe an angular slice proportional to the room it actually needs
+   rather than an equal share, so a group of eleven is not allotted the same arc as a group
+   of one. k, the unit that turns a count into a radius, is solved for rather than chosen:
+   the slices plus their gaps have to close the circle exactly, and at seventeen groups there
+   is no slack to guess with. Bisection rather than algebra because asin() does not invert
+   into anything worth reading. */
+function homesCluster(){
+  const groups={}; N.forEach(n=>(groups[groupOf(n)]??=[]).push(n));
+  Object.values(groups).forEach(g=>g.sort(byRank));
+  const keys=GROUP_ORDER.filter(p=>groups[p]).concat(
+    Object.keys(groups).filter(p=>!GROUP_ORDER.includes(p)));
+  const counts=keys.map(k=>groups[k].length), most=Math.max(...counts);
+  /* Each lobe's name is written OUTSIDE it, so the rosette's real extent is the outermost
+     lobe edge plus a name and its tally. Sizing to the frame and then drawing the labels past
+     it is how a label ends up under the bottom strip; the band they need comes off the top. */
+  const LBLBAND=30;
+  /* The bottom of the frame is not the bottom of the usable area. SAFE_B covers the strip of
+     tags; the one-line hint sits above it and is furniture too, and a lobe name landing on it
+     is the same collision for the same reason. So the rosette is centred in what the furniture
+     leaves rather than in the raw frame — which keeps it as large as the space allows instead
+     of shrinking it on all four sides to clear something at the bottom. */
+  const hint=$('hint'), u=W/innerWidth;
+  const bottom=Math.max(SAFE_B, (hint && getComputedStyle(hint).display!=='none')
+    ? (innerHeight-hint.getBoundingClientRect().top+6)*u : 0);
+  const cy=(H-bottom)/2;
+  const avail=Math.max(90, Math.min((SAFE_R-SAFE_L)/2, (H-bottom)/2) - LBLBAND);
+  /* The agreement keeps the middle. Its badge is 34 units of disc inside 56 of glow, so a
+     lobe allowed to drift in there would be laid over the one landmark the map has. HOLE is
+     that clearance, and it is what fixes the ring: the biggest lobe has to clear the core on
+     the inside and the frame on the outside, which leaves one radius that satisfies both and
+     a ceiling on how big that lobe may be. */
+  const HOLE=58;
+  const Rring=(HOLE+avail)/2, rCap=(avail-HOLE)/2;
+  AX=CX; AY=cy;
+  const GAP=0.055;                      // radians of clear air between neighbouring lobes
+  // The half-angle a lobe needs depends on the ring it sits on, so the ring is an argument.
+  // It was closed over instead, and the fit below scales the ring — which left the placement
+  // loop widening every slice against a radius the lobes were no longer on, and wrapping the
+  // rosette through itself.
+  const slice=(r,R)=>2*Math.asin(Math.min(0.94,r/R));
+  const need=k=>counts.reduce((a,n)=>a+slice(k*Math.sqrt(n),Rring),0)+GAP*counts.length;
+  let lo=0.1, hi=rCap/Math.sqrt(most);
+  if(need(hi)>Math.PI*2)
+    for(let i=0;i<44;i++){ const mid=(lo+hi)/2; if(need(mid)>Math.PI*2) hi=mid; else lo=mid; }
+  let k=Math.min(hi,lo===0.1?hi:lo), ring=Rring;
+  /* Whatever the bisection settled on, the result has to fill the frame. When the angles bind
+     before the size cap does — which is what seventeen groups do — the lobes come out smaller
+     than the ceiling and the rosette sits in the middle of the space with a margin all round
+     it. Scaling the ring and the unit by the SAME factor leaves every r/Rring ratio untouched,
+     so the slices still close the circle exactly, and the outermost edge lands on the frame. */
+  const fit=avail/(ring+k*Math.sqrt(most));
+  ring*=fit; k*=fit;
+  const Rfit=ring;
+  // Node radii are derived from this the way the board derives them from its column pitch:
+  // r/sqrt(n) is k whatever the lobe, so the spacing inside every lobe is the same number.
+  COLGAP=Math.max(6,Math.min(22,k*1.3));
+  let a=-Math.PI/2;
+  keys.forEach(key=>{
+    const list=groups[key], r=k*Math.sqrt(list.length), half=slice(r,Rfit)/2;
+    a+=half+GAP/2;
+    const lx=CX+Math.cos(a)*Rfit, ly=cy+Math.sin(a)*Rfit;
+    /* Phyllotaxis inside the disc: the golden angle fills a circle evenly without rings or
+       clumps, it is stable for a given count so a lobe does not reshuffle between redraws,
+       and j=0 lands dead centre — which is what a group of one should look like. */
+    list.forEach((n,j)=>{
+      const rr=r*0.80*Math.sqrt(j/Math.max(1,list.length)), th=j*2.399963229728653;
+      n.hx=lx+Math.cos(th)*rr; n.hy=ly+Math.sin(th)*rr;
+    });
+    SCAF.push({t:'lobe',key,x:lx,y:ly,r,n:list.length,
+               title:phaseTitle(key),col:SECTOR[key]||cv('--ink2')});
+    a+=half+GAP/2;
+  });
 }
 
 function homesRadial(){
@@ -1969,7 +2103,7 @@ function sizeNodes(){
   // The radius is derived from the arc a ring gives one node, which says nothing about a
   // column. In the board a node has COLGAP to itself, and what has to fit inside it is the
   // outermost circle — the agent collar at twice the radius, or the ring at 1.45 times it.
-  if(VIEW==='board') N.forEach(n=>{
+  if(VIEW==='board'||VIEW==='cluster') N.forEach(n=>{
     n.rad=Math.min(n.rad, Math.max(1.05, (COLGAP/2-0.8)/(n.agent?1.55:1.26)));
   });
   N.forEach((n,i)=>{
