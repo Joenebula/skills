@@ -384,6 +384,12 @@
   /* The skill's own frontmatter, quoted. It had no rule of its own, so the label ran straight
      into the sentence — "Its own descriptionUse this skill whenever…". It is also the one
      block on the panel that is not mine, so it is set apart rather than merely labelled. */
+  /* A note about a file nobody can open is a memory, not a description. It sits in the
+     warning's own amber rather than the panel's grey, because the paragraph above it reads
+     as settled fact and is exactly as old as the claim the warning is disputing. */
+  .d-oldnote{margin:11px 0 0;padding:10px 12px;border-radius:8px;font-size:13px;
+    line-height:1.55;color:var(--ink2);background:rgba(242,160,60,.09)}
+  .d-oldnote b{color:var(--amber)}
   .d-own{margin:14px 0 0;padding:11px 13px;border-radius:8px;
     background:rgba(140,170,235,.06);
     font-size:14px;color:var(--ink2);line-height:1.58}
@@ -3658,6 +3664,12 @@ function detail(id){
       <span class="evlab">${EV_LABEL[EVIDENCE[id]]}</span>${EV_NOTE[EVIDENCE[id]]}
       <span class="evbasis">Established from: ${EV_BASIS}</span></div>`:''}
     <div class="d-desc">${n.desc||'<i>No note written for this one yet.</i>'}</div>
+    ${n.ring&&EVIDENCE[id]==='named'&&n.desc ? `<div class="d-oldnote">
+      <b>And that note is the map's, not the skill's.</b> It was written from a reading of the
+      file, and the build has not been able to open that file since — so it describes the
+      skill as it was on the day someone last looked, in the present tense, however long ago
+      that was. Everything above it is the same age. Put the skill in the library and the next
+      build replaces this with the skill's own words.</div>` : ''}
     ${LIVE[id]&&LIVE[id].desc
       ? `<div class="d-own"><span class="lbl">Its own description</span>${esc(LIVE[id].desc)}</div>` : ''}
     ${PLACED[id]
