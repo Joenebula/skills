@@ -1,6 +1,7 @@
 ﻿/*
 !/.gitignore
 !/.gitattributes
+!/docs/
 !/skills/
 !/agents/
 !/CLAUDE.md
