@@ -869,6 +869,23 @@ ANCHOR.flag = isOpen(ANCHOR.id);
 console.assert(N.every(n=>n.tags.length),'untagged skill',N.filter(n=>!n.tags.length).map(n=>n.id));
 const IDX={}; N.forEach((n,i)=>IDX[n.id]=i);
 
+/* The measurement, finally read. scripts/overlap.mjs has been run on every build since the
+   map existed and its result written into the page, and nothing ever looked at it: every
+   overlap drawn on the map, and every pair listed under "Trigger overlap" on a panel, was one
+   somebody had noticed by hand.
+
+   A pair a person thought of and a pair the measurement found are both worth drawing, and
+   neither set contains the other — the hand-noticed ones know that `security` and
+   `security-review` claim the same ground, which no amount of word-counting would say,
+   and the measurement found `responsive-design` against `reviewing-code`, which nobody had.
+   So the two are unioned, and a pair naming a skill that is not on the map is skipped. */
+if(typeof OVERLAP!=='undefined') for(const o of OVERLAP){
+  const a=IDX[o.a], b=IDX[o.b];
+  if(a===undefined||b===undefined) continue;
+  if(!N[a].rel.includes(o.b)) N[a].rel.push(o.b);
+  if(!N[b].rel.includes(o.a)) N[b].rel.push(o.a);
+}
+
 const EDGES=[], pairSeen=new Set();
 N.forEach(n=>{ EDGES.push({a:ANCHOR.id,b:n.id,kind:n.phase==='always'?'bind':'phase'});
   // canonical pair key, not `r > n.id` — that silently dropped any relation declared on
@@ -2931,15 +2948,23 @@ function detail(id){
          library at <code>~/.claude/skills</code>, which is not a git repository — so nothing
          knows when it arrived, and a skill with no date is never tagged new. Commit it to
          <code>github.com/Joenebula/skills</code> and the next build tags it.</div>` : ''}
-    <div class="d-desc">${n.desc||'<i>No note written for this one yet.</i>'}</div>
+    ${n.ring&&EVIDENCE[id]?`<div class="d-ev ${EVIDENCE[id]}">
+      <span class="evlab">${EV_LABEL[EVIDENCE[id]]}</span>${EV_NOTE[EVIDENCE[id]]}
+      <span class="evbasis">Established from: ${EV_BASIS}</span></div>`:''}
+    ${/* The skill's own description first, because it is the skill's. The map's note used to
+          lead and the frontmatter sat underneath it labelled "Its own description", which is
+          the wrong way round: one of them is the thing and the other is a remark about it. */''}
+    <div class="d-desc">${LIVE[id]&&LIVE[id].desc ? esc(LIVE[id].desc)
+      : (n.desc || '<i>Nothing written about this one yet.</i>')}</div>
+    ${LIVE[id]&&LIVE[id].desc&&n.desc
+      ? `<div class="d-own"><span class="lbl">The map's note</span>${n.desc}</div>` : ''}
     ${n.ring&&EVIDENCE[id]==='named'&&n.desc ? `<div class="d-oldnote">
       <b>And that note is the map's, not the skill's.</b> It was written from a reading of the
       file, and the build has not been able to open that file since — so it describes the
       skill as it was on the day someone last looked, in the present tense, however long ago
       that was. Everything above it is the same age. Put the skill in the library and the next
       build replaces this with the skill's own words.</div>` : ''}
-    ${LIVE[id]&&LIVE[id].desc
-      ? `<div class="d-own"><span class="lbl">Its own description</span>${esc(LIVE[id].desc)}</div>` : ''}
+
     ${PLACED[id]
       ? `<div class="d-placed"><b>This column is a guess.</b> Nothing in the build plan places
          this skill, so the map put it in <b>${esc(phaseTitle(PLACED[id].group)[0])}</b> —

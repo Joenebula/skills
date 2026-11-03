@@ -264,11 +264,10 @@ swap('      <div class="locnote">Invented repository — this resolves to nothin
 // Every open panel now states how well its subject is established, before the description.
 // Without it the panel reads with the same confidence whether the file was opened or the
 // name was lifted out of a table.
-swap(`    <div class="d-desc">\${n.desc||'<i>No note written for this one yet.</i>'}</div>`,
-`    \${n.ring&&EVIDENCE[id]?\`<div class="d-ev \${EVIDENCE[id]}">
-      <span class="evlab">\${EV_LABEL[EVIDENCE[id]]}</span>\${EV_NOTE[EVIDENCE[id]]}
-      <span class="evbasis">Established from: \${EV_BASIS}</span></div>\`:''}
-    <div class="d-desc">\${n.desc||'<i>No note written for this one yet.</i>'}</div>`);
+/* The evidence block used to be injected here, ahead of the description. It is markup and it
+   now lives in the shell with the rest of the panel — one less literal needle to go stale,
+   and one less place where what the panel looks like is decided somewhere other than the
+   file that draws it. */
 swap('<button class="loccopy" data-loc="1">Copy link</button>',
      '<button class="loccopy" data-loc="1">Copy path</button>');
 
