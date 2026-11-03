@@ -251,7 +251,18 @@ swap('<button class="loccopy" data-loc="1">Copy link</button>',
    pushed to github.com/Joenebula/skills and fetched into SKILLS_REPO, its files are read
    directly and `named` should stay at zero. If it climbs, a document is naming something the
    library does not have. */
-const ACCOUNT_LIB = process.env.HOME ? path.join(process.env.HOME,'.claude/skills') : null;
+/* The account library is a SECOND library, and it exists on exactly one machine. Deriving it
+   from $HOME meant every machine that ran this build offered its own ~/.claude/skills in its
+   place — and a cloud container has one, holding the skills of the session doing the
+   building. The map duly reported session-start-hook as a skill in the library on the
+   strength of a folder that belonged to the builder, not to the library.
+
+   Same mistake as reading map/restore-skills: a path that happens to exist where you looked
+   is not the thing you were looking for. So it is named explicitly or not read at all, and
+   the build says which — on the machine that has one, set ACCOUNT_LIB to its path; anywhere
+   else the honest answer is that the account library was out of reach, which is what the
+   `named` grade already means. */
+const ACCOUNT_LIB = process.env.ACCOUNT_LIB || null;
 const SCAN = path.join(ROOT,'map/scan.json');
 const seen = new Set();
 /* map/restore-skills/skills is NOT one of these, and used to be. It is a backup copy kept
@@ -681,6 +692,7 @@ if(partial.length) console.log(`            incomplete, not checked for removals
 // NEWLY is graded seen in its own block, so the tally has to count it or the console reports
 // one fewer skill than the map draws
 console.log(`  evidence  ${(tally.seen||0)+NEWLY.length} seen on disk · ${tally.loaded||0} loaded by Claude Code · ${tally.named||0} named only`);
+console.log(`            account library ${ACCOUNT_LIB ? 'read from '+ACCOUNT_LIB : 'NOT read — set ACCOUNT_LIB to include it'}`);
 console.log(`            read from ${libStamp ? 'the library at '+libStamp : 'this checkout only — SKILLS_REPO not found'}`);
 if (noClock.length) console.log(
   `            no repo date, so never tagged new: ${noClock.join(', ')}\n`+
