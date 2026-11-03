@@ -10,75 +10,148 @@ const PHASES={anchor:'anchor',always:'Loaded every session',
  F:'Build step 6 · ads',G:'Build step 7 · analytics',H:'Build step 8 · hardening',
  S2:'After launch',never:'Never use',unmapped:'Not in the build plan',
  builtin:'Built into Claude Code'};
-const S=(id,ring,phase,src,w,desc,rel=[])=>({id,ring,phase,src,w,status:phase==='never'?'never':'present',desc,rel});
-const SKILLS=[
- // ---- workspace library: OneDrive\Design2\Web\.claude\skills (31 folders, confirmed)
- S('engineering-standards','core','always','workspace',1,'Always-on per <code>CLAUDE.md</code>, and it exists. Folder confirmed in the workspace library.'),
- S('debugging','core','always','workspace',1,'Always-on per <code>CLAUDE.md</code>, and it exists.'),
- S('reviewing-code','core','always','workspace',1,'Always-on per <code>CLAUDE.md</code>, and it exists. Overlaps the built-in <code>simplify</code>.',['simplify']),
- S('refactoring','core','always','workspace',1,'<b>The two documents disagree.</b> The build plan lists it as always-on; <code>CLAUDE.md</code> names only three and this is not one of them. The skill itself is fine — the docs are not.'),
- S('project-setup','phasemap','A','workspace',1,'Build step 1. The build plan calls it an exact stack match for Next.js + Supabase + Vercel.'),
- S('infrastructure','phasemap','A','workspace',1,'Build step 1.'),
- S('data-modelling','phasemap','B','workspace',1,'Build step 2. Where RLS-first schema design should live.'),
- S('privacy-and-compliance','phasemap','B','workspace',1,'The build plan assigns it to <b>build steps 2 and 7</b>.'),
- S('auth-and-accounts','phasemap','C','workspace',1,'Build step 3 — Supabase Auth via Google.'),
- S('data-grids','phasemap','C','workspace',1,'Build step 3 admin CRUD.'),
- S('forms-and-input','phasemap','C','workspace',1,'Build step 3 admin CRUD.'),
- S('cms','phasemap','C','workspace',1,'Build step 3.'),
- S('design-system','phasemap','C','workspace',1,'Build step 3. Overlaps <code>mydesignskill</code>, which carries the house style.',['mydesignskill']),
- S('accessibility','phasemap','C','workspace',1,'<b>Three skills now carry WCAG 2.2 material.</b> This one, plus <code>public-service-website</code> and <code>bootstrap5-migration</code>, which both ship a11y reference files. The build plan assigns it to <b>build steps 3, 4 and 8</b>.',['public-service-website','bootstrap5-migration']),
- S('responsive-design','phasemap','C','workspace',1,'The build plan assigns it to <b>build steps 3 and 4</b>. Overlaps <code>bootstrap5-migration</code>&rsquo;s grid and breakpoint work.',['bootstrap5-migration']),
- S('seo','phasemap','D','workspace',1,'Build step 4, and the build plan flags it load-bearing — the business model is ranking for &ldquo;[genre] in [city]&rdquo;. <b>It exists.</b> Worth checking it actually enforces non-negotiable #5, server-render anything that needs to rank.'),
- S('performance','phasemap','D','workspace',1,'The build plan assigns it to <b>build steps 4 and 8</b>.'),
- S('api-design','phasemap','D','workspace',1,'The build plan assigns it to <b>build steps 4 and 6</b>.'),
- S('integrations','phasemap','E','workspace',1,'The build plan calls it &ldquo;the whole step&rdquo; for build step 5 — Skiddle, Eventbrite, Ticketmaster. Exists. The step is blocked on affiliate approval, not on this.'),
- S('background-jobs','phasemap','E','workspace',1,'Build step 5.'),
- S('observability','phasemap','E','workspace',1,'Build step 5 — Sentry is in the stack.'),
- S('analytics-dashboards','phasemap','F','workspace',1,'The build plan assigns it to <b>build steps 6 and 7</b>. Build step 7 is analytics.'),
- S('preflight','phasemap','H','workspace',1,'Build step 8.'),
- S('regression-testing','phasemap','H','workspace',1,'Build step 8.'),
- S('releasing','phasemap','H','workspace',1,'Build step 8.'),
- S('security','phasemap','H','workspace',1,'The build plan records this as deleted from the working tree. A <code>security/</code> folder is present in the library listing — but gotcha G-001 says its <code>SKILL.md</code> vanished twice while the folder remained. <b>Folder present does not mean skill present.</b> One <code>Test-Path</code> settles it.',['security-review','ecommerce-security-audit']),
- S('email-and-notifications','phasemap','S2','workspace',1,'After launch.'),
- S('internationalization','phasemap','S2','workspace',1,'After launch — the regions and currency franchise hook.'),
- S('ecommerce-security-audit','phasemap','H','account',5,'The heaviest skill you own — 20 reference files, a checklist, 2 scan scripts, 2 report templates. <b>The map said workspace library; the file is in the account-synced one.</b> Corrected after checking disk. The build plan uses it for Build step 8 item 7 only, so it is doing less than it could.',['security','public-service-website','security-review']),
- S('webaudio-plugin-builder','phasemap','never','account',3,'The only skill the build plan marks <b>never use</b> for VibeHQ — correctly parked. <b>The map said workspace library; the file is in the account-synced one.</b> Corrected after checking disk.'),
- S('security-route-auditor','phasemap','H','agent',1,'<b>An agent, and the only one the build plan names.</b> It says this &ldquo;still covers the route layer&rdquo; for security. There are <b>five</b> agents in the library — the other four appear in no document at all.',['security','security-review','ecommerce-security-audit']),
- S('accessibility-auditor','unmapped','unmapped','agent',1,'<b>An agent, and the build plan does not mention it.</b> Name only — its file has not been read. Overlaps the <code>accessibility</code> skill and the a11y material in <code>public-service-website</code>.',['accessibility']),
- S('design-system-auditor','unmapped','unmapped','agent',1,'<b>An agent, and the build plan does not mention it.</b> Name only. Overlaps <code>design-system</code> and <code>mydesignskill</code>.',['design-system','mydesignskill']),
- S('feature-completeness-auditor','unmapped','unmapped','agent',1,'<b>An agent, and the build plan does not mention it.</b> Name only. Sounds like Build step 8 work — <code>preflight</code> territory.',['preflight']),
- S('regression-auditor','unmapped','unmapped','agent',1,'<b>An agent, and the build plan does not mention it.</b> Name only. Overlaps <code>regression-testing</code>.',['regression-testing']),
- S('ask-dont-guess','unmapped','unmapped','workspace',1,'Not in vibehq&rsquo;s <code>CLAUDE.md</code> or the build plan — but gotcha G-001 records it as <b>130 lines, 54 inbound links, cited by law number from the workspace <code>CLAUDE.md</code></b>. Heavily mapped, just not from this repo. Its <code>SKILL.md</code> has vanished from disk twice.',['critical-thinking-partner']),
- // ---- account-synced library
- S('bootstrap5-migration','unmapped','unmapped','account',4,'<b>Routing tightened 6 Aug.</b> Rebuilds a static site on Bootstrap 5 — responsive, WCAG 2.2 AA, modern JS. <b>The one skill that routes away cleanly</b>: it sends civic work to <code>public-service-website</code>. The model the other design skills should copy.',['public-service-website','accessibility','responsive-design','mydesignskill']),
- S('public-service-website','unmapped','unmapped','account',4,'Civic, council, charity and campaigning sites — UX research, IA, wireframes, tokens, a11y annotations, content design, handoff. <b>Rewritten 6 Aug</b>: owns WCAG 2.2 and the accessibility layer, and defers Bootstrap 5 mechanics to <code>bootstrap5-migration</code>.',['bootstrap5-migration','accessibility','ecommerce-security-audit']),
- S('mydesignskill','unmapped','unmapped','account',3,'The house style: no outline borders on containers, Material typefaces only, plus five annotated reference designs. <b>Rewritten 6 Aug</b> to state its precedence over <code>frontend-design</code> for anything marketing-facing, since it is the one carrying the house constraints.',['frontend-design','design-system','bootstrap5-migration']),
- S('frontend-design','unmapped','unmapped','account',2,'<b>Narrowed 6 Aug.</b> Scoped to application surfaces — components, screens, state, interaction — and it now routes marketing pages to <code>mydesignskill</code>, artifacts to <code>artifact-design</code>, civic work to <code>public-service-website</code> and Bootstrap 5 rebuilds to <code>bootstrap5-migration</code>.',['mydesignskill','bootstrap5-migration','public-service-website','artifact-design']),
- S('critical-thinking-partner','unmapped','unmapped','account',1,'<b>Narrowed 6 Aug</b> to fire only when critique is explicitly asked for, rather than on any analysis or review task. Its own note still says a disposition belongs in CLAUDE.md or a Style — that move is still open, but it no longer fires by luck.',['ask-dont-guess']),
- S('knowledge-system-setup','unmapped','unmapped','account',2,'<b>Scoped 6 Aug.</b> It now excludes itself from any project that already keeps ledgers, so it no longer competes with <code>build-ledger.md</code>, <code>decisions.md</code> and <code>gotchas.md</code>.',['init']),
- S('skill-creator','unmapped','unmapped','account',3,'Create, edit, optimise and eval skills, with variance analysis on triggering accuracy. <b>The tool for every routing fix on this map.</b>'),
- S('session-start-hook','unmapped','unmapped','account',1,'<b>Fixed 6 Aug.</b> The frontmatter declared <code>name: startup-hook-skill</code> against a <code>session-start-hook/</code> directory, and <code>manifest.json</code> listed neither. Both corrected; the manifest went from 14 skills to 15.',['update-config']),
- S('morning','unmapped','unmapped','account',2,'Morning brief as a styled HTML artifact, optionally on a weekday schedule.'),
- S('pdf','unmapped','unmapped','account',4,'PDF read, merge, split, rotate, watermark, forms, encryption, OCR.'),
- S('docx','unmapped','unmapped','account',3,'Word documents and .dotx templates — tracked changes, comments, find-and-replace.'),
- S('pptx','unmapped','unmapped','account',3,'Slide decks, .potx templates, layouts, speaker notes.'),
- S('xlsx','unmapped','unmapped','account',2,'Spreadsheets — formulas, charts, cleaning messy tabular data.'),
- // ---- built into Claude Code
- S('security-review','builtin','builtin','built-in',2,'Reviews pending changes on the branch for security issues. <b>Overlaps the workspace <code>security</code> skill and <code>ecommerce-security-audit</code></b> — three things now claim security, and nothing says which owns what.',['security','ecommerce-security-audit']),
- S('simplify','builtin','builtin','built-in',1,'Reviews changed code for reuse, simplification and efficiency; explicitly does not hunt bugs. <b>Overlaps <code>reviewing-code</code></b>, which is always-on.',['reviewing-code','refactoring']),
- S('init','builtin','builtin','built-in',1,'Generates a <code>CLAUDE.md</code> from the codebase, which would destroy the hand-maintained one at the centre of this map. <b>Guarded</b> — CLAUDE.md now says never to regenerate it, per D-009.',['knowledge-system-setup']),
- S('dataviz','builtin','builtin','built-in',2,'Read before writing any chart, dashboard or stat tile. Form heuristic, colour formula with a validator, mark specs.',['artifact-design']),
- S('artifact-design','builtin','builtin','built-in',2,'Design guidance for Artifacts. Part of the five-way design collision — it fires on the same intent as <code>frontend-design</code> and <code>mydesignskill</code>. <b>A routing table resolving all five is drafted</b> in <code>docs/skills-map/design-routing.md</code>, ready to apply.',['frontend-design','mydesignskill','artifact-diagramming']),
- S('artifact-diagramming','builtin','builtin','built-in',1,'When a diagram earns its place, and the inline-SVG mechanics that stay legible in both themes.',['artifact-design','dataviz']),
- S('artifact-capabilities','builtin','builtin','built-in',1,'Runtime capabilities a published Artifact can be granted — live data, shared state, self-republishing.',['artifact-design']),
- S('claude-api','builtin','builtin','built-in',2,'Model ids, pricing, params, streaming, tool use, MCP, caching, migration.'),
- S('run','builtin','builtin','built-in',1,'Launches and drives the project app to see a change working — the real app, not just tests.',['preflight']),
- S('update-config','builtin','builtin','built-in',1,'Configures the harness via settings.json — hooks, permissions, env vars.',['session-start-hook']),
- S('keybindings-help','builtin','builtin','built-in',1,'Customise keyboard shortcuts and chords.'),
- S('fewer-permission-prompts','builtin','builtin','built-in',1,'Scans transcripts and writes a prioritised allowlist into project settings.',['update-config']),
- S('loop','builtin','builtin','built-in',1,'Runs a prompt or slash command on a recurring interval, or self-paced.'),
- S('code-review','builtin','builtin','built-in',2,'Reviews the diff for correctness bugs and cleanups at a chosen effort level, and can post them as PR comments or apply them. <b>This was missing from the map entirely</b> until the node list was checked against the skills actually loaded. It overlaps <code>reviewing-code</code>, which is always-on, and <code>simplify</code>, which does the quality half of the same job.',['reviewing-code','simplify','security-review'])
-];
+/* ---- the map's own notes about a skill --------------------------------------------------
+   Not the skill's description — that is read from its frontmatter at build time and shown
+   separately. This is commentary: what was noticed, what it collides with, what was decided.
+   It is written by hand because there is no way to derive it.
+
+   Keyed by id, and a key whose skill is no longer in the library is simply never read. That
+   is the discipline the rebuild rests on: editorial material attaches to the library, it does
+   not assert that anything exists. */
+const NOTES={
+ "engineering-standards":"Always-on per <code>CLAUDE.md</code>, and it exists. Folder confirmed in the workspace library.",
+ "debugging":"Always-on per <code>CLAUDE.md</code>, and it exists.",
+ "reviewing-code":"Always-on per <code>CLAUDE.md</code>, and it exists. Overlaps the built-in <code>simplify</code>.",
+ "refactoring":"<b>The two documents disagree.</b> The build plan lists it as always-on; <code>CLAUDE.md</code> names only three and this is not one of them. The skill itself is fine — the docs are not.",
+ "project-setup":"Build step 1. The build plan calls it an exact stack match for Next.js + Supabase + Vercel.",
+ "infrastructure":"Build step 1.",
+ "data-modelling":"Build step 2. Where RLS-first schema design should live.",
+ "privacy-and-compliance":"The build plan assigns it to <b>build steps 2 and 7</b>.",
+ "auth-and-accounts":"Build step 3 — Supabase Auth via Google.",
+ "data-grids":"Build step 3 admin CRUD.",
+ "forms-and-input":"Build step 3 admin CRUD.",
+ "cms":"Build step 3.",
+ "design-system":"Build step 3. Overlaps <code>mydesignskill</code>, which carries the house style.",
+ "accessibility":"<b>Three skills now carry WCAG 2.2 material.</b> This one, plus <code>public-service-website</code> and <code>bootstrap5-migration</code>, which both ship a11y reference files. The build plan assigns it to <b>build steps 3, 4 and 8</b>.",
+ "responsive-design":"The build plan assigns it to <b>build steps 3 and 4</b>. Overlaps <code>bootstrap5-migration</code>&rsquo;s grid and breakpoint work.",
+ "seo":"Build step 4, and the build plan flags it load-bearing — the business model is ranking for &ldquo;[genre] in [city]&rdquo;. <b>It exists.</b> Worth checking it actually enforces non-negotiable #5, server-render anything that needs to rank.",
+ "performance":"The build plan assigns it to <b>build steps 4 and 8</b>.",
+ "api-design":"The build plan assigns it to <b>build steps 4 and 6</b>.",
+ "integrations":"The build plan calls it &ldquo;the whole step&rdquo; for build step 5 — Skiddle, Eventbrite, Ticketmaster. Exists. The step is blocked on affiliate approval, not on this.",
+ "background-jobs":"Build step 5.",
+ "observability":"Build step 5 — Sentry is in the stack.",
+ "analytics-dashboards":"The build plan assigns it to <b>build steps 6 and 7</b>. Build step 7 is analytics.",
+ "preflight":"Build step 8.",
+ "regression-testing":"Build step 8.",
+ "releasing":"Build step 8.",
+ "security":"The build plan records this as deleted from the working tree. A <code>security/</code> folder is present in the library listing — but gotcha G-001 says its <code>SKILL.md</code> vanished twice while the folder remained. <b>Folder present does not mean skill present.</b> One <code>Test-Path</code> settles it.",
+ "email-and-notifications":"After launch.",
+ "internationalization":"After launch — the regions and currency franchise hook.",
+ "ecommerce-security-audit":"The heaviest skill you own — 20 reference files, a checklist, 2 scan scripts, 2 report templates. <b>The map said workspace library; the file is in the account-synced one.</b> Corrected after checking disk. The build plan uses it for Build step 8 item 7 only, so it is doing less than it could.",
+ "webaudio-plugin-builder":"The only skill the build plan marks <b>never use</b> for VibeHQ — correctly parked. <b>The map said workspace library; the file is in the account-synced one.</b> Corrected after checking disk.",
+ "security-route-auditor":"<b>An agent, and the only one the build plan names.</b> It says this &ldquo;still covers the route layer&rdquo; for security. There are <b>five</b> agents in the library — the other four appear in no document at all.",
+ "accessibility-auditor":"<b>An agent, and the build plan does not mention it.</b> Name only — its file has not been read. Overlaps the <code>accessibility</code> skill and the a11y material in <code>public-service-website</code>.",
+ "design-system-auditor":"<b>An agent, and the build plan does not mention it.</b> Name only. Overlaps <code>design-system</code> and <code>mydesignskill</code>.",
+ "feature-completeness-auditor":"<b>An agent, and the build plan does not mention it.</b> Name only. Sounds like Build step 8 work — <code>preflight</code> territory.",
+ "regression-auditor":"<b>An agent, and the build plan does not mention it.</b> Name only. Overlaps <code>regression-testing</code>.",
+ "ask-dont-guess":"Not in vibehq&rsquo;s <code>CLAUDE.md</code> or the build plan — but gotcha G-001 records it as <b>130 lines, 54 inbound links, cited by law number from the workspace <code>CLAUDE.md</code></b>. Heavily mapped, just not from this repo. Its <code>SKILL.md</code> has vanished from disk twice.",
+ "bootstrap5-migration":"<b>Routing tightened 6 Aug.</b> Rebuilds a static site on Bootstrap 5 — responsive, WCAG 2.2 AA, modern JS. <b>The one skill that routes away cleanly</b>: it sends civic work to <code>public-service-website</code>. The model the other design skills should copy.",
+ "public-service-website":"Civic, council, charity and campaigning sites — UX research, IA, wireframes, tokens, a11y annotations, content design, handoff. <b>Rewritten 6 Aug</b>: owns WCAG 2.2 and the accessibility layer, and defers Bootstrap 5 mechanics to <code>bootstrap5-migration</code>.",
+ "mydesignskill":"The house style: no outline borders on containers, Material typefaces only, plus five annotated reference designs. <b>Rewritten 6 Aug</b> to state its precedence over <code>frontend-design</code> for anything marketing-facing, since it is the one carrying the house constraints.",
+ "frontend-design":"<b>Narrowed 6 Aug.</b> Scoped to application surfaces — components, screens, state, interaction — and it now routes marketing pages to <code>mydesignskill</code>, artifacts to <code>artifact-design</code>, civic work to <code>public-service-website</code> and Bootstrap 5 rebuilds to <code>bootstrap5-migration</code>.",
+ "critical-thinking-partner":"<b>Narrowed 6 Aug</b> to fire only when critique is explicitly asked for, rather than on any analysis or review task. Its own note still says a disposition belongs in CLAUDE.md or a Style — that move is still open, but it no longer fires by luck.",
+ "knowledge-system-setup":"<b>Scoped 6 Aug.</b> It now excludes itself from any project that already keeps ledgers, so it no longer competes with <code>build-ledger.md</code>, <code>decisions.md</code> and <code>gotchas.md</code>.",
+ "skill-creator":"Create, edit, optimise and eval skills, with variance analysis on triggering accuracy. <b>The tool for every routing fix on this map.</b>",
+ "session-start-hook":"<b>Fixed 6 Aug.</b> The frontmatter declared <code>name: startup-hook-skill</code> against a <code>session-start-hook/</code> directory, and <code>manifest.json</code> listed neither. Both corrected; the manifest went from 14 skills to 15.",
+ "morning":"Morning brief as a styled HTML artifact, optionally on a weekday schedule.",
+ "pdf":"PDF read, merge, split, rotate, watermark, forms, encryption, OCR.",
+ "docx":"Word documents and .dotx templates — tracked changes, comments, find-and-replace.",
+ "pptx":"Slide decks, .potx templates, layouts, speaker notes.",
+ "xlsx":"Spreadsheets — formulas, charts, cleaning messy tabular data.",
+ "security-review":"Reviews pending changes on the branch for security issues. <b>Overlaps the workspace <code>security</code> skill and <code>ecommerce-security-audit</code></b> — three things now claim security, and nothing says which owns what.",
+ "simplify":"Reviews changed code for reuse, simplification and efficiency; explicitly does not hunt bugs. <b>Overlaps <code>reviewing-code</code></b>, which is always-on.",
+ "init":"Generates a <code>CLAUDE.md</code> from the codebase, which would destroy the hand-maintained one at the centre of this map. <b>Guarded</b> — CLAUDE.md now says never to regenerate it, per D-009.",
+ "dataviz":"Read before writing any chart, dashboard or stat tile. Form heuristic, colour formula with a validator, mark specs.",
+ "artifact-design":"Design guidance for Artifacts. Part of the five-way design collision — it fires on the same intent as <code>frontend-design</code> and <code>mydesignskill</code>. <b>A routing table resolving all five is drafted</b> in <code>docs/skills-map/design-routing.md</code>, ready to apply.",
+ "artifact-diagramming":"When a diagram earns its place, and the inline-SVG mechanics that stay legible in both themes.",
+ "artifact-capabilities":"Runtime capabilities a published Artifact can be granted — live data, shared state, self-republishing.",
+ "claude-api":"Model ids, pricing, params, streaming, tool use, MCP, caching, migration.",
+ "run":"Launches and drives the project app to see a change working — the real app, not just tests.",
+ "update-config":"Configures the harness via settings.json — hooks, permissions, env vars.",
+ "keybindings-help":"Customise keyboard shortcuts and chords.",
+ "fewer-permission-prompts":"Scans transcripts and writes a prioritised allowlist into project settings.",
+ "loop":"Runs a prompt or slash command on a recurring interval, or self-paced.",
+ "code-review":"Reviews the diff for correctness bugs and cleanups at a chosen effort level, and can post them as PR comments or apply them. <b>This was missing from the map entirely</b> until the node list was checked against the skills actually loaded. It overlaps <code>reviewing-code</code>, which is always-on, and <code>simplify</code>, which does the quality half of the same job."
+};
+
+/* Overlaps noticed by hand. scripts/overlap.mjs measures overlap from the descriptions and
+   finds pairs nobody thought of; these are the ones somebody thought about. The two are
+   unioned. Same rule as NOTES: a link to a skill that is gone is dropped. */
+const LINKS={
+ "reviewing-code":["simplify"],
+ "design-system":["mydesignskill"],
+ "accessibility":["public-service-website", "bootstrap5-migration"],
+ "responsive-design":["bootstrap5-migration"],
+ "security":["security-review", "ecommerce-security-audit"],
+ "ecommerce-security-audit":["security", "public-service-website", "security-review"],
+ "security-route-auditor":["security", "security-review", "ecommerce-security-audit"],
+ "accessibility-auditor":["accessibility"],
+ "design-system-auditor":["design-system", "mydesignskill"],
+ "feature-completeness-auditor":["preflight"],
+ "regression-auditor":["regression-testing"],
+ "ask-dont-guess":["critical-thinking-partner"],
+ "bootstrap5-migration":["public-service-website", "accessibility", "responsive-design", "mydesignskill"],
+ "public-service-website":["bootstrap5-migration", "accessibility", "ecommerce-security-audit"],
+ "mydesignskill":["frontend-design", "design-system", "bootstrap5-migration"],
+ "frontend-design":["mydesignskill", "bootstrap5-migration", "public-service-website", "artifact-design"],
+ "critical-thinking-partner":["ask-dont-guess"],
+ "knowledge-system-setup":["init"],
+ "session-start-hook":["update-config"],
+ "security-review":["security", "ecommerce-security-audit"],
+ "simplify":["reviewing-code", "refactoring"],
+ "init":["knowledge-system-setup"],
+ "dataviz":["artifact-design"],
+ "artifact-design":["frontend-design", "mydesignskill", "artifact-diagramming"],
+ "artifact-diagramming":["artifact-design", "dataviz"],
+ "artifact-capabilities":["artifact-design"],
+ "run":["preflight"],
+ "update-config":["session-start-hook"],
+ "fewer-permission-prompts":["update-config"],
+ "code-review":["reviewing-code", "simplify", "security-review"]
+};
+
+/* The built-ins Claude Code provides. They are real and they have no file, so their group is
+   the one thing about them that has to be written down. */
+const BUILTIN_GROUP={
+ "security-review":"quality",
+ "simplify":"quality",
+ "init":"setup",
+ "dataviz":"design",
+ "artifact-design":"design",
+ "artifact-diagramming":"design",
+ "artifact-capabilities":"design",
+ "claude-api":"setup",
+ "run":"setup",
+ "update-config":"setup",
+ "keybindings-help":"setup",
+ "fewer-permission-prompts":"setup",
+ "loop":"setup",
+ "code-review":"quality"
+};
+
+/* ---- the node list ----------------------------------------------------------------------
+   GENERATED by scripts/build-map.mjs from the library on disk. Do not write entries here;
+   the next build overwrites them — and the build refuses outright if this placeholder has
+   been edited, rather than quietly discarding what somebody typed.
+
+   This was a hand-written list of 63 skills and it was the spine of the map: N was built from
+   it and the library was checked against it. So the library could not add to the map, only
+   disagree with it, and each disagreement became a node that existed nowhere else, carrying a
+   description written on the day somebody last looked. See docs/map-rebuild-spec.md. */
+const SKILLS=[];   /* @generated */
+const GROUP={};    /* @generated */
+SKILLS.forEach(s=>{ s.desc=NOTES[s.id]||''; s.rel=LINKS[s.id]||[]; });
+
 const ANCHOR={id:'CLAUDE.md',ring:null,phase:'anchor',status:'present',src:'repo root',w:6,rel:[],
  desc:'<b>The skills library is pushed — <code>github.com/Joenebula/skills</code>, at <code>df2b3f2</code>.</b> 31 skills, 5 agents, the workspace <code>CLAUDE.md</code> and 16 commits of history. That closes G-008: the one directory with a proven loss record (G-001, twice) had the weakest backup in the workspace, and now has a copy that is not on the machine.<br><br>The VibeHQ project agreement, loaded every session. It names three always-on skills, points at four ledgers, and defers the step→skill map to <code>BUILD-PLAN.md</code>, section 10 — the build plan.<br><br><b>Every skill it reaches for has been opened.</b> Not listed — opened. This build reads each <code>SKILL.md</code> in the library and takes its description from the file, so no node here is standing on a document\'s word. The unverified count went from 34 to 0.<br><br><b>A folder is still not a skill</b>, which is the whole reason for that. G-001 records <code>SKILL.md</code> files vanishing while their folders remained, and this map twice used a listing as evidence anyway — once calling <code>security</code> missing when it is 63 lines, once calling <code>ask-dont-guess</code> unmapped when it has 54 inbound links. Both recorded as G-009.<br><br>All 15 items raised against this library are settled. What the map shows now is what is on the machine, and when each thing arrived.'};
 
@@ -388,38 +461,6 @@ const SECTOR={never:'#5E6B8C',G:'#8FD9A8',A:'#5EE0E8',B:'#6BB6F5',C:'#A78BFA',D:
    is used, because it is the plan's and not mine to overrule; where it is silent, the group
    is the job the skills actually do. Every one of the 63 is in exactly one column and there
    is no bucket — build-map.mjs fails the build if that stops being true. */
-const GROUP={
-  // the build plan's own assignments, kept as it made them
-  'engineering-standards':'always','debugging':'always','reviewing-code':'always',
-  'refactoring':'always',
-  'project-setup':'A','infrastructure':'A',
-  'data-modelling':'B','privacy-and-compliance':'B',
-  'auth-and-accounts':'C','data-grids':'C','forms-and-input':'C','cms':'C',
-  'design-system':'C','accessibility':'C','responsive-design':'C',
-  'seo':'D','performance':'D','api-design':'D',
-  'integrations':'E','background-jobs':'E','observability':'E',
-  'analytics-dashboards':'F',
-  'preflight':'H','regression-testing':'H','releasing':'H','security':'H',
-  'ecommerce-security-audit':'H','security-route-auditor':'H',
-  'email-and-notifications':'S2','internationalization':'S2',
-  'webaudio-plugin-builder':'never',
-
-  // the design collision, together in one place for the first time — this is the group the
-  // routing work in docs/skills-map/design-routing.md is about, and it is easier to argue
-  // about five skills claiming one job when they are side by side
-  'frontend-design':'design','mydesignskill':'design','bootstrap5-migration':'design',
-  'public-service-website':'design','artifact-design':'design',
-  'artifact-diagramming':'design','artifact-capabilities':'design','dataviz':'design',
-
-  'pdf':'docs','docx':'docs','pptx':'docs','xlsx':'docs',
-  'security-review':'quality','simplify':'quality','code-review':'quality',
-  'ask-dont-guess':'style','critical-thinking-partner':'style',
-  'accessibility-auditor':'audit','design-system-auditor':'audit',
-  'feature-completeness-auditor':'audit','regression-auditor':'audit',
-  'skill-creator':'setup','knowledge-system-setup':'setup','session-start-hook':'setup',
-  'update-config':'setup','keybindings-help':'setup','fewer-permission-prompts':'setup',
-  'loop':'setup','init':'setup','run':'setup','claude-api':'setup','morning':'setup'
-};
 const GROUP_ORDER=['always','A','B','C','D','E','F','H','S2',
                    'design','quality','audit','style','docs','setup','never'];
 const GROUP_NAME={

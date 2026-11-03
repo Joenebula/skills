@@ -54,6 +54,72 @@ const body  = read(DATA);
 const shell = slice(read(SHELL),'shell.html');
 const map   = {body};
 
+/* ---- the node list, generated from the library ------------------------------------------
+   The spine of the map used to be a hand-written array of 63 skills in skills-data.js. N was
+   built from it and the library was checked against it, which is backwards: the library could
+   not add to the map, only disagree with it, and every disagreement became a node that
+   existed on the map and nowhere else.
+
+   It is generated here instead, before anything downstream parses it, so a node is a file or
+   it is not a node. The list is spliced into the data block rather than threaded through the
+   seven places that read it, because those seven all want the same shape and the shape has
+   not changed — only where it comes from.
+
+   Three things cannot be derived and are read rather than guessed: the group comes from each
+   skill's own frontmatter, the built-ins' groups from BUILTIN_GROUP (they have no file), and
+   the notes and hand-noticed links from NOTES and LINKS, attached in the data block itself. */
+const BUILD_PLAN = ['always','A','B','C','D','E','F','G','H','S2','never'];
+function libraryNodes(){
+  const rows=[];
+  const add=(id,group,src,bytes)=>{
+    const ring  = src==='built-in'        ? 'builtin'
+                : group==='always'        ? 'core'
+                : BUILD_PLAN.includes(group) ? 'phasemap' : 'unmapped';
+    const phase = src==='built-in'        ? 'builtin'
+                : BUILD_PLAN.includes(group) ? group : 'unmapped';
+    // weight nudges the drawn size. It was a hand-picked 1-6; a skill's own length is a
+    // fact about it and needs nobody to remember to update it.
+    const w = Math.max(1, Math.min(6, 1 + Math.floor(bytes/9000)));
+    rows.push({id,group,ring,phase,src,w});
+  };
+  const sdir=path.join(SKILLS_REPO,'skills');
+  if (fs.existsSync(sdir)) for (const d of fs.readdirSync(sdir).sort()){
+    const f=path.join(sdir,d,'SKILL.md');
+    if (!fs.existsSync(f)) continue;          // a folder is not a skill — G-001
+    add(d,(fmOf(f)||{}).group||'setup','workspace',fs.statSync(f).size);
+  }
+  const adir=path.join(SKILLS_REPO,'agents');
+  if (fs.existsSync(adir)) for (const a of fs.readdirSync(adir).sort()){
+    if (!a.endsWith('.md')) continue;
+    const f=path.join(adir,a);
+    add(a.replace(/\.md$/,''),(fmOf(f)||{}).group||'audit','agent',fs.statSync(f).size);
+  }
+  const bg=/const BUILTIN_GROUP=\{([\s\S]*?)\n\};/.exec(map.body);
+  if (bg) for (const m of bg[1].matchAll(/"([a-z0-9-]+)"\s*:\s*"([A-Za-z0-9]+)"/g))
+    add(m[1],m[2],'built-in',0);
+  return rows;
+}
+{
+  const rows=libraryNodes();
+  if (!rows.length) throw new Error('no skills found in '+SKILLS_REPO+' — refusing to build an empty map');
+  const list = 'const S=(id,ring,phase,src,w,desc,rel=[])=>'
+    + '({id,ring,phase,src,w,status:phase===\'never\'?\'never\':\'present\',desc,rel});\n'
+    + 'const SKILLS=[\n'
+    + rows.map(n=>` S('${n.id}','${n.ring}','${n.phase}','${n.src}',${n.w},'')`).join(',\n')
+    + '\n];';
+  const groups = 'const GROUP={'
+    + rows.map(n=>`'${n.id}':'${n.group}'`).join(',') + '};';
+  if (!map.body.includes("const SKILLS=[];   /* @generated */"))
+    throw new Error('the generated-list placeholder is missing from skills-data.js');
+  map.body = map.body
+    .replace("const SKILLS=[];   /* @generated */", list)
+    .replace("const GROUP={};    /* @generated */", groups);
+  console.log(`  nodes     ${rows.length} generated from the library `
+    + `(${rows.filter(r=>r.src==='workspace').length} skills, `
+    + `${rows.filter(r=>r.src==='agent').length} agents, `
+    + `${rows.filter(r=>r.src==='built-in').length} built in)`);
+}
+
 // the real data, on the better shell
 let out = shell.head + map.body + shell.tail;
 
