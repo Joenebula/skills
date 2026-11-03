@@ -2783,6 +2783,21 @@ function drawFindings(){
     '<button class="copy f-all" id="f-copyall">Copy '+
       (findFilter==='open'&&open.length!==all.length ? 'the '+rows.length+' open' : 'all '+rows.length)+
       ', to discuss</button>'+
+    ((typeof DRIFT!=='undefined'&&DRIFT.length&&findFilter!=='open') ? `<div class="f-item">
+      <div class="f-top"><span class="n">the notes outlived the skills</span>
+        <span class="f-state open">measured</span></div>
+      <div class="f-body"><b>${DRIFT.length} skills are written about here that the library
+        does not contain.</b> They used to be drawn as nodes — a skill-shaped thing standing in
+        for a skill that is not there — which is how the map came to assert that thirteen
+        skills existed when it could not open one of them. They are a fact about the notes, not
+        about the library, so they are one line rather than thirteen shapes.
+
+Either they were retired and the notes have not caught up, or they are in a library this build
+cannot reach. ${DRIFT.map(d=>'<code>'+esc(d)+'</code>').join(' · ')}</div>
+      <div class="f-knob"><b>To close it.</b> Put the ones you still want into the library and
+        push — they become nodes on the next build. Delete the notes for the ones you do not.
+        Recomputed every build, so it cannot outlive what it reports.</div>
+    </div>` : '')+
     rows.map(n=>{
       const isO=isOpen(n.id), [b]=BASIS[n.id]||['unverified'];
       return '<div class="f-item">'+

@@ -673,6 +673,28 @@ const inRepo = new Set(gitPaths);
 const noClock = found.filter(id=>
   !LIVE[id].added && !LIVE[id].since && !inRepo.has(id));
 
+/* What the editorial material still talks about that the library does not have.
+   Before the inversion this was expressed as 13 nodes on the map, each with a description and
+   an amber warning — a skill-shaped thing standing in for a skill that is not there. It is
+   not a skill, it is a fact about the notes: somebody wrote about something that has since
+   left, or never arrived. One measured line instead of thirteen phantoms.
+
+   It cannot go stale, because it is recomputed from the library on every build. */
+const NODE_IDS = new Set(libraryNodes().map(n=>n.id));
+const DRIFT = (() => {
+  const named = new Set();
+  for (const tbl of ['NOTES','FIXES','LINKS']){
+    const m = new RegExp(`const ${tbl}=\\{([\\s\\S]*?)\\n\\};`).exec(map.body);
+    if (!m) continue;
+    // NOTES and LINKS are generated and JSON-quoted; FIXES is hand-written with single
+    // quotes. Both, or the hand-written table is silently skipped and the drift under-reports.
+    for (const k of m[1].matchAll(/^\s*['"]([a-zA-Z0-9.\-]+)['"]\s*:/gm)) named.add(k[1]);
+  }
+  named.delete('CLAUDE.md');
+  return [...named].filter(id=>!NODE_IDS.has(id)).sort();
+})();
+if (DRIFT.length) console.log(`  drift     ${DRIFT.length} written about, not in the library: ${DRIFT.join(', ')}`);
+
 const DISCOVERY_BLOCK =
 `/* ---- what the library actually holds, read at build time -------------------------------
    LIVE is each skill's own frontmatter description — its words, not the map's notes about
@@ -719,6 +741,9 @@ const NOCLOCK=new Set(${JSON.stringify(noClock)});
    whole map exists to avoid. */
 const PLACED=${JSON.stringify(placedBy)};
 const GONE=${JSON.stringify(GONE)};
+/* Skills the map's own notes still discuss that the library does not contain. Measured, not
+   written: recomputed on every build, so it cannot outlive the thing it reports. */
+const DRIFT=${JSON.stringify(DRIFT)};
 `;
 
 /* ---- overlap, measured from the descriptions we actually hold -------------------------- */
