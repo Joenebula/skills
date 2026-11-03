@@ -1,4 +1,5 @@
 ---
+group: C
 name: cms
 description: Use when building content management or modelling editable content — content types, a page/block model, media library, navigation, SEO fields, and publishing. Model content as structured data, not blobs of HTML, and separate what editors own from what the app owns.
 ---

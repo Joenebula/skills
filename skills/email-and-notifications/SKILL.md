@@ -1,4 +1,5 @@
 ---
+group: S2
 name: email-and-notifications
 description: Use when sending transactional email, building in-app notifications, or authoring message templates — send off the request path, exactly once per event, from a verified domain, honour preferences, and never fire a real send from dev. A sent message cannot be unsent.
 ---

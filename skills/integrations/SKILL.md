@@ -1,4 +1,5 @@
 ---
+group: E
 name: integrations
 description: Use when connecting a third-party service — CRM, email, webhooks, or two-way sync. Decide who owns each field, make every sync idempotent, verify inbound webhooks, and degrade gracefully when the other side is down. Their uptime is not yours.
 ---

@@ -1,4 +1,5 @@
 ---
+group: C
 name: accessibility
 description: Invoke BEFORE calling any UI done — labels, contrast, keyboard, focus, semantics, and motion. Accessibility is a release gate (zero critical issues), not a polish pass. If it can't be used by keyboard and screen reader, it isn't finished.
 ---

@@ -1,4 +1,5 @@
 ---
+group: docs
 name: report-from-notes
 description: >
   Turn messy build-run notes into one readable HTML page — what still needs the reader,

@@ -1,4 +1,5 @@
 ---
+group: style
 name: keep-going
 description: >
   Work continuously through an agreed queue of build tasks without stopping to ask

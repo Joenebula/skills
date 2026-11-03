@@ -1,4 +1,5 @@
 ---
+group: H
 name: regression-testing
 description: Invoke BEFORE calling any change "done" and BEFORE any deploy — the layered pre-go-live verification model, the mandatory preflight gate, and the read-only guardian-auditor pattern; use it to prove a feature WORKS, not merely that it compiles.
 ---

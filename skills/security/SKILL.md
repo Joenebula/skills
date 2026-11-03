@@ -1,4 +1,5 @@
 ---
+group: H
 name: security
 description: Invoke when handling auth, permissions, secrets, user input, file uploads, third-party calls, or anything outward-facing — the trust model, where to gate, and the input/secret/dependency rules. Assume every input is hostile until proven otherwise.
 ---

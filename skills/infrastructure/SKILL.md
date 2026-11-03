@@ -1,4 +1,5 @@
 ---
+group: A
 name: infrastructure
 description: Invoke when setting up environments, config, backups, or scaling — separate dev/stage/prod, configure per environment, back up before you need it, and have a rollback path. The first time you think about backups should not be after data loss.
 ---

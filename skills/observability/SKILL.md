@@ -1,4 +1,5 @@
 ---
+group: E
 name: observability
 description: Invoke when adding error handling, logging, monitoring, or a failure path — log with structure and context, degrade gracefully, alert on what matters, and never fail silently. If you can't see it happening, you can't fix it.
 ---

@@ -1,4 +1,5 @@
 ---
+group: H
 name: security-route-auditor
 description: Audits a new or changed server route/endpoint that reads or writes — verifying the server-side auth/capability gate (401/403 before any write), correct session-vs-privileged client usage, the submissions-only write path, preview→execute for destructive ops, migration-safe and paginated queries, and that no secret/PII/raw upstream error leaks into a response. Invoke AFTER writing or changing a route and BEFORE shipping it. Read-only: it returns a verdict plus numbered issues, each with a concrete fix, and proposes no edits.
 tools: Read, Grep, Glob

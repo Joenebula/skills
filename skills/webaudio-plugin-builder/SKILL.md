@@ -1,4 +1,5 @@
 ---
+group: never
 name: webaudio-plugin-builder
 description: Build browser-based audio instruments and plugins — synths, samplers, drum machines, slicers, effect racks, sequencers, loopers, modular patch bays — as single-file HTML apps with a Web Audio engine, a transport, and a control surface. Use this skill whenever the user wants to build, extend, restyle, debug or refactor any audio tool that runs in a browser: "build me a synth", "make a sampler", "add a delay", "the sliders don't do anything", "the effect keeps playing when it's off", "make the grid sequence the effects", "why is it out of time", "add presets", "the rack won't animate". Also use it for the UI surface of such tools — panels, dials, sliders, step grids, patch cables, preset banks, help sheets — and whenever a plugin's audio graph, scheduler, or parameter automation is involved. It carries a working UI kit, a bootable starter, and a catalogue of the specific bugs that eat weeks in this domain.
 ---

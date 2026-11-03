@@ -1,4 +1,5 @@
 ---
+group: H
 name: releasing
 description: Use BEFORE and DURING any deploy or release — verify → regression-gate → ship → confirm; authorized + controlled deploys only, never mask a verification exit code, and confirm the release is actually live.
 ---

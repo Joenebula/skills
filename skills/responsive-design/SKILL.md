@@ -1,4 +1,5 @@
 ---
+group: C
 name: responsive-design
 description: Invoke BEFORE calling any UI done — design mobile-first, verify it across the device matrix, and never let content overflow or controls shrink below a usable size. Most visitors are on a phone; "looks fine on my laptop" is not tested.
 ---

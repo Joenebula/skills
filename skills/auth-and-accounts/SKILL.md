@@ -1,4 +1,5 @@
 ---
+group: C
 name: auth-and-accounts
 description: Use when building sign-up, sign-in, sessions, password/magic-link flows, account settings, or role administration — the complete account lifecycle, server-verified sessions, enumeration-safe errors, and the negative paths that must stay closed. Auth is the first journey every user walks and the first one regression must cover.
 ---

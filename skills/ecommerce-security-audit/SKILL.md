@@ -1,4 +1,5 @@
 ---
+group: H
 name: ecommerce-security-audit
 description: Use this skill whenever the user wants to check, audit, harden, review, or fix the security of a website or web app — especially AI-built or "vibe-coded" sites, e-commerce sites, sites taking payments (Stripe, PayPal, Google Pay, checkout, carts), sites with an admin area or login, or any site storing customer data. Trigger for requests like "is my site secure", "check for vulnerabilities", "can my site get hacked", "find security holes", "audit this code", "review before launch", "protect customer data", "secure my checkout/payment/admin", or when a non-developer worries an AI-generated site has gaps they can't see. Also trigger before deploying any e-commerce or data-handling site. Covers price-tampering and fake/simulated payment paths, webhook verification, broken access control / IDOR, exposed API keys, SQL/XSS injection, insecure admin areas, over-exposed data, security headers, dependencies, regulated-goods age checks, and UK selling law — producing a plain-English report plus fixes.
 ---

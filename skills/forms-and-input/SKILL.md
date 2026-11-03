@@ -1,4 +1,5 @@
 ---
+group: C
 name: forms-and-input
 description: Invoke when building any form, input, or data-entry flow — validation, clear errors, required/optional, multi-step, autosave and unsaved-changes guards, and file upload. A form is where users hand you their work; never lose it and never confuse them.
 ---

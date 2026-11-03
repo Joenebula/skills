@@ -1,4 +1,5 @@
 ---
+group: design
 name: vibehq-update-design-system
 description: >
   Vibe HQ only. Bring every copy of the design system up to date with the code on develop:

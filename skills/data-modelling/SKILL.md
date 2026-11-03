@@ -1,4 +1,5 @@
 ---
+group: B
 name: data-modelling
 description: Invoke BEFORE creating or changing any table, column, relation, enum, or migration — model the entities first, change the schema additively and reversibly, and never run a destructive migration without a confirmed backup. The schema outlives the code.
 ---

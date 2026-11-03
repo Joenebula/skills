@@ -1,4 +1,5 @@
 ---
+group: style
 name: ask-dont-guess
 description: Always-on guardrail — when intent, scope, data, or approach is unclear, or an action is destructive/irreversible, STOP and ask; recommend before acting; verify don't assume; never ship anything that looks done but isn't.
 ---

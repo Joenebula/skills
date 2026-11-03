@@ -1,4 +1,5 @@
 ---
+group: D
 name: api-design
 description: Invoke BEFORE adding or changing an endpoint, route, or service contract — the shape, validation, error format, pagination, idempotency, and versioning. A contract is a promise other code depends on; design it once and don't break it casually.
 ---

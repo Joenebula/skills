@@ -1,4 +1,5 @@
 ---
+group: E
 name: background-jobs
 description: Invoke when work should happen off the request — scheduled tasks, queues, async processing, retries, and lifecycle automation. Make every job idempotent, retry-safe, and observable; a job that silently fails or double-charges is worse than no job.
 ---

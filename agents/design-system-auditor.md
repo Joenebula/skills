@@ -1,4 +1,5 @@
 ---
+group: audit
 name: design-system-auditor
 description: Audits any UI or stylesheet change against the documented design system. Invoke BEFORE building UI (to learn the documented components and tokens to use) and AFTER building (to catch deviations) — for new pages, components, forms, cards, modals, list rows, or any stylesheet edit. Read-only: proposes no edits and returns a single verdict line (GREEN / ISSUES — N found) followed by numbered issues, each with a location, the violation, and the documented replacement to use instead.
 tools: Read, Grep, Glob

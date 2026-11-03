@@ -1,4 +1,5 @@
 ---
+group: F
 name: analytics-dashboards
 description: Use when building metrics, reports, KPIs, or a dashboard — define the metric precisely first, compute it from the authoritative source, and show it honestly. A number whose definition is fuzzy or whose source is a capped sample is worse than no number.
 ---

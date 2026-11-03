@@ -400,11 +400,17 @@ function gitAdded(){
 }
 
 const LIB = [];
-{ const home = process.env.HOME && path.join(process.env.HOME,'.claude');
-  if (home) LIB.push({root:path.join(home,'skills'), src:'account'});
-  const ws = path.resolve(ROOT,'../.claude');
-  LIB.push({root:path.join(ws,'skills'), src:'workspace'},
-           {root:path.join(ws,'agents'),  src:'agent', flat:true});
+{ /* The account library, named or not read — the same rule the evidence scan follows, and for
+     the same reason. This list had its own copy of the $HOME guess, so fixing it in one place
+     left descriptions still being read out of whatever ~/.claude/skills the build machine
+     happened to have. In this container that is the skills of the session running the build.
+
+     The ../.claude pair went with it. It dates from when the map lived in the vibehq repo and
+     reached sideways into the library; now ROOT is the library, so on the machine it was
+     written for it resolves to ROOT itself and finds the same files twice, and anywhere else
+     it resolves to $HOME/.claude and finds a stranger's. A path that means one thing on one
+     machine is not a library. */
+  if (ACCOUNT_LIB) LIB.push({root:ACCOUNT_LIB, src:'account'});
   // Once the library is under version control the repo is a library like any other, and the
   // best one: it is the only copy this build can read from anywhere, and the only one that
   // knows when each file arrived.

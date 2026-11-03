@@ -1,4 +1,5 @@
 ---
+group: audit
 name: accessibility-auditor
 description: Audits any UI change against the WCAG AA release gate — semantics, programmatic labels, keyboard operability, focus visibility, contrast via the token scale, announcements, target size, and reduced motion. Invoke AFTER building UI and BEFORE deploy, alongside design-system-auditor, for any new or changed page, component, form, modal, or interactive control. Read-only: returns a verdict (GREEN / ISSUES — N found) plus numbered issues each with a location, the barrier and the principle it fails, and the concrete fix; anything only a manual/behavioural pass can prove is declared UNVERIFIED, never assumed.
 tools: Read, Grep, Glob

@@ -1,4 +1,5 @@
 ---
+group: D
 name: performance
 description: Invoke when a page, query, list, or asset feels slow or will grow — measure first, then fix the biggest cost. Paginate, avoid N+1, cache deliberately, and budget images and bundles. Optimise what you measured, never what you guessed.
 ---

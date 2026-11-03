@@ -1,4 +1,5 @@
 ---
+group: always
 name: reviewing-code
 description: Invoke when reviewing a diff, a pull request, or your own change before calling it done — what to look for in priority order, how to refute before you trust, and how to give feedback that lands. "Looks fine" is not a review.
 ---

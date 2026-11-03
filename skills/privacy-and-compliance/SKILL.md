@@ -1,4 +1,5 @@
 ---
+group: B
 name: privacy-and-compliance
 description: Invoke when collecting, storing, processing, or sharing personal data — consent, lawful basis, retention, subject-access/erasure, cookies, and age gating. Collect the minimum, keep it the shortest time, and let people see and delete their own data.
 ---

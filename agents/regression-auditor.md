@@ -1,4 +1,5 @@
 ---
+group: audit
 name: regression-auditor
 description: Audits a pending change to a live surface, mapping its diff to the exact must-pass regression checks (named static checks, smoke/reconciliation scripts, end-to-end specs) and the user journeys at risk; invoke AFTER verify and BEFORE deploy/merge on any change that touches live behaviour. It also flags new user-facing features that ship with no covering test. Read-only: it runs and proposes no mutations, and returns a GO / NO-GO verdict plus numbered issues.
 tools: Read, Grep, Glob, Bash

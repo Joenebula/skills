@@ -1,4 +1,5 @@
 ---
+group: A
 name: project-setup
 description: Use when standing up or onboarding to a GitHub + Supabase + Vercel + Next.js web app — gives you the bootstrap order, where every API key goes, and how to boot locally first with zero keys before wiring any service.
 ---

@@ -1,4 +1,5 @@
 ---
+group: always
 name: debugging
 description: Invoke when investigating any bug, failure, or "it doesn't work" report — reproduce it first, read the real evidence, isolate by changing one variable, fix the root cause not the symptom, and ship the regression test that would have caught it. A bug report is a request to investigate, never permission to ship.
 ---

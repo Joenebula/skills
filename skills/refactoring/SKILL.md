@@ -1,4 +1,5 @@
 ---
+group: always
 name: refactoring
 description: Invoke when restructuring code or delivering a large change — keep behaviour identical, move in small reversible steps, lean on tests, and flag risky changes. Refactoring that changes behaviour is not refactoring; it's an undisclosed rewrite.
 ---

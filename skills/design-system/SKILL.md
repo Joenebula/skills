@@ -1,4 +1,5 @@
 ---
+group: C
 name: design-system
 description: Use BEFORE building or changing ANY UI (page, screen, component, form, modal, or stylesheet) — build every UI from a documented design system (tokens + a component catalogue + a live gallery), never invent one-off classes or values; also covers standing a design system up from scratch, including choosing its aesthetic direction — bold, intentional, context-specific — when none exists yet.
 ---

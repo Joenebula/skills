@@ -1,4 +1,5 @@
 ---
+group: C
 name: data-grids
 description: Use when building any list, table, or management view of many records — search, filter, sort, paginate/virtualize, bulk actions, and export. Decide server-side vs client-side by data size, and never show a count that's really a capped page.
 ---

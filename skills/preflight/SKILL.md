@@ -1,4 +1,5 @@
 ---
+group: H
 name: preflight
 description: Invoke immediately BEFORE any deploy, merge, or "it's done" claim — the orchestrated pre-ship pass: scope the diff, fan out the read-only auditor agents, climb the regression layers, and emit ONE explicit GO / NO-GO verdict. The gate only protects you if it actually runs; this is the runbook that runs it.
 ---

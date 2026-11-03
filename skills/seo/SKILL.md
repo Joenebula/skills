@@ -1,4 +1,5 @@
 ---
+group: D
 name: seo
 description: Invoke when building public pages or content that should be found — titles/metadata, sitemap, robots, structured data, canonical URLs, and social cards. Make every public page tell search engines exactly what it is, once, without duplicates.
 ---

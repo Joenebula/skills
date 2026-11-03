@@ -1,4 +1,5 @@
 ---
+group: audit
 name: feature-completeness-auditor
 description: Audits a new or changed feature for the "looks done but isn't wired" class of gaps — affordances that appear finished but trace to nothing real (dead controls, broken-promise copy, settings that don't persist, demo data on a live surface, empty lists, totals that don't match their source). Invoke AFTER building and BEFORE deploy, for any change that adds or alters a user-facing affordance (button, form, toggle, link, metric, list, setting) or a backend module. Read-only: it proposes no edits and returns a verdict plus numbered issues, each with a concrete honest-state fix.
 tools: Read, Grep, Glob

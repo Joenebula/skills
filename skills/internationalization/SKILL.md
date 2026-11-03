@@ -1,4 +1,5 @@
 ---
+group: S2
 name: internationalization
 description: Invoke BEFORE hard-coding user-facing text, dates, money, or layout assumptions — externalise strings, format by locale, support multiple currencies, and don't assume English/LTR/one timezone. Retrofitting i18n late means touching every file; design for it early.
 ---
