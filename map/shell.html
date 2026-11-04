@@ -742,7 +742,7 @@
       <span class="chip tog" data-f="present"><i style="background:var(--present)"></i>available<b id="k-p"></b></span>
       <span class="chip tog" data-f="missing"><i class="hollow"></i>missing<b id="k-m"></b></span>
       <span class="chip tog" data-f="never"><i class="solidh"></i>excluded<b id="k-n"></b></span>
-      <button class="q" data-tip="<b>Available</b> — the file exists and Copilot can load it. <b>Missing</b> — referenced by another file, or by an <code>applyTo</code> glob, with nothing of that name in the repository. <b>Retired</b> — still present but marked do-not-use; it keeps loading until someone deletes it, which is the point of showing it.<br><br>Click any of the three to filter.">?</button>
+      <button class="q" id="q-state" data-tip="">?</button>
     </div>
     <div class="krow2">
       <span class="chip"><i class="ln" style="background:var(--bind)"></i>always-on</span>
@@ -904,6 +904,29 @@ $('k-n').textContent=N.filter(n=>statusOf(n)==='never').length;
 // the row says 14 and the button says 15, and both are right about different things
 const FIXCOUNT=[ANCHOR].concat(N).filter(n=>isOpen(n.id)).length;
 $('k-f').textContent=FIXCOUNT;
+/* The tooltip beside the state chips used to carry its numbers as text — "15 files seen, 14
+   loaded", "34 nodes are names taken from the build plan". Written by hand into a literal in
+   the build script, so they were true on the day somebody typed them and silently wrong
+   afterwards: by the time anyone looked they said 15 and 34 where the answer was 40 and 0.
+
+   A number in a sentence is still a number. It counts the same set the chips count. */
+{ const ev=k=>N.filter(n=>EVIDENCE[n.id]===k).length;
+  const excluded=N.filter(n=>statusOf(n)==='never');
+  $('q-state').dataset.tip=
+    '<b>Available</b> — established: a <code>SKILL.md</code> was found on disk, or Claude Code '+
+    'lists it among this session\'s skills. <b>'+ev('seen')+' files seen, '+ev('loaded')+
+    ' loaded.</b><br><br>'+
+    '<b>Missing</b> — looked for and not found. '+
+    (N.filter(n=>statusOf(n)==='missing').length||'Nothing')+' in this state.<br><br>'+
+    '<b>Excluded</b> — the build plan marks it <b>never use</b>. '+
+    (excluded.length ? excluded.map(n=>'<code>'+n.id+'</code>').join(', ') : 'Nothing is.')+
+    '<br><br><b>Unverified</b> — a name with no file behind it. '+
+    (ev('named')
+      ? ev('named')+' of them, and the card below lists which.'
+      : 'None: every node on this map is a file in the library, because the list is generated '+
+        'from the library rather than written beside it.')+
+    '<br><br>Click any of them to filter.';
+}
 { // spell the number out where it is shown, not only in the copied brief
   const open=[ANCHOR].concat(N).filter(n=>isOpen(n.id));
   const tally=k=>open.filter(n=>NEEDS[n.id]===k).length;

@@ -226,9 +226,9 @@ swap(`  .ringkey i{width:8px;height:8px;border-radius:50%;flex:none}`,
      `  .ringkey i{width:8px;height:8px;border-radius:50%;flex:none}
   .ringkey b{font-family:var(--mono);font-size:13px;color:var(--ink3);font-weight:400}`);
 
-// the counter tooltip quoted library sizes that were taken from a document, not from disk
-swap(`data-tip="<b>Available</b> — the file exists and Copilot can load it. <b>Missing</b> — referenced by another file, or by an <code>applyTo</code> glob, with nothing of that name in the repository. <b>Retired</b> — still present but marked do-not-use; it keeps loading until someone deletes it, which is the point of showing it.<br><br>Click any of the three to filter.">`,
-     `data-tip="<b>Available</b> — established: a <code>SKILL.md</code> was found on disk, or Claude Code lists it among this session's skills. <b>15 files seen, 14 loaded.</b><br><br><b>Missing</b> — looked for and not found. Nothing is in this state.<br><br><b>Excluded</b> — the build plan marks it <b>never use</b>. Only <code>webaudio-plugin-builder</code>.<br><br><b>Unverified</b> — in the card below. 34 nodes are names taken from the build plan (<code>BUILD-PLAN.md</code>) or a <code>CLAUDE.md</code> with no file ever opened, because your workspace library is not in this checkout. They are not counted as available.<br><br>Click any of them to filter.">`);
+/* The state tooltip used to be swapped in here with its numbers written into the
+   sentence — "15 files seen, 14 loaded", "34 nodes are names taken from the build plan".
+   It counts them itself now, in the shell, from the same set the chips beside it count. */
 
 // the runbook heading
 swap('return `# ${COMPANY} · Copilot Enterprise — ${rows.length} open items\\n\\n`+\n    "> **Synthetic demo.** Generated data, invented company, invented files. Not a real audit,\\n> and not safe to run against a real repository.\\n\\n"+',
