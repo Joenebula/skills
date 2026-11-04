@@ -4206,11 +4206,26 @@ function synProject(){
 /* What is lit. apply() has already decided; this only reads the answer, so the key, the
    search box and a click on a node all go on meaning the same thing. */
 let LITSET=null;
+/* The ones related to whatever is in focus, held apart from the rest of what is lit.
+   Everything lit used to be lit identically — the skill you picked and the four it overlaps
+   with were the same dot at the same brightness, so the picture said "these five matter" and
+   nothing about which was which, or that there was a relationship there at all. A relation
+   is a weaker claim than a selection, so it is drawn as one: smaller, and dimmer.
+
+   It is drawn as its own pass rather than as a dimmer multiplier on the ordinary one. A
+   tip's alpha is already depth times group-density times state, and .4 of that product came
+   out at .087 on a crowded group — under the .09 that means "not in this at all". A relation
+   you cannot see is not a relation shown, so these numbers are what reaches the screen. */
+let RELSET=null;
+const REL_ALPHA=.18, REL_SCALE=.55;
+const related=n=>!!RELSET && n.id!==sel && RELSET.has(n.id);
 function nodeAlpha(n){
   if(!LITSET) return 1;
   if(n.id===sel) return 1.3;
+  if(related(n)) return REL_ALPHA;
   return LITSET.has(n.id) ? 1 : .09;
 }
+const nodeScale=n=>related(n)?REL_SCALE:1;
 /* ---- the signal down one branch ---------------------------------------------------------
    Seventy of these used to run at once, all the time, over the whole tree. It looked alive
    and it said nothing: a dot on a branch meant only that the branch was there. Worse, it was
@@ -4275,7 +4290,7 @@ function paint(fdt){                            // supersedes the SVG painter
   let best=-1,bd=20*20;
   for(let k=0;k<T.leaf.length;k++){
     const i=T.leaf[k], g=T.leafG[k], n=T.leafN[k];
-    const r=T.leafR[k]*T.ss[i];
+    const r=T.leafR[k]*T.ss[i]*nodeScale(n);
     const a=Math.max(.16,Math.min(1,.62-T.sz[i]/(zr*3)))*nodeAlpha(n)*T.kl[g];
     const x=T.sx[i],y=T.sy[i];
     const d2=(x-ptrS.x)**2+(y-ptrS.y)**2;
@@ -4286,6 +4301,19 @@ function paint(fdt){                            // supersedes the SVG painter
     const c=r*1.2; sctx.drawImage(core[g],x-c,y-c,c*2,c*2);
   }
   hotLeaf=best;
+  /* The relations, each a dot at a little over half the size and roughly half the weight of
+     the one you picked. Group colour, no white centre — the white centre is what says "this
+     is the one", and there is only ever one of those. */
+  if(RELSET && RELSET.size){
+    for(let k=0;k<T.leaf.length;k++){
+      const n=T.leafN[k]; if(!related(n)) continue;
+      const i=T.leaf[k], g=T.leafG[k], r=T.leafR[k]*T.ss[i]*REL_SCALE;
+      sctx.globalAlpha=.18; const hh=r*4.4;
+      sctx.drawImage(halo[g],T.sx[i]-hh,T.sy[i]-hh,hh*2,hh*2);
+      sctx.globalAlpha=.26; const c=r*1.35;
+      sctx.drawImage(core[g],T.sx[i]-c,T.sy[i]-c,c*2,c*2);
+    }
+  }
   const selK=sel!=null&&T.ofId[sel]!==undefined?T.ofId[sel]:-1;
   /* The lit tip used to be a white halo and nothing else, which washed the colour out of the
      one node you were actually asking about — the whole map is colour-coded by group and the
@@ -4390,6 +4418,10 @@ function apply(){
   const focus=sel||hover;
   const picked=pickedIds();
   const hitSet=(query&&hits)?hits:null;
+  /* The related set is the focus's neighbours and only those — not the picks and not the
+     search hits, which are things you asked for by name and should stay at full weight. */
+  RELSET = focus ? new Set(neigh[focus]||[]) : null;
+  if(RELSET) RELSET.delete(focus);          // neigh is a Set, so copy it and drop the focus
   if(!focus && !picked && !hitSet){ LITSET=null; }
   else {
     const out=new Set();
