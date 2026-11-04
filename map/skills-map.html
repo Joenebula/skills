@@ -1473,7 +1473,7 @@ const EV_NOTE={
  seen:'A directory containing a <code>SKILL.md</code> was found. This one is real.',
  loaded:'Claude Code lists this among the skills available in a session. It is real, and it has no file of its own to open.',
  named:'<b>This is a claim, not a finding.</b> The name comes from <code>BUILD-PLAN.md</code> or a <code>CLAUDE.md</code>, and no matching file was found in your library. Either it was never built, or it lives somewhere the build cannot read.'};
-const EV_BASIS="your library at commit a2b8b98, 2026-11-04, read file by file + the skills Claude Code lists this session";
+const EV_BASIS="your library at commit 543ba6b, 2026-11-04, read file by file + the skills Claude Code lists this session";
 /* ---- measured overlap ------------------------------------------------------------------
    Produced by scripts/overlap.mjs from the 64 SKILL.md descriptions this repo
    actually holds, not from reading names. Weighted by inverse document frequency so a word
@@ -4137,7 +4137,19 @@ const TREE={x:[],y:[],z:[],par:[],segA:[],segB:[],segG:[],segD:[],leaf:[],leafG:
   T.ofId={}; T.leafN.forEach((n,k)=>T.ofId[n.id]=k);
 }
 
-let yaw=.5, pitch=-.18, vy=0, odrag=null, spin=true;
+let yaw=.5, pitch=-.18, vy=0, odrag=null;
+/* ---- the turn is a screensaver, not a default ------------------------------------------
+   A map that never stops turning is a map you cannot read: the thing you are looking at is
+   somewhere else by the time you have found it, and a name you were tracking walks off the
+   back of the sphere. So it stands still while anyone is here, and only turns once the room
+   has been empty for five minutes — the same idle clock the opening uses, so a pointer, a
+   key, a wheel or a touch stops it the moment you come back.
+
+   Neither edge is a cut. Measured in the browser: about two and a half seconds to come up to
+   speed, which reads as the map drifting off on its own, and a little over half a second to
+   stop, which reads as it noticing you. A hard switch at either end looks like a bug. */
+const SPIN_IDLE_MS=5*60*1000;
+let spinGain=0;                      // 0 still, 1 turning, and every value between is an ease
 let SYNX=500, SYNY=370, SYNSC=1;
 const ptrS={x:-1e4,y:-1e4};
 let hotLeaf=-1;
@@ -4181,12 +4193,23 @@ function nodeAlpha(n){
   if(n.id===sel) return 1.3;
   return LITSET.has(n.id) ? 1 : .09;
 }
-function spawnPulse(){
-  const T=TREE; let k=Math.floor(Math.random()*T.leaf.length);
-  if(LITSET) for(let t=0;t<16 && !LITSET.has(T.leafN[k].id);t++) k=Math.floor(Math.random()*T.leaf.length);
+/* ---- the signal down one branch ---------------------------------------------------------
+   Seventy of these used to run at once, all the time, over the whole tree. It looked alive
+   and it said nothing: a dot on a branch meant only that the branch was there. Worse, it was
+   the busiest thing on a page whose job is to be read, so the eye went to the traffic rather
+   than to the shape.
+
+   So they are an answer now, not decor. Select a skill and three travel the one path from
+   CLAUDE.md out to it — which is the thing worth seeing, because that path IS how the
+   agreement reaches that skill. Select nothing and there is nothing to show, so nothing
+   moves. They also go at about a third of the old speed: at 14-30 units a second the dot was
+   a streak, and the point is to be able to follow it. */
+const PULSE_N=3;
+function spawnPulse(k,phase){
+  const T=TREE;
   const ch=[]; let i=T.leaf[k];
   while(i>=0){ch.push(i);i=T.par[i];} ch.reverse();
-  return {ch,t:Math.random()*ch.length*.6,v:14+Math.random()*16,g:T.leafG[k],n:T.leafN[k]};
+  return {k,ch,t:-(phase||0)*1.25,v:5+Math.random()*3.5,g:T.leafG[k],n:T.leafN[k]};
 }
 let pulses=[];
 function paint(){                               // supersedes the SVG painter
@@ -4252,12 +4275,18 @@ function paint(){                               // supersedes the SVG painter
     sctx.globalAlpha=.95;
     sctx.drawImage(halo[WHITE],T.sx[i]-r*3,T.sy[i]-r*3,r*6,r*6);
   }
-  // pulses out to the tips
+  /* pulses: only ever down the selected skill's own branch, and only while one is selected.
+     ofId has no entry for the centre, so selecting CLAUDE.md itself leaves the map still. */
   const dt=.016;
-  while(pulses.length<70) pulses.push(spawnPulse());
+  if(selK<0) pulses.length=0;              // selK is the lit tip, worked out just above
+  else {
+    if(pulses.length && pulses[0].k!==selK) pulses.length=0;   // the selection moved
+    while(pulses.length<PULSE_N) pulses.push(spawnPulse(selK,pulses.length));
+  }
   for(const p of pulses){
     p.t+=p.v*dt;
-    if(p.t>=p.ch.length-1){ Object.assign(p,spawnPulse()); p.t=0; continue; }
+    if(p.t>=p.ch.length-1){ Object.assign(p,spawnPulse(p.k,0)); continue; }
+    if(p.t<0) continue;                                        // still waiting its turn
     const dm=nodeAlpha(p.n);
     for(let tr=0;tr<4;tr++){
       const tt=p.t-tr*.55; if(tt<0) break;
@@ -4296,7 +4325,13 @@ function paint(){                               // supersedes the SVG painter
   } else if(!$('tip').matches(':hover')) tip.classList.remove('on');
 }
 function tick(){
-  if(spin && !odrag) yaw+=(.09+vy)*.016;
+  /* document.hidden matters: a background tab gets no pointer events, so its idle clock runs
+     out and it would turn to nobody — and on some browsers rAF keeps firing. */
+  const want = (!odrag && !document.hidden
+    && performance.now()-lastActive>=SPIN_IDLE_MS) ? 1 : 0;
+  spinGain += (want-spinGain)*(want?.012:.06);
+  if(!want && spinGain<.001) spinGain=0;
+  if(!odrag) yaw+=(.09*spinGain+vy)*.016;
   vy*=.86;
   paint();
   raf=requestAnimationFrame(tick);
