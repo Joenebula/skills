@@ -524,14 +524,30 @@ function gitTouched(){
     const log = execSync(
       `git -C ${SKILLS_REPO} log --no-renames --name-only --format=%x00%aI`,
       {encoding:'utf8', maxBuffer:1<<26});
-    let date=null;
+    /* A sweep is not a change to any one skill. Adding `group:` to every SKILL.md in the
+       library put one line in forty files, and that single commit became the "last changed"
+       date for all forty — wiping out 27 Oct, 31 Oct, 12 Sep and 28 Aug, which were the dates
+       worth having. The whole point of reading the clock from git is that it reports what
+       happened to a skill, and a library-wide reformat did not happen to any skill.
+
+       So a commit touching SWEEP or more skill files is maintenance and does not date them.
+       It is a threshold and thresholds are arguable; this one is set well above the handful a
+       real piece of work touches at once and well below a sweep. A skill whose only commits
+       are sweeps keeps no date, which is the honest answer rather than a flattering one. */
+    const SWEEP = 10;
+    const commits=[];
+    let cur=null;
     for (const line of log.split('\n')){
-      if (line.startsWith('\0')){ date = line.slice(1,11); continue; }
-      if (!line.trim() || !date) continue;
+      if (line.startsWith('\0')){ cur={date:line.slice(1,11),ids:[]}; commits.push(cur); continue; }
+      if (!line.trim() || !cur) continue;
       const m = /^(?:skills|agents)\/([^/]+)/.exec(line);   // a skill, not a copy of one
       if (!m) continue;
-      const id = m[1].replace(/\.md$/,'');
-      if (!out[id] || date > out[id]) out[id] = date;       // latest wins
+      cur.ids.push(m[1].replace(/\.md$/,''));
+    }
+    for (const c of commits){
+      const ids=[...new Set(c.ids)];
+      if (ids.length >= SWEEP) continue;
+      for (const id of ids) if (!out[id] || c.date > out[id]) out[id] = c.date;
     }
   } catch { /* no git, no dates — which is the honest answer */ }
   return out;
@@ -712,8 +728,11 @@ const LIVE=${JSON.stringify(LIVE,null,0)};
 /* When each skill was last changed, from git. The panel prefers this over META's hand-written
    date, because a table nobody remembers to edit reports the library as it was on the day
    somebody last remembered. */
+/* Only for skills that ARE files here. frontend-design was deleted from the library in
+   August and git remembers the deletion, so it came back carrying 8 August as its "last
+   changed" — the date it stopped existing, presented as the date it was last worked on. */
 const TOUCHED=${JSON.stringify(Object.fromEntries(
-  Object.entries(TOUCHED).filter(([id])=>LIVE[id])),null,0)};
+  Object.entries(TOUCHED).filter(([id])=>LIVE[id] && LIVE[id].src!=='account')),null,0)};
 const NEWTAG=new Set(${JSON.stringify(NEWTAG)});
 const NEW_DAYS=${NEW_DAYS};
 const BUILT=${JSON.stringify(new Date().toISOString().slice(0,10))};
