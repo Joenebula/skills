@@ -32,6 +32,16 @@ Pairs with [[design-system]] (responsive primitives — spacing scale, fluid typ
 ## Law 4 — Touch, input, and orientation
 
 - **Targets ≥ ~44px** with spacing so neighbours aren't mis-tapped.
+- **Switch on touch vs mouse, not iPhone vs Android.** `@media (pointer: coarse)` asks the browser
+  "is a finger the pointer?" — the page never knows the phone. In a browser 1px = 1pt (iOS) = 1dp
+  (Android), so one value meets both: tap size **48 on touch** (Android 48dp, iOS 44pt), 44 with a
+  mouse. WCAG 2.2 2.5.8's floor is 24.
+- **Text fields 16px on touch.** Under 16px, Safari on the iPhone zooms the page in when the field
+  is tapped, and does not zoom back. Vibe HQ had 96 of 100 fields under 16px.
+- **Height and the home bar:** `100dvh`, not `100vh` (vh runs under the address bar);
+  `env(safe-area-inset-bottom)` under anything fixed to the bottom.
+- **Ready to copy:** [kit/mobile.css](kit/mobile.css) — the tokens (`--tap-min`, `--screen-h`,
+  `--safe-bottom`) and the 16px field rule.
 - No **hover-only** affordance — there's no hover on touch; everything has a tap/focus path.
 - Works in **portrait and landscape**; nothing assumes one orientation.
 - Respect the **safe area** (notches, rounded corners) and on-screen-keyboard resize.
@@ -47,6 +57,19 @@ Pairs with [[design-system]] (responsive primitives — spacing scale, fluid typ
 | Nothing clipped | no element with content wider than its box (`scrollWidth > clientWidth`) unless it scrolls on purpose | loop over elements, list offenders |
 
 "It looked fine on my phone" is not one of the three.
+
+**Run every check on three devices** — desktop (mouse), Android (Pixel 7, Blink) and iPhone
+(iPhone 15, WebKit; every iPhone browser is WebKit). The same CSS can pass in one engine and break
+in the other. Ready to copy: [kit/playwright-devices.ts](kit/playwright-devices.ts), and the
+no-zoom check [kit/field-zoom.check.ts](kit/field-zoom.check.ts).
+
+| Trap | What to do |
+|---|---|
+| CI gets slow: phones run after desktop (Vibe HQ: 38 → 60 min) | Phones in their **own CI job**, beside the main one (back to ~29 min) |
+| Safari's Tab key skips links by default; a keyboard walk fails on every link | Skip the Tab walk on the iPhone, write down why; desktop and Android walk it |
+| A phone check that has never failed | Plant a touch-only fault (crowded 16px buttons, a 14px field): phones must fail **by name**, desktop must pass |
+| "Finished drawing" fires before some content appears | Wait until the count holds before measuring; assert a minimum count so an empty build can't pass |
+| Emulated is not real | A real-device pass (BrowserStack, a phone in hand) before launch |
 
 Test, don't assume:
 

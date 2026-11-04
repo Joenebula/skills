@@ -39,7 +39,7 @@ The spine and cross-cutting craft apply to **every** build. The domain guides ar
 | **[security](security/SKILL.md)** | auth, permissions, secrets, user input, uploads, third-party calls — gate on the server, treat all input as hostile. |
 | **[privacy-and-compliance](privacy-and-compliance/SKILL.md)** | collecting/storing personal data — minimise, consent, retention, subject-access/erasure, cookies, age gating. |
 | **[accessibility](accessibility/SKILL.md)** | before any UI is "done" — WCAG AA: labels, contrast, keyboard, focus, semantics. A gate, not a garnish. |
-| **[responsive-design](responsive-design/SKILL.md)** | before any UI is "done" — mobile-first, no overflow, fluid type, ≥44px targets, a real device matrix. |
+| **[responsive-design](responsive-design/SKILL.md)** | before any UI is "done" — mobile-first, no overflow, fluid type, ≥44px targets (48 on touch), 16px fields, a real device matrix; a copy-ready mobile kit (tokens, 3-device Playwright, no-zoom check). |
 | **[forms-and-input](forms-and-input/SKILL.md)** | any form or data-entry flow — validation, clear errors, autosave/unsaved-changes guards, file upload. |
 | **[performance](performance/SKILL.md)** | something slow or that will grow — measure first, fix the biggest cost; paginate, avoid N+1, cache, budget assets. |
 | **[seo](seo/SKILL.md)** | public pages that should be found — titles/metadata, sitemap, robots, structured data, one canonical URL. |

@@ -1,0 +1,40 @@
+/* MOBILE KIT — tokens and touch rules for phone browsers (iPhone Safari/WebKit,
+   Android Chrome/Blink). From Vibe HQ, 2026-11-04 (D-133 era; #80, #85).
+
+   The site never asks which phone it is on. It asks the browser one question:
+   "is a finger the pointer?" — @media (pointer: coarse). Touch vs mouse, not
+   iPhone vs Android: in a browser 1px = 1pt (iOS) = 1dp (Android), so one value
+   meets both platforms.
+
+   Use: import after your component CSS. Then write var(--tap-min) wherever a
+   tap size was typed (icon buttons, menu links, rows), var(--screen-h) for a
+   full-height panel, var(--safe-bottom) under anything fixed to the bottom.
+   Rename the tokens to your prefix if you have one (Vibe HQ: --vh-*). */
+:root{
+  /* TAP TARGETS. 44px with a mouse (comfortable). 48px with a finger:
+     Android (Material) asks 48dp, iOS 44pt, so 48 meets both. WCAG 2.2 2.5.8
+     sets the floor at 24px. */
+  --tap-min:44px;
+
+  /* SCREEN HEIGHT. 100vh is the screen with the address bar hidden, so a
+     full-height panel runs under the bar while it shows. dvh follows the bar,
+     in Safari and in Chrome. */
+  --screen-h:100dvh;
+
+  /* THE HOME BAR. Measured by the browser: the iPhone's home indicator, and
+     Android's gesture bar when the page is drawn edge to edge. 0 if none.
+     Needs <meta name="viewport" content="…, viewport-fit=cover">. */
+  --safe-bottom:env(safe-area-inset-bottom, 0px);
+}
+@media (pointer: coarse){
+  :root{ --tap-min:48px; }
+
+  /* NO ZOOM WHEN A TEXT FIELD IS TAPPED. Safari on the iPhone zooms the page
+     in when a field's text is under 16px, and does not zoom back out. With a
+     finger every text field is 16px; with a mouse it keeps its own size.
+     !important because it is a floor: it must win over every field rule.
+     Vibe HQ, measured: 96 of 100 fields were under 16px before this. */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]):not([type=submit]):not([type=reset]):not([type=image]):not([type=hidden]),
+  textarea,
+  select{ font-size:16px !important; }
+}
