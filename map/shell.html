@@ -3273,11 +3273,20 @@ let yaw=.5, pitch=-.18, vy=0, odrag=null;
    has been empty for five minutes — the same idle clock the opening uses, so a pointer, a
    key, a wheel or a touch stops it the moment you come back.
 
-   Neither edge is a cut. Measured in the browser: about two and a half seconds to come up to
-   speed, which reads as the map drifting off on its own, and a little over half a second to
-   stop, which reads as it noticing you. A hard switch at either end looks like a bug. */
+   Neither edge is a cut, and the shape of the curve matters more than its length. The first
+   attempt eased exponentially — gain += (want-gain)*k — which has no corner in the SPEED but
+   a hard step in the acceleration: at the instant it starts it is already accelerating as
+   hard as it ever will, and a mouse move slams the brakes on just as abruptly. Both read as
+   a lurch, which is what "jerky" was.
+
+   This is smootherstep, 6p^5-15p^4+10p^3, which arrives at both ends with zero speed AND
+   zero acceleration, over eight seconds up and a little over two down. Nothing starts,
+   nothing stops; it is simply turning, or it is not. */
 const SPIN_IDLE_MS=5*60*1000;
-let spinGain=0;                      // 0 still, 1 turning, and every value between is an ease
+const SPIN_UP_MS=8000, SPIN_DOWN_MS=2200;
+let spinP=0;                         // raw progress along the ramp, 0 still .. 1 turning
+let spinGain=0;                      // that progress, curved — this is what multiplies the speed
+let lastFrame=performance.now();
 let SYNX=500, SYNY=370, SYNSC=1;
 const ptrS={x:-1e4,y:-1e4};
 let hotLeaf=-1;
@@ -3340,7 +3349,7 @@ function spawnPulse(k,phase){
   return {k,ch,t:-(phase||0)*1.25,v:5+Math.random()*3.5,g:T.leafG[k],n:T.leafN[k]};
 }
 let pulses=[];
-function paint(){                               // supersedes the SVG painter
+function paint(fdt){                            // supersedes the SVG painter
   const T=TREE;
   synProject();
   sctx.setTransform(CDPR,0,0,CDPR,0,0);
@@ -3405,7 +3414,7 @@ function paint(){                               // supersedes the SVG painter
   }
   /* pulses: only ever down the selected skill's own branch, and only while one is selected.
      ofId has no entry for the centre, so selecting CLAUDE.md itself leaves the map still. */
-  const dt=.016;
+  const dt=fdt||.016;                      // seconds since the last frame, same as the turn
   if(selK<0) pulses.length=0;              // selK is the lit tip, worked out just above
   else {
     if(pulses.length && pulses[0].k!==selK) pulses.length=0;   // the selection moved
@@ -3453,15 +3462,25 @@ function paint(){                               // supersedes the SVG painter
   } else if(!$('tip').matches(':hover')) tip.classList.remove('on');
 }
 function tick(){
+  /* Real elapsed time, not a sixtieth. Everything here used to advance by a fixed .016 a
+     frame, which is only true on a machine that never misses one — and the frames a browser
+     misses are exactly the ones where something else just happened, so the map jumped its
+     angle at the worst possible moment. Capped at 50ms so a tab coming back from sleep, or
+     a long stall, resumes rather than teleporting. */
+  const now=performance.now();
+  const fdt=Math.min((now-lastFrame)/1000,.05); lastFrame=now;
   /* document.hidden matters: a background tab gets no pointer events, so its idle clock runs
      out and it would turn to nobody — and on some browsers rAF keeps firing. */
   const want = (!odrag && !document.hidden
-    && performance.now()-lastActive>=SPIN_IDLE_MS) ? 1 : 0;
-  spinGain += (want-spinGain)*(want?.012:.06);
-  if(!want && spinGain<.001) spinGain=0;
-  if(!odrag) yaw+=(.09*spinGain+vy)*.016;
-  vy*=.86;
-  paint();
+    && now-lastActive>=SPIN_IDLE_MS) ? 1 : 0;
+  spinP += want ? fdt*1000/SPIN_UP_MS : -fdt*1000/SPIN_DOWN_MS;
+  spinP = spinP<0?0 : spinP>1?1 : spinP;
+  spinGain = spinP*spinP*spinP*(spinP*(spinP*6-15)+10);     // smootherstep
+  // .09 is radians a second now that it is multiplied by seconds, so the speed is unchanged
+  if(!odrag) yaw+=(.09*spinGain+vy)*fdt;
+  // the flick-to-spin decay was .86 a frame; same half-life, measured in seconds
+  vy*=Math.pow(.86,fdt*60);
+  paint(fdt);
   raf=requestAnimationFrame(tick);
 }
 function kick(){ if(!raf) raf=requestAnimationFrame(tick); }
