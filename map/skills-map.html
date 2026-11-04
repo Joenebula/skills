@@ -8,6 +8,12 @@
     --r1:#F2A03C; --r2:#A78BFA; --r3:#5EC8F0; --r4:#4E7BE8; --r5:#3E9C8F;
     --edge:rgba(140,170,235,.30); --edge2:rgba(140,170,235,.16);
     --ease:cubic-bezier(.32,.72,.28,1);
+    /* A 4pt grid. Every margin, padding and gap on the reading panels is one of these, so the
+       vertical rhythm is a rhythm rather than eleven numbers that each looked right on their
+       own. What was there: 5, 7, 8, 9, 10, 11, 12, 13, 14, 16, 20 and 22, none of them
+       related to any other. Text was also set hard against its boxes — 10px of padding under
+       a 13px line leaves the words touching the container. */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px;
     --font:'Roboto','Roboto Flex','Helvetica Neue',system-ui,-apple-system,sans-serif;
     --mono:'Roboto Mono',ui-monospace,'SF Mono',Menlo,monospace;
   }
@@ -176,33 +182,38 @@
   .krow .q{margin-left:9px}
   .q:hover,.q:focus-visible{background:var(--r3);color:var(--void);outline:none}
   .cap{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
-    font-weight:500;padding:5px 10px;border-radius:6px;background:rgba(140,170,235,.10);
+    font-weight:500;padding:var(--s2) var(--s3);border-radius:6px;background:rgba(140,170,235,.10);
     color:var(--ink2);transition:background .16s var(--ease),color .16s var(--ease)}
   .cap:hover,.cap.on{background:rgba(94,200,240,.22);color:var(--r3)}
   .cap i{font-style:normal;color:var(--ink3);margin-left:5px}
   .cap:hover i,.cap.on i{color:var(--r3);opacity:.7}
   /* Location: the path is the readable part, the URL is not. Show the path, copy the URL,
      and only unfold the URL once someone has asked for it by pressing the button. */
-  .d-loc{margin-top:14px}
-  .d-loc .lbl{font-size:13px;letter-spacing:.12em;color:var(--ink3);
-    font-weight:700;margin-bottom:7px}
-  .locrow{display:flex;align-items:flex-start;gap:9px}
+  .d-loc{margin-top:var(--s5)}
+  /* One rule for every block label on the panel. "Location" and "Trigger overlap" were
+     styled here and in .d-rel, and "Tags" was styled nowhere — so it rendered as body text
+     at 14.5px beside two labels at 13px. The same heading, three different sizes. */
+  .d-loc .lbl,.d-rel .lbl,.d-tags .lbl,.d-own .lbl{
+    font-size:13px;letter-spacing:.12em;color:var(--ink3);
+    font-weight:700;margin-bottom:var(--s2)}
+  .locrow{display:flex;align-items:flex-start;gap:var(--s2)}
   .locpath{flex:1 1 auto;min-width:0;font-family:var(--mono);font-size:13px;line-height:1.5;
-    color:var(--ink2);background:rgba(140,170,235,.07);padding:8px 10px;border-radius:7px;
+    color:var(--ink2);background:rgba(140,170,235,.07);padding:var(--s3);border-radius:7px;
     overflow-wrap:anywhere}
   .locpath b{color:var(--r3);font-weight:600}
   .loccopy{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
-    font-weight:600;padding:8px 11px;border-radius:7px;flex:none;white-space:nowrap;
+    font-weight:600;padding:var(--s3);border-radius:7px;flex:none;white-space:nowrap;
     background:rgba(94,200,240,.16);color:var(--r3);transition:background .16s var(--ease),color .16s var(--ease)}
   .loccopy:hover,.loccopy:focus-visible{background:var(--r3);color:var(--void);outline:none}
   .loccopy.ok{background:var(--present);color:var(--void)}
-  .locfull{margin-top:8px;font-family:var(--mono);font-size:13px;line-height:1.5;
-    color:var(--ink3);background:rgba(4,6,12,.5);padding:8px 10px;border-radius:7px;
+  .locfull{margin-top:var(--s2);font-family:var(--mono);font-size:13px;line-height:1.5;
+    color:var(--ink3);background:rgba(4,6,12,.5);padding:var(--s3);border-radius:7px;
     overflow-wrap:anywhere;box-shadow:inset 0 0 0 1px var(--edge2)}
   .locfull[hidden]{display:none}
-  .locnote{margin-top:7px;font-size:13px;color:var(--ink3);line-height:1.5}
-  .d-tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:7px}
+  .locnote{margin-top:var(--s2);font-size:13px;color:var(--ink3);line-height:1.5}
+  .d-tags{margin-top:var(--s5);display:flex;flex-wrap:wrap;gap:var(--s2)}
   .d-tags .lbl{flex:0 0 100%}
+  .d-own .lbl{display:block}
   .krow2{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .krow2+.krow2{margin-top:10px}
   .chip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink2);
@@ -233,16 +244,16 @@
   /* A node the map only has a name for is drawn as an outline of a node. It is not the
      same as missing — missing means looked for and not found. This means not looked at. */
   .node.named .dot{fill-opacity:.16}
-  .d-ev{margin-top:13px;font-size:13px;line-height:1.55;color:var(--ink2);
-    background:rgba(140,170,235,.07);border-radius:8px;padding:10px 12px}
+  .d-ev{margin-top:var(--s4);font-size:13px;line-height:1.55;color:var(--ink2);
+    background:rgba(140,170,235,.07);border-radius:8px;padding:var(--s3) var(--s4)}
   .d-ev .evlab{display:block;font-size:13px;font-weight:700;letter-spacing:.06em;
-    text-transform:uppercase;margin-bottom:5px}
+    text-transform:uppercase;margin-bottom:var(--s2)}
   .d-ev.seen .evlab{color:var(--present)}
   .d-ev.loaded .evlab{color:var(--r3)}
   .d-ev.named{background:rgba(242,160,60,.10)}
   .d-ev.named .evlab{color:var(--amber)}
   .d-ev code{font-family:var(--mono);font-size:12px;color:var(--r3)}
-  .d-ev .evbasis{display:block;margin-top:7px;color:var(--ink3);font-size:13px}
+  .d-ev .evbasis{display:block;margin-top:var(--s3);color:var(--ink3);font-size:13px}
   .ringkey.capmode .byring{display:none}
   .ringkey.capmode .bycap{display:flex}
   /* every ring/kind entry selects a group, so it has to look pressable */
@@ -267,7 +278,7 @@
   .khint{font-size:13px;color:var(--ink3);line-height:1.5;margin-top:2px}
 
   /* ---------- detail ---------- */
-  #detail{flex:0 1 auto;min-height:0;overflow-y:auto;padding:20px 22px;display:none;
+  #detail{flex:0 1 auto;min-height:0;overflow-y:auto;padding:var(--s6);display:none;
     position:relative}
   #detail.on{display:block;animation:drop .3s var(--ease)}
   /* With room for it, a skill gets its own column rather than the bottom of a stack it
@@ -310,7 +321,7 @@
   #findbtn:hover b,#findbtn.on b{color:var(--r3)}
   #findbtn i{grid-column:1/-1;font-style:normal;font-size:13px;font-weight:400;
     color:var(--ink3);margin-top:1px}
-  #findings{flex:0 1 auto;min-height:0;overflow-y:auto;padding:18px 20px;position:relative;
+  #findings{flex:0 1 auto;min-height:0;overflow-y:auto;padding:var(--s6);position:relative;
     scrollbar-width:thin;scrollbar-color:rgba(140,170,235,.26) transparent}
   #findings[hidden]{display:none}
   #findings::-webkit-scrollbar{width:9px;background:transparent}
@@ -372,14 +383,14 @@
     font-weight:600;color:var(--r3);background:transparent;padding:6px 0 0;text-align:left}
   .f-go:hover{text-decoration:underline}
   .d-name{font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.2;
-    margin-bottom:5px;padding-right:24px;word-break:break-word}
-  .d-stamp{font-size:13px;color:var(--ink3);margin-bottom:11px;line-height:1.4}
+    margin-bottom:var(--s1);padding-right:var(--s6);word-break:break-word}
+  .d-stamp{font-size:13px;color:var(--ink3);margin-bottom:var(--s3);line-height:1.4}
   .d-stamp b{font-family:var(--mono);font-weight:700;color:var(--ink2)}
   .d-stamp .dot{margin:0 7px;opacity:.55}
   .d-stamp i{font-style:normal;opacity:.8}
-  .d-meta{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:13px}
+  .d-meta{display:flex;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s4)}
   .tag{font-size:13px;font-weight:600;letter-spacing:.01em;
-    padding:5px 10px;border-radius:5px;background:rgba(140,170,235,.14);color:var(--ink2)}
+    padding:var(--s2) var(--s3);border-radius:5px;background:rgba(140,170,235,.14);color:var(--ink2)}
   .tag.st{color:var(--void)}
   /* The skill's own frontmatter, quoted. It had no rule of its own, so the label ran straight
      into the sentence — "Its own descriptionUse this skill whenever…". It is also the one
@@ -387,36 +398,32 @@
   /* A note about a file nobody can open is a memory, not a description. It sits in the
      warning's own amber rather than the panel's grey, because the paragraph above it reads
      as settled fact and is exactly as old as the claim the warning is disputing. */
-  .d-oldnote{margin:11px 0 0;padding:10px 12px;border-radius:8px;font-size:13px;
+  .d-oldnote{margin:var(--s4) 0 0;padding:var(--s3) var(--s4);border-radius:8px;font-size:13px;
     line-height:1.55;color:var(--ink2);background:rgba(242,160,60,.09)}
   .d-oldnote b{color:var(--amber)}
-  .d-own{margin:14px 0 0;padding:11px 13px;border-radius:8px;
+  .d-own{margin:var(--s4) 0 0;padding:var(--s3) var(--s4);border-radius:8px;
     background:rgba(140,170,235,.06);
     font-size:14px;color:var(--ink2);line-height:1.58}
-  .d-own .lbl{display:block;font-size:13px;letter-spacing:.12em;color:var(--ink3);
-    font-weight:700;margin-bottom:6px}
-  .d-placed{margin:2px 0 12px;padding:9px 11px;border-radius:8px;font-size:13px;
+  .d-placed{margin:var(--s1) 0 var(--s4);padding:var(--s3) var(--s4);border-radius:8px;font-size:13px;
     line-height:1.5;color:var(--r3);background:rgba(94,200,240,.09)}
   .d-placed b{color:var(--r3)}
   .d-placed code{font-family:var(--mono);font-size:12px}
-  .d-noclock{margin:2px 0 12px;padding:9px 11px;border-radius:8px;font-size:13px;
+  .d-noclock{margin:var(--s1) 0 var(--s4);padding:var(--s3) var(--s4);border-radius:8px;font-size:13px;
     line-height:1.5;color:var(--amber);background:rgba(242,160,60,.10)}
   .d-noclock b{color:var(--amber)}
   .d-noclock code{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
-  .d-desc{font-size:14.5px;color:var(--ink2);line-height:1.62}
+  .d-desc{font-size:14.5px;color:var(--ink2);line-height:1.62;margin-top:var(--s4)}
   .d-desc b{color:var(--ink);font-weight:600}
-  .d-rel{margin-top:13px}
-  .d-rel .lbl{font-size:13px;letter-spacing:.12em;color:var(--ink3);
-    font-weight:700;margin-bottom:7px}
+  .d-rel{margin-top:var(--s5)}
   .relbtn{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;
-    font-weight:500;padding:6px 11px;border-radius:6px;background:rgba(232,121,199,.14);
-    color:var(--overlap);margin:0 4px 4px 0;transition:background .16s var(--ease),color .16s var(--ease)}
+    font-weight:500;padding:var(--s2) var(--s3);border-radius:6px;background:rgba(232,121,199,.14);
+    color:var(--overlap);margin:0 var(--s2) var(--s2) 0;transition:background .16s var(--ease),color .16s var(--ease)}
   .relbtn:hover{background:var(--overlap);color:var(--void)}
   /* An open finding is a warning, and it was reading as a footnote — same greys as the
      description above it, with the only colour on a Copy button. It now carries the amber
      the map already uses for an open item, so the panel tells you there is something wrong
      here before you read a word of it. */
-  .d-fix{margin-top:16px;padding:12px 13px 13px;border-radius:10px;
+  .d-fix{margin-top:var(--s5);padding:var(--s4);border-radius:10px;
     background:rgba(242,160,60,.07);
     box-shadow:0 0 0 1px rgba(242,160,60,.24)}
   .d-fix .lbl{display:flex;align-items:center;gap:8px;margin-bottom:9px;
@@ -483,8 +490,8 @@
   .copy.ok,.fixall.ok{background:var(--present);color:var(--void)}
   .fixall{width:100%;margin-top:10px;font-size:13px;padding:9px 12px}
   .fixall b{font-family:var(--mono);font-weight:700}
-  .close{position:absolute;top:14px;right:14px;appearance:none;border:0;background:transparent;
-    color:var(--ink3);cursor:pointer;font-size:16px;line-height:1;padding:4px 6px;border-radius:6px}
+  .close{position:absolute;top:var(--s4);right:var(--s4);appearance:none;border:0;background:transparent;
+    color:var(--ink3);cursor:pointer;font-size:16px;line-height:1;padding:var(--s1);border-radius:6px}
   .close:hover{color:var(--ink);background:rgba(140,170,235,.14)}
 
   /* ---------- graph ---------- */

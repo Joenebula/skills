@@ -200,22 +200,9 @@ swap('<span class="always tog" data-k="agent"><i class="dot-agent"></i>custom ag
      `<span class="always tog" data-k="agent"><i class="dot-agent"></i>agent (not a skill)</span>
       <span class="always tog" data-k="unverified"><i class="dot-named"></i>unverified</span>`);
 // the unverified marker: a hollow ring, so it reads as an outline of a node rather than a node
-swap(`  .ringkey i.dot-done{background:transparent;box-shadow:inset 0 0 0 1.5px var(--present)}`,
-`  .ringkey i.dot-done{background:transparent;box-shadow:inset 0 0 0 1.5px var(--present)}
-  .ringkey i.dot-named{background:transparent;box-shadow:inset 0 0 0 1.5px var(--ink3)}
-  /* A node the map only has a name for is drawn as an outline of a node. It is not the
-     same as missing — missing means looked for and not found. This means not looked at. */
-  .node.named .dot{fill-opacity:.16}
-  .d-ev{margin-top:13px;font-size:13px;line-height:1.55;color:var(--ink2);
-    background:rgba(140,170,235,.07);border-radius:8px;padding:10px 12px}
-  .d-ev .evlab{display:block;font-size:13px;font-weight:700;letter-spacing:.06em;
-    text-transform:uppercase;margin-bottom:5px}
-  .d-ev.seen .evlab{color:var(--present)}
-  .d-ev.loaded .evlab{color:var(--r3)}
-  .d-ev.named{background:rgba(242,160,60,.10)}
-  .d-ev.named .evlab{color:var(--amber)}
-  .d-ev code{font-family:var(--mono);font-size:12px;color:var(--r3)}
-  .d-ev .evbasis{display:block;margin-top:7px;color:var(--ink3);font-size:13px}`);
+/* The evidence panel's styling used to be injected here. It styles markup that now lives
+   in the shell, so it lives there too — one less needle, and one less place where how the
+   panel looks is decided somewhere other than the file that draws it. */
 
 // title, core label, demo notices
 swap('<title>Meridian — Copilot Enterprise map (demo)</title>',
