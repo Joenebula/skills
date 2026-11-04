@@ -624,7 +624,6 @@
     margin-left:8px;white-space:nowrap;opacity:.75}
   #stamp b{color:var(--ink2);font-weight:700}
   #stamp .warn{color:var(--amber);opacity:1}
-  #stamp br{display:none}                      /* one line down here, not two */
   @media(max-width:820px){#bar{display:none}}
 
   /* the board's column headings are two facts, so they get two lines and a tally */
@@ -813,7 +812,6 @@
    Replaced at build time by docs/skills-map/skills-data.js — see scripts/build-map.mjs. */
 /* ------------------------------------------------------------------ setup */
 const cv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const COL={present:'--present',missing:'--missing',never:'--never',anchor:'--amber'};
 // Every skill resolves now, so status is one colour and tells you nothing. Colour carries the
 // ring instead — which library a skill is in and what asks for it.
 const RINGCOL={org:'--r1',repo:'--r2',scoped:'--r3',ondemand:'--r4',ext:'--r5'};
@@ -848,9 +846,6 @@ const NS='http://www.w3.org/2000/svg';
 const mk=(t,a={})=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
 const $=i=>document.getElementById(i), svg=$('viz');
 const P=(cx,cy,r,a)=>[cx+Math.cos(a)*r, cy+Math.sin(a)*r];
-const arc=(cx,cy,r,a0,a1)=>{const s=P(cx,cy,r,a0),e=P(cx,cy,r,a1);
-  return `M${s[0].toFixed(1)},${s[1].toFixed(1)}A${r.toFixed(1)},${r.toFixed(1)} 0 ${(a1-a0)>Math.PI?1:0} 1 ${e[0].toFixed(1)},${e[1].toFixed(1)}`;};
-const SLOW=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 let W=1000,H=740,CX=500,CY=370,MAXR=340,SAFE_L=10,SAFE_R=990,SAFE_B=0;
 let FITTED='';                      // the strip the current layout was built for
@@ -1066,10 +1061,6 @@ const gClip=mk('g',{id:'clipped'});
 gClip.append(gRing,gFlow,gEdge,gRingTop,gNode);
 gWorld.append(gSpin,gClip);
 let zoom=1, panX=0, panY=0;
-// The anchor is a landmark, not a subject. Left to scale with the view it becomes an
-// orange wall at 5x, so it grows to about 1.6x and then stops.
-const coreScale=()=>FLAT()?1:Math.min(1,1.6/zoom);
-const toScreenX=x=>x*zoom+panX, toScreenY=y=>y*zoom+panY;
 const toWorldX=x=>(x-panX)/zoom, toWorldY=y=>(y-panY)/zoom;
 /* Node names live outside gWorld so they hold 13px at any zoom. The column headings and the
    arc's phase ticks do not — they are drawn in world units, so at 2.2x they came out twice
@@ -1283,7 +1274,7 @@ function orbitPlace(){
 let settled=true;                       // false only while the field is coming to rest
 let pending=null;                       // a click made mid-settle, applied when it lands
 let coreX=0, coreY=0, corePX=0, corePY=0;
-const CORE_MS=760, SPRING=0.055, DRAG=0.865, SETTLE_MS=520;
+const SETTLE_MS=520;
 let restFrames=0;
 
 function startSettle(aimed){
@@ -1308,44 +1299,16 @@ function startSettle(aimed){
    ten frames a second it was still 51 units out after four. The clock is virtual, so the
    choreography is identical on any machine, and a hard stop guarantees it always lands. */
 let settleT=0, settleAcc=0, settleWall=0;
-const STEP=1000/60, SETTLE_CAP=3600;
 
-function settleSub(){
-  settleT+=STEP;
-  const k=Math.min(1,settleT/CORE_MS), e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
-  corePX=coreX; corePY=coreY;
-  coreX=W/2+(CX-W/2)*e; coreY=H/2+(CY-H/2)*e;
-  const cvx=coreX-corePX, cvy=coreY-corePY;
-  const reach=Math.max(1,MAXR);
-  let moving=0;
-  for(const n of N){
-    // dragged along by the centre, hardest on whatever is closest to it
-    const d=Math.hypot(n.x-coreX,n.y-coreY);
-    const share=Math.max(0,1-d/(reach*1.35));
-    n.vx+=cvx*share*1.9; n.vy+=cvy*share*1.9;
-    // then gravity toward its place, switched on ring by ring
-    const g=Math.max(0,Math.min(1,(settleT-n._gate)/300));
-    n.vx+=(n.hx-n.x)*SPRING*g; n.vy+=(n.hy-n.y)*SPRING*g;
-    n.vx*=DRAG; n.vy*=DRAG;
-    n.x+=n.vx; n.y+=n.vy;
-    if(Math.abs(n.vx)+Math.abs(n.vy)>0.09 || Math.hypot(n.hx-n.x,n.hy-n.y)>1.4) moving++;
-  }
-  restFrames = (moving===0 && settleT>CORE_MS) ? restFrames+1 : 0;
-  return restFrames>=4 || settleT>SETTLE_CAP;
-}
+/* ---- what the synapse replaced ---------------------------------------------------------
+   Twenty-one functions came out here. They drew, laid out, animated and labelled the four
+   arrangements the map used to offer, and the synapse replaced all four. Six of them —
+   resize, paint, tick, reheat, kick, apply — were already unreachable the moment the new
+   engine declared the same names further down the file, because the later declaration in a
+   scope is the one every call resolves to. The rest were reachable only from those six.
+   Nothing here was removed by eye: the set was computed from the parse tree and taken to a
+   fixed point, and the state they shared with the live code is still declared above. */
 
-function settleStep(){
-  const now=performance.now();
-  settleAcc+=Math.min(200, now-settleWall); settleWall=now;
-  let done=false, guard=0;
-  while(settleAcc>=STEP && guard++<24){ settleAcc-=STEP; if(settleSub()){ done=true; break; } }
-  if(!done) return;
-  N.forEach(n=>{ n.x=n.hx; n.y=n.hy; n.vx=n.vy=0; });
-  coreX=CX; coreY=CY;
-  settled=true; svg.classList.remove('settling');
-  if(pending){ const p=pending; pending=null; select(p); }
-  else apply();
-}
 
 function unpack(aimed){ startSettle(aimed); }
 
@@ -1550,17 +1513,7 @@ function scaffold(){
 // and their filter chips are gone: every skill in that ring is missing, so the grouping
 // never separated anything, and search already finds a phase by name.
 
-function hexPath(r){ let d='';
-  for(let i=0;i<6;i++){ const a=-Math.PI/2+i*Math.PI/3;
-    d+=(i?'L':'M')+(Math.cos(a)*r).toFixed(2)+','+(Math.sin(a)*r).toFixed(2); }
-  return d+'Z'; }
 
-const edgeVis=new Uint8Array(EDGES.length);
-const edgeEl=EDGES.map(e=>{
-  const c=e.kind==='bind'?'--bind':e.kind==='overlap'?'--overlap':'--phase';
-  const p=mk('path',{class:'edge',stroke:cv(c),'stroke-width':e.kind==='overlap'?.45:.32,
-    'stroke-opacity':0,'stroke-linecap':'round',pathLength:1,'stroke-dashoffset':1});
-  gEdge.appendChild(p); return p; });
 
 const labelEl=[];
 const nodeEl=N.map((n,i)=>{
@@ -1641,17 +1594,6 @@ const aT3=mk('text',{class:'plaincore corelbl nohit','text-anchor':'middle',y:22
 aT3.textContent='CLAUDE.md'; gA.appendChild(aT3);
 gNode.appendChild(gA);
 
-function repaint(){
-  N.forEach((n,i)=>{
-    const c=paintOf(n), el=nodeEl[i];
-    el.querySelector('.ring').setAttribute('fill',c);
-    el.querySelectorAll('.dot').forEach(d=>{
-      if(d.getAttribute('fill')&&d.getAttribute('fill')!=='none') d.setAttribute('fill',c);
-      if(d.getAttribute('stroke')) d.setAttribute('stroke',c);
-    });
-  });
-  document.querySelectorAll('.ringkey').forEach(k=>k.classList.toggle('capmode',colourMode==='cap'));
-}
 
 /* ------------------------------------------------------------------ layout */
 /* How far left the right-hand side reaches. It holds one thing or two — the controls, and
@@ -1722,7 +1664,6 @@ const FLAT=()=>VIEW==='board'||VIEW==='flow';
 
    The floor is the zoom that fits the whole width, so the far end of the board is one
    gesture away rather than unreachable. */
-const FRAMEZ=2.2;                    // enough that a 13px name reads as a 29px one
 /* The whole layout has to fit, always. This used to switch to a narrower band when something
    was selected, so that framing it could zoom past what the full layout allows. Nothing frames
    a selection in a flat view any more, so the exception has nothing left to serve — and
@@ -1770,8 +1711,6 @@ const VIEWS={
   cluster: {name:'Clusters',    hint:'all of it at once'},
   flow:    {name:'Flow',        hint:'where it all lands'}
 };
-const PHASE_ORDER=['always','A','B','C','D','E','F','G','H','S2','never','unmapped','builtin'];
-const phaseRank=p=>{const i=PHASE_ORDER.indexOf(p); return i<0?99:i;};
 /* "Phase A" is a filing reference, not a name — it says where something sits in a list and
    nothing about what it is. The heading is what the column is FOR, from GROUP_NAME in the
    data; where the build plan made the assignment its numbered step stays on the sub-line so
@@ -2123,82 +2062,7 @@ function setLayout(v){
   apply(); kick();
 }
 
-function resize(){
-  W=1000; H=Math.round(1000*innerHeight/innerWidth); CY=H/2;
-  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
-  // map units per CSS pixel — every node name is 13px on screen whatever the width
-  const u=W/innerWidth;
-  LBLU=13*u; LBLH=LBLU*1.55; LBLOFF=52*u;
-  // how far a name stands off its dot before the leader line takes over
-  LBLSTAND=9*u;
-  svg.style.setProperty('--lbl',LBLU.toFixed(3)+'px');
-  svg.style.setProperty('--lblhalo',(3.4*u).toFixed(3)+'px');
-  // Column headings, sub-lines and tick labels in screen pixels too, so they stay the same
-  // size as everything else on the page whatever the window is doing.
-  svg.style.setProperty('--col',(11*u).toFixed(3)+'px');
-  svg.style.setProperty('--colsub',(10*u).toFixed(3)+'px');
-  // The flow view's own type, in the same screen pixels. Set as a fixed world size it came
-  // out at twice the node names on a wide window — legible, and shouting.
-  svg.style.setProperty('--lane',(12.5*u).toFixed(3)+'px');
-  svg.style.setProperty('--hubn',(15*u).toFixed(3)+'px');
-  svg.style.setProperty('--hubl',(10*u).toFixed(3)+'px');
-  trailFit();
-  gutters();
-  // centre and size the map in the space the panel leaves, so no node ever sits under it
-  CX=(SAFE_L+SAFE_R)/2;
-  MAXR=Math.max(90, Math.min((SAFE_R-SAFE_L)/2, CY) - Math.min(60,Math.min(W,H)*.09));
-  homes(); clipFlat();
-  sizeNodes();
-  orbitHomes();
-  svg.classList.toggle('orbiting',orbiting);
-  if(orbiting) orbitPlace();
-  else if(!N[0].x) N.forEach(n=>{ n.x=n.hx; n.y=n.hy; });
-  deco(); rings();
-  if(orbiting){ alpha=0; if(!raf) raf=requestAnimationFrame(tick); } else { alpha=0; paint(); }
-  // the strip the map is now laid out for. refit() compares against this rather than against
-  // whatever gutters() last measured, which is not the same thing: select() measures once
-  // with the skill panel in its beside-the-controls slot, a frame before the controls stow
-  // and it moves to the edge. Comparing to that transient made every selection look like a
-  // change of width and re-home the whole map for a strip it already had.
-  FITTED=[SAFE_L,SAFE_R,SAFE_B].join();
-}
 
-// Node radius is derived from the arc each ring gives one node, so the map stays legible
-// whether it holds 56 skills or several hundred. NODE_SC feeds back into the repulsion,
-// otherwise a dense map would push its own nodes off their rings.
-let NODE_SC=1;
-function sizeNodes(){
-  const per={}; N.forEach(n=>per[n.ring]=(per[n.ring]||0)+1);
-  let smallest=Infinity;
-  N.forEach(n=>{
-    const arcPer=2*Math.PI*n.R/Math.max(8,per[n.ring]);
-    // Drawn smaller than it is pressable: the hit disc below is a separate transparent
-    // circle of 7 units, so shrinking this costs nothing in aim.
-    const base=Math.max(1.05,Math.min(2.3,arcPer*0.195));
-    smallest=Math.min(smallest,base);
-    n.rad=base*(0.80+n.w*0.06);
-  });
-  NODE_SC=smallest/3.1;
-  // The radius is derived from the arc a ring gives one node, which says nothing about a
-  // column. In the board a node has COLGAP to itself, and what has to fit inside it is the
-  // outermost circle — the agent collar at twice the radius, or the ring at 1.45 times it.
-  if(VIEW==='board'||VIEW==='cluster') N.forEach(n=>{
-    n.rad=Math.min(n.rad, Math.max(1.05, (COLGAP/2-0.8)/(n.agent?1.55:1.26)));
-  });
-  N.forEach((n,i)=>{
-    const el=nodeEl[i];
-    // The rings scale with the node instead of clearing it by a fixed distance. A fixed
-    // 3.2 units around a 2-unit dot is a ring nearly twice the width of the thing it is
-    // marking, which reads as a circle with a dot loose inside it. Proportional keeps the
-    // relationship the same whatever size the node ends up, which matters because the board
-    // caps its radii and the radial view does not.
-    const f=el.querySelector('.flag'); if(f) f.setAttribute('r',(n.rad*1.48+0.26).toFixed(2));
-    const tk=el.querySelector('.tick'); if(tk) tk.setAttribute('r',(n.rad*1.40+0.24).toFixed(2));
-    el.querySelector('.ring').setAttribute('r',(n.rad*1.26+0.22).toFixed(2));
-    el.querySelectorAll('.dot').forEach(d=>
-      d.setAttribute('r',(d.classList.contains('collar')?n.rad*1.55+0.4:n.rad).toFixed(2)));
-  });
-}
 
 /* ---- trails ---------------------------------------------------------------------------
    Three treatments, one picked at random each load, so the opening is not the same twice.
@@ -2221,232 +2085,16 @@ function sizeNodes(){
 const tcv=document.createElement('canvas');
 tcv.id='trailcv'; document.body.insertBefore(tcv,svg);
 const tcx=tcv.getContext('2d');
-let TW=0,TH=0,TDPR=1;
-function trailFit(){
-  TDPR=Math.min(2,devicePixelRatio||1);
-  TW=innerWidth; TH=innerHeight;
-  tcv.width=Math.round(TW*TDPR); tcv.height=Math.round(TH*TDPR);
-  tcx.setTransform(TDPR,0,0,TDPR,0,0);
-}
+let TW=0,TH=0;
 
 const sparks=[];
-function trailStep(dt){
-  for(const n of N){
-    n._emit=(n._emit||0)-dt;
-    if(n._emit<=0){
-      n._emit=0.05+Math.random()*0.07;
-      sparks.push({x:n.x,y:n.y,col:paintOf(n),life:1,sz:0.7+Math.random()*1.1,
-        vx:(Math.random()-0.5)*7,vy:(Math.random()-0.5)*7});
-    }
-  }
-  for(let i=sparks.length-1;i>=0;i--){
-    const s=sparks[i]; s.life-=dt*1.15; s.x+=s.vx*dt; s.y+=s.vy*dt;
-    if(s.life<=0) sparks.splice(i,1);
-  }
-}
-function trailDraw(){
-  if(!orbiting){ tcx.clearRect(0,0,TW,TH); return; }
-  const sc=TW/W;                                  // map units to screen pixels
-  tcx.clearRect(0,0,TW,TH);
-  tcx.lineCap='round';
-  for(const s of sparks){
-    tcx.globalAlpha=s.life*s.life*0.62; tcx.fillStyle=s.col;
-    tcx.beginPath(); tcx.arc(s.x*sc,s.y*sc,(0.5+s.life*s.sz*1.6),0,7); tcx.fill();
-  }
-  tcx.globalAlpha=1;
-}
 
 /* ------------------------------------------------------------------ physics */
 let drag=null, alpha=1, raf=null;
-// Physics is a 62-node luxury. Past a few hundred the repulsion overwhelms every spring
-// and the map turns to mush, so both layouts are computed and the simulation stays off.
-const SIMULATE=N.length<=200;
-function sim(){
-  const k=alpha, sc=MAXR/340;
-  // Outside the radial view a node's home is the whole answer — the ring constraint and
-  // the overlap springs would drag a column or a row back into a circle. Spring to home,
-  // with just enough separation to stop two nodes sitting exactly on top of each other.
-  if(VIEW!=='radial'){
-    for(let i=0;i<N.length;i++){ const a=N[i];
-      for(let j=i+1;j<N.length;j++){ const b=N[j];
-        let dx=b.x-a.x, dy=b.y-a.y, d2=dx*dx+dy*dy; if(d2<1)d2=1;
-        if(d2<150){ const d=Math.sqrt(d2), f=26/d2; dx/=d; dy/=d;
-          a.vx-=dx*f; a.vy-=dy*f; b.vx+=dx*f; b.vy+=dy*f; } } }
-    N.forEach(n=>{ n.vx+=(n.hx-n.x)*.075; n.vy+=(n.hy-n.y)*.075;
-      n.vx*=.72; n.vy*=.72;
-      if(n!==drag){ n.x+=n.vx*k; n.y+=n.vy*k; } });
-    return;
-  }
-  for(let i=0;i<N.length;i++){ const a=N[i];
-    for(let j=i+1;j<N.length;j++){ const b=N[j];
-      let dx=b.x-a.x, dy=b.y-a.y, d2=dx*dx+dy*dy; if(d2<1)d2=1;
-      if(d2<14000*sc*sc*NODE_SC){ const d=Math.sqrt(d2), f=520*sc*NODE_SC/d2; dx/=d; dy/=d;
-        a.vx-=dx*f; a.vy-=dy*f; b.vx+=dx*f; b.vy+=dy*f; } } }
-  N.forEach(n=>{
-    let dx=n.x-CX, dy=n.y-CY, d=Math.hypot(dx,dy)||1;
-    n.vx+=dx/d*(n.R-d)*.075; n.vy+=dy/d*(n.R-d)*.075;
-    const hx=CX+Math.cos(n.A)*n.R, hy=CY+Math.sin(n.A)*n.R;
-    n.vx+=(hx-n.x)*.010; n.vy+=(hy-n.y)*.010;
-  });
-  EDGES.forEach(e=>{ if(e.kind!=='overlap')return;
-    const a=N[IDX[e.a]], b=N[IDX[e.b]];
-    let dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||1;
-    const f=(d-92*sc)/d*.012; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f; });
-  N.forEach(n=>{ n.vx*=.79; n.vy*=.79;
-    if(n!==drag){ n.x+=n.vx*k; n.y+=n.vy*k; }
-    n.x=Math.max(14,Math.min(W-14,n.x)); n.y=Math.max(14,Math.min(H-14,n.y));
-  });
-}
 
-/* every shown label is pushed clear of its neighbours, with a leader when it moves */
-// Row pitch and the width estimate are both in map units, so they have to track the label
-// size — pinning names to 13px on screen changes how many units of the map they occupy.
-let LBLH=11.6, LBLU=8.5, LBLOFF=40, LBLSTAND=8;
-const DEAD=24;              // the deadband that stops labels flip-flopping across the gutter
-let easing=false;
-const EASE=.26;
-const LBLBOX=[];
-function paintMask(){
-  while(lblMask.childNodes.length>1) lblMask.removeChild(lblMask.lastChild);
-  const pad=LBLH*0.26/zoom;
-  for(const b of LBLBOX)
-    lblMask.appendChild(mk('rect',{x:(b.x0-pad).toFixed(1),y:(b.y0-pad).toFixed(1),
-      width:(b.x1-b.x0+pad*2).toFixed(1),height:(b.y1-b.y0+pad*2).toFixed(1),
-      rx:(pad*1.4).toFixed(1),fill:'#000'}));
-}
-function dodge(){
-  easing=false; LBLBOX.length=0;
-  const items=[];
-  N.forEach((n,i)=>{
-    const el=labelEl[i], LT=el._t, LD=el._ld;
-    if(nodeEl[i].style.display==='none'||!el.classList.contains('show')){
-      // retract to the node so the next reveal animates outward from it
-      if(n._ldy===undefined) n._ldy=0;
-      if(Math.abs(n._ldy)>.4){ n._ldy+=(0-n._ldy)*EASE; easing=true;
-        LT.setAttribute('y',(n._ldy+3).toFixed(1)); }
-      // _lead was set to 0 here and never set to anything else, so this ran once per node
-      // for the life of the page. A label that showed, drew a leader, then hid again left
-      // that leader on screen for good — a line from a node to a name that is no longer
-      // there. Those are the random lines. Clear it every time.
-      LD.style.opacity=0; return; }
-    const est=(n.id.length+(NEWTAG.has(n.id)?2:0))*LBLU*.635+LBLU*.94;   // text width in map units, from the label size
-    // Side is sticky: a node drifting a pixel across the gutter must not swap the label
-    // back and forth every frame. Only commit once it is clearly past the threshold.
-    const sx=n.sx, sy=n.sy, srad=n.srad;
-    const rEdge=sx+srad+8+est, lEdge=sx-srad-8-est;
-    const left = sx<CX ? (lEdge > (n._left===false ? SAFE_L+DEAD : SAFE_L))
-                       // against the visible strip: a name has room on the right only if
-                       // there is screen there, not merely layout there
-                       : (rEdge > (n._left===true  ? VIS_R-DEAD : VIS_R));
-    n._left=left;
-    // A bigger standoff is what buys the room: the labels were starting 8 units from the
-    // dot, so a row of three nodes 15 units apart had its three names overlapping before
-    // the dodge had anywhere to put them. Further out, and the leader line says which name
-    // belongs to which dot.
-    const ax = left ? -(srad+LBLSTAND) : (srad+LBLSTAND);
-    const x0 = left ? sx+ax-est : sx+ax;
-    items.push({n,el,left,ax,x0,x1:x0+est,ty:sy});
-  });
-  // one sweep over every label, both columns at once — a left-anchored label from the
-  // right half can still land on top of a right-anchored one, which per-side misses
-  items.sort((a,b)=>a.ty-b.ty);
-  // The pitch is what the map can afford, not the tightest that fits. Twelve names on an
-  // empty board were being stacked at 14 units in the middle of 600 units of nothing.
-  const PITCH=Math.max(LBLH, Math.min(LBLH*2.0,(H-70)/Math.max(1,items.length)));
-  /* How far a name may travel from its own dot before it is withdrawn instead. The cap
-     exists because a name a long way from its node stops belonging to it — but it was a
-     fixed distance, and the distance a name NEEDS depends on how many others are competing
-     for the same column. Picking "agent (not a skill)" lights five names; two of them sat a
-     pixel apart in y, so one had to move a full pitch, which is further than the cap allows,
-     so it vanished. Five names on an empty screen and one of them silently gone.
-
-     The budget therefore scales with how crowded it is. Sixty names showing and it stays
-     where it was; a handful and a name may go a long way, because there is nothing else up
-     there to confuse it with. A name you asked to see and did not get is worse than a name
-     sitting further from its dot than it might.
-
-     34 rather than 14: measured, not guessed. Lighting each ring in turn and counting both
-     withdrawals and actual overlapping glyph boxes, 14 still dropped four names from the
-     eighteen-node rings; 34 drops none, and every set tested — 4, 5, 14, 18 — comes out with
-     nothing withdrawn and nothing overlapping. */
-  const OFF=LBLOFF*Math.max(1,Math.min(4,34/Math.max(1,items.length)));
-  const PUSH = 1;                     // names stack downward
-  const placed=ringBoxes.slice();     // ring titles are fixed obstacles, never moved
-  // Obstacles carry their own required clearance: a fat disc needs more room above and
-  // below it than a text row does, so a flat pitch left labels sitting on the big nodes.
-  // the core moves and scales with the view, so its obstacle has to as well
-  const acx=toScreenX(AX), acy=toScreenY(AY), ar=34*coreScale()*zoom;
-  placed.push({x0:acx-ar,x1:acx+ar,ty:acy,h:ar+6});
-  // Only the nodes that are themselves being named are obstacles. Dodging every dot on
-  // screen meant a single label had 55 of them in its column, got pushed past the
-  // displacement cap, and was withdrawn — a framed node with nothing but a dot. A name
-  // crossing an unlit dot is not ambiguous: unlit dots have no names to be confused with,
-  // and the label carries a dark halo stroke to stay legible over one.
-  for(const it of items)
-    placed.push({owner:it.n,x0:it.n.sx-it.n.srad-3,x1:it.n.sx+it.n.srad+3,
-                 ty:it.n.sy,h:it.n.srad+5});
-  for(const it of items){
-    for(let guard=0,moved=true; moved&&guard<80; guard++){
-      moved=false;
-      for(const p of placed)
-        { if(p.owner===it.n) continue;              // never dodge your own dot
-          const gap=p.h||PITCH;
-          if(it.x0<p.x1 && p.x0<it.x1 && Math.abs(it.ty-p.ty)<gap){ it.ty=p.ty+gap*PUSH; moved=true; } }
-    }
-    placed.push(it);
-  }
-  // A long push chain can walk the last labels off-screen. Clamping them individually
-  // would collapse rows back together, so shift the whole set — that keeps every gap.
-  if(items.length){
-    const hi=Math.max(...items.map(i=>i.ty)), lo=Math.min(...items.map(i=>i.ty));
-    let shift=hi>H-10 ? (H-10)-hi : 0;
-    if(lo+shift<10) shift=10-lo;
-    if(shift) for(const i of items) i.ty+=shift;
-  }
-  const kept=[];
-  for(const s of items){
-    const t=s.el._t, ld=s.el._ld;
-    // withdraw rather than drag: also covers nodes panned outside the safe gutter, whose
-    // labels the clamp would otherwise sling across the whole screen
-    // The displacement cap can stop a push before the row is actually clear, which leaves
-    // two names touching. Two names touching is worse than one name missing, so the
-    // second one goes.
-    let clash=false;
-    for(const k of kept)
-      if(s.x0<k.x1 && k.x0<s.x1 && Math.abs(s.ty-k.ty)<PITCH*0.92){ clash=true; break; }
-    const far = clash || Math.abs(s.ty-s.n.sy)>OFF ||
-                s.x0<SAFE_L-40 || s.x1>VIS_R+40 || s.n.sy<-20 || s.n.sy>H+20;
-    s.el.classList.toggle('toofar',far);
-    if(far){ s.n._ldy=0; t.setAttribute('y',3); ld.style.opacity=0; continue; }
-    kept.push(s);
-    // glide into the clear slot rather than snapping to it
-    const target=s.ty-s.n.sy;
-    if(s.n._ldy===undefined) s.n._ldy=0;
-    // In the flat views the label lands rather than glides. The glide is a per-frame state
-    // that the withdraw rule then reads back: a label part-way to its slot can still be
-    // touching its neighbour, which withdraws it, which resets it toward zero, which clears
-    // the touch, which lets it start again. It never settles, and the leader lines swing
-    // about at angles that belong to no particular frame — the "random lines". Nodes here
-    // do not move, so there is nothing for the glide to smooth over anyway.
-    if(FLAT()) s.n._ldy=target;
-    else if(Math.abs(target-s.n._ldy)>.4){ s.n._ldy+=(target-s.n._ldy)*EASE; easing=true; }
-    else s.n._ldy=target;
-    const oy=s.n._ldy;
-    t.setAttribute('x',s.ax); t.setAttribute('y',(oy+3).toFixed(1));
-    t.setAttribute('text-anchor',s.left?'end':'start');
-    // where this name ended up, in world units, so a link can go round it rather than
-    // through it. Screen to world is the inverse of the pan and zoom the links are drawn in.
-    LBLBOX.push({x0:(s.x0-panX)/zoom, x1:(s.x1-panX)/zoom,
-                 y0:(s.ty-LBLH*0.50-panY)/zoom, y1:(s.ty+LBLH*0.40-panY)/zoom});
-    // No leader lines. They were how a name that had nowhere to go still pointed at its
-    // dot; with the flat views zooming to a selection the name has somewhere to go, and a
-    // line to every name is more ink than the thing it explains.
-    ld.style.opacity = 0;
-    ld.setAttribute('x1',s.left?-(s.n.srad+2):(s.n.srad+2)); ld.setAttribute('y1',0);
-    ld.setAttribute('x2',(s.ax*.92).toFixed(1)); ld.setAttribute('y2',oy.toFixed(1));
-  }
-  paintMask();
-}
+// The width a name takes, per character, in map units. The label dodging this fed is gone
+// with the flat views; the tooltip still sizes itself off it.
+let LBLU=8.5;
 /* One ribbon per skill, from where it sits to where it belongs. Drawn here rather than built
    once in scaffold() because the settle animates the nodes into place and a path laid down
    before they arrive is a path to where they used to be.
@@ -2455,71 +2103,6 @@ function dodge(){
    is what makes a hundred curves leaving one area for four points read as four streams
    rather than as a hundred lines. Bundling them any harder would be a lie about how many
    there are. */
-function flowPaths(){
-  gFlow.style.display='';
-  const want=N.length;
-  while(gFlow.childNodes.length<want)
-    gFlow.appendChild(mk('path',{fill:'none','stroke-width':.85,'stroke-linecap':'round'}));
-  N.forEach((n,i)=>{
-    const el=gFlow.childNodes[i], h=HUB[n.ring];
-    if(!h||nodeEl[i].style.display==='none'){ el.style.display='none'; return; }
-    el.style.display='';
-    const dx=(h.x-n.x);
-    el.setAttribute('d',`M${n.x.toFixed(1)},${n.y.toFixed(1)}`
-      +`C${(n.x+dx*.42).toFixed(1)},${n.y.toFixed(1)} `
-      +`${(h.x-dx*.30).toFixed(1)},${h.y.toFixed(1)} ${h.x.toFixed(1)},${h.y.toFixed(1)}`);
-    el.setAttribute('stroke',paintOf(n));
-    // A lit node's ribbon comes forward with it; the rest stay faint enough that sixty of
-    // them are a texture rather than a thicket. The lit/faded decision is apply()'s, taken
-    // from the node's own class rather than recomputed here — two implementations of "is
-    // this one lit" is how a ribbon ends up bright under a dimmed dot.
-    const cl=nodeEl[i].classList, isSel=cl.contains('sel');
-    el.setAttribute('stroke-opacity',cl.contains('faded')?.05:(isSel?.95:.40));
-    el.setAttribute('stroke-width',isSel?1.9:.85);
-  });
-  for(let i=want;i<gFlow.childNodes.length;i++) gFlow.childNodes[i].style.display='none';
-}
-function paint(){
-  N.forEach((n,i)=>{
-    nodeEl[i].setAttribute('transform',`translate(${n.x.toFixed(1)},${n.y.toFixed(1)})`);
-    n.sx=toScreenX(n.x); n.sy=toScreenY(n.y); n.srad=n.rad*zoom;
-    labelEl[i].setAttribute('transform',`translate(${n.sx.toFixed(1)},${n.sy.toFixed(1)})`); });
-  gA.setAttribute('transform',`translate(${oCX()},${oCY()}) scale(${coreScale().toFixed(4)})`);
-  // Left visible, they drew over the board: sixty ribbons to four points that are not on the
-  // screen any more, on top of a layout that has nothing to do with them.
-  if(VIEW==='flow') flowPaths(); else if(gFlow.childNodes.length) gFlow.style.display='none';
-  EDGES.forEach((e,i)=>{
-    if(VIEW==='flow'){ edgeEl[i].style.display='none'; return; }  // the ribbons are the links
-    edgeEl[i].style.display='';
-    if(!edgeVis[i]) return;   // invisible edges do not need a path
-    const a=e.a===ANCHOR.id?{x:AX,y:AY}:N[IDX[e.a]];
-    const b=e.b===ANCHOR.id?{x:AX,y:AY}:N[IDX[e.b]];
-    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
-    let qx,qy;
-    if(e.kind==='overlap' && VIEW!=='board'){ qx=mx+(AX-mx)*.45; qy=my+(AY-my)*.45; }
-    else { qx=mx; qy=my; }                      // control point at the midpoint == straight
-    edgeEl[i].setAttribute('d',`M${a.x.toFixed(1)},${a.y.toFixed(1)}Q${qx.toFixed(1)},${qy.toFixed(1)} ${b.x.toFixed(1)},${b.y.toFixed(1)}`); });
-  dodge();
-}
-function tick(){
-  // Labels easing must not keep the physics awake: moving nodes move the label targets,
-  // which keeps easing alive, which keeps the nodes moving. Freeze the graph, glide the text.
-  if(orbiting){ spinT+=1/60; orbitPlace(); trailStep(1/60); trailDraw();
-    validateHover(); paint();
-    raf=requestAnimationFrame(tick); return; }
-  if(!settled){
-    settleStep(); paint();
-    raf=requestAnimationFrame(tick); return;
-  }
-  const live=(alpha>.05&&SIMULATE)||drag;
-  if(live){ if(SIMULATE) sim(); alpha*=.997; validateHover(); }
-  paint();
-  raf=(live||easing)?requestAnimationFrame(tick):null;
-}
-function reheat(v){ alpha=Math.max(alpha,v); if(!raf) raf=requestAnimationFrame(tick); }
-// redraw without waking the graph — used for selection, filters and label easing,
-// none of which should move a node
-function kick(){ if(!raf) raf=requestAnimationFrame(tick); }
 
 /* ------------------------------------------------------------------ state */
 const nrm=t=>t.toLowerCase();
@@ -2535,105 +2118,6 @@ function score(n,q){ const id=nrm(n.id), i=id.indexOf(q);
   if(nrm(PHASES[n.phase]||'').includes(q))return 4;
   if(nrm(n.desc.replace(/<[^>]+>/g,'')).includes(q))return 5; return -1; }
 
-function apply(){
-  const focus=sel||hover;
-  // At 62 nodes, focusing the root and lighting everything was a useful gesture. At a
-  // thousand it is a hairball and a 30ms label pass, so the root lights only what binds
-  // to it unconditionally — the organisation and repository surfaces.
-  const lit=focus?new Set([focus,...(focus===ANCHOR.id
-    ? N.filter(n=>n.ring==='org').map(n=>n.id)
-    : [...(neigh[focus]||[]),ANCHOR.id])]):null;
-  // A search and a pick are the same gesture — "show me these" — so they light through
-  // the same channel and add rather than compete.
-  const picked=pickedIds();
-  const lit2=(query&&hits)||picked
-    ? new Set([...((query&&hits)?hits:[]),...(picked||[])])
-    : null;
-  // Beyond what the viewport can stack, naming everything at once is noise, not a firehose.
-  // Two columns of rows is the ceiling; past it, fall back to the selection and hover only.
-  // How many names can be shown is a function of the view, not the viewport. At 100% the
-  // median gap between nodes is 10px, so ninety names cannot each sit beside their dot —
-  // they get withdrawn and you see almost nothing. Fewer names, each in the right place,
-  // and the budget grows as you zoom in and the nodes move apart.
-  const CAP=Math.max(12,Math.min(Math.floor(2*(H-20)/LBLH),Math.round(12*zoom+6)));
-  // Past the cap the old behaviour was to name nothing but the selection, which at this
-  // scale means selecting the root lit a hundred nodes and named none of them. Name the
-  // ones nearest the thing you focused instead — a full screen of labels, closest first.
-  // Which names to show is decided by which ones have somewhere to go. Ranking by
-  // distance from the focus picked exactly the most crowded nodes on the map, and every
-  // one of them then failed the displacement cap — a hundred candidates, nothing drawn.
-  // Rank by elbow room instead: the isolated node gets named, the one in the middle of a
-  // pile does not, and zooming in is what gives the pile room.
-  const cand=[];
-  N.forEach(n=>{ if(visible(n) && ((!!lit2&&lit2.has(n.id))||(!!lit&&lit.has(n.id))||n.id===hover))
-    cand.push(n); });
-  let nameable=null;
-  if(cand.length>CAP){
-    const room=cand.map((n,i)=>{ let m=Infinity;
-      for(let j=0;j<cand.length;j++){ if(i===j) continue;
-        const d=(n.x-cand[j].x)**2+(n.y-cand[j].y)**2; if(d<m) m=d; }
-      return [n.id,m]; });
-    room.sort((p,q)=>q[1]-p[1]);
-    nameable=new Set(room.slice(0,CAP).map(r=>r[0]));
-    if(sel) nameable.add(sel); if(hover) nameable.add(hover);
-  }
-  N.forEach((n,i)=>{ const el=nodeEl[i];
-    el.style.display=visible(n)?'':'none';
-    const isHit=!!lit2&&lit2.has(n.id), isLit=!!lit&&lit.has(n.id);
-    const lg=labelEl[i]; lg.style.display=el.style.display;
-    // A tag search and a selection are two ways of lighting the map, and they used to
-    // fight: a search hit that was not also a neighbour of the selected node got faded
-    // to nothing while its label stayed lit, which is how a name ended up floating with
-    // no dot under it. One rule now — lit is the union, faded is everything else.
-    const on=isHit||isLit||n.id===sel;
-    const state=[n.id===sel, isHit,
-      // Nothing is named until it has landed: a name on a node still travelling is a
-      // label for wherever that node happens to be a frame later.
-      settled && !orbiting && (on||n.id===hover) &&
-        (!nameable||nameable.has(n.id)||n.id===sel||n.id===hover),
-      (!!lit||!!lit2) && !on && n.id!==hover];
-    // Most nodes are unchanged between two states of the map. At 62 rewriting all of
-    // them anyway cost nothing; at a thousand it is eight thousand class writes for a
-    // single hover, so skip the ones whose four flags did not move.
-    const kstr=state.join('')+el.style.display;
-    if(n._kstate===kstr) return;
-    n._kstate=kstr;
-    const NAMES=['sel','hit','show','faded'];
-    for(let k=0;k<4;k++){ el.classList.toggle(NAMES[k],state[k]); lg.classList.toggle(NAMES[k],state[k]); } });
-  // The core is the landmark everything else is positioned against, not a result, so a
-  // pick never dims it — picking "excluded" left the middle of the map an empty smudge.
-  // A selection or a search still does, because then it genuinely is or is not a match.
-  const aOn = sel===ANCHOR.id || (!!lit&&lit.has(ANCHOR.id)) || (!!lit2&&lit2.has(ANCHOR.id))
-    || (!lit && !query);
-  gA.classList.toggle('sel',sel===ANCHOR.id);
-  gA.classList.toggle('faded',(!!lit||!!lit2)&&!aOn);
-  EDGES.forEach((e,i)=>{
-    const na=e.a===ANCHOR.id?null:N[IDX[e.a]], nb=e.b===ANCHOR.id?null:N[IDX[e.b]];
-    let o=0;
-    // The board draws links only for what you have selected, and draws them straight. The
-    // thicket before came from curving them toward the centre, which on a row of columns
-    // sends every line on a detour through the middle of the board; a straight line between
-    // two columns crosses only what is between them.
-    if(VIEW==='board' && !focus) { edgeVis[i]=0; edgeEl[i].setAttribute('stroke-opacity',0); return; }
-    if((!na||visible(na))&&(!nb||visible(nb))){
-      // In the arc the overlaps ARE the picture: a row of dots with
-      // nothing over it, or a scatter with nothing between it, is the one thing those
-      // layouts have nothing to say. They stay drawn at rest and lift when something is
-      // focused, rather than appearing only on a click. The radial view still hides them —
-      // there they cross the middle and make a hairball rather than a diagram.
-      if(VIEW==='arc'&&e.kind==='overlap')
-        o = focus&&(e.a===focus||e.b===focus) ? .95
-          : (lit||lit2) ? .07 : .34;
-      else if(focus&&(e.a===focus||e.b===focus)) o=e.kind==='overlap'?.9:e.kind==='bind'?.85:.45;
-      // A fan from the root to all 1024 is a purple wall, not a diagram. Draw only the
-      // links to what the root actually lights.
-      else if(focus===ANCHOR.id&&e.a===ANCHOR.id&&lit&&lit.has(e.b)) o=.75; }
-    edgeVis[i]=o>0;
-    edgeEl[i].setAttribute('stroke-opacity',o);
-    edgeEl[i].setAttribute('stroke-dashoffset',o?0:1); });   // links draw themselves in
-  $('hint').classList.toggle('gone',!!sel||!!query);
-  kick();
-}
 
 /* ------------------------------------------------------------------ clipboard */
 async function copy(text,btn){
@@ -2875,50 +2359,6 @@ function openFindings(filter){
 }
 function closeFindings(){ $('findings').hidden=true; $('findbtn').classList.remove('on'); }
 
-function brief(){
-  const all=[ANCHOR].concat(N).filter(n=>FIXES[n.id])
-    .sort((a,b)=>(BASIS[a.id]||['',99])[1]-(BASIS[b.id]||['',99])[1]);
-  const rows=all.filter(n=>isOpen(n.id));
-  const counts={};
-  rows.forEach(n=>{ const k=(BASIS[n.id]||['unverified'])[0]; counts[k]=(counts[k]||0)+1; });
-  const needs={};
-  rows.forEach(n=>{ const k=NEEDS[n.id]; if(k) needs[k]=(needs[k]||0)+1; });
-  const tally=Object.entries(counts)
-    .map(([k,v])=>`${v} ${BASIS_SHORT[k]}`).join(', ');
-  return `# ${COMPANY} · Copilot Enterprise — ${rows.length} open items\n\n`+
-    "> **Synthetic demo.** Generated data, invented company, invented files. Not a real audit,\n> and not safe to run against a real repository.\n\n"+
-
-    `How far each one has got:\n\n| State | Count | Means |\n|---|---|---|\n`+
-    BASIS_ORDER.filter(k=>counts[k]).map(k=>
-      `| **${BASIS_SHORT[k]}** | ${counts[k]} | ${BASIS_MEANS[k]} |`).join('\n')+`\n\n`+
-    `\n**Nothing here is finished.** Drafted means the text is written but not pasted; corrected `+
-    `means I fixed my claim, not that the question is settled. Every one of the ${rows.length} `+
-    `still needs something from you:\n\n`+
-    `| What it still needs | Count |\n|---|---|\n`+
-    NEEDS_ORDER.filter(k=>needs[k]).map(k=>`| ${NEEDS_LABEL[k]} | ${needs[k]} |`).join('\n')+`\n\n`+
-    `Ordered by dependency: several edit the same paragraph, so work top to bottom rather than in `+
-    `parallel. Step 1 may close some of the unverified ones outright.\n\n`+
-    PREAMBLE+`\n`+
-    rows.map((n,i)=>{
-      const st=stateOf(n);
-      const [b]=BASIS[n.id]||['unverified'];
-      return `## Step ${i+1} — ${n.id}  (${st}, ${PHASES[n.phase]||'anchor'}) — ${BASIS_LABEL[b]}\n\n`+
-        `**Run from:** ${WHERE[n.id]||'repo'}  ·  **Needs:** ${NEEDS_LABEL[NEEDS[n.id]]||'—'}\n\n`+
-        `**What I observed:** ${plain(n.desc)}\n\n`+
-        `**Fix:**\n${FIXES[n.id]}\n`;
-    }).join('\n---\n\n')+
-    `\n\n---\n\n## When you finish\n\n`+
-    `Report three lists: what you changed, what you could not reach and exactly where to run it, `+
-    `and anything you closed because the premise turned out to be wrong. Several of these are `+
-    `marked unverified precisely so that closing them counts as a result.\n\n`+
-    `Then update vibehq/docs/skills-map/skills-map.html — the BASIS entry for each step you `+
-    `settled — and append to docs/decisions.md and docs/gotchas.md as that repo's agreement `+
-    `requires. Commit and push: that repo treats an unpushed change as unbacked up.\n\n`+
-    `The workspace library is a git repo (G-001) and now has a remote (D-010): `+
-    `github.com/Joenebula/skills. If you changed a SKILL.md there, commit and push it too — `+
-    `that is the whole point of step 1. The account library at ~/.claude/skills is not a repo, `+
-    `so say which files you touched there, or nothing records it.\n`;
-}
 
 /* ------------------------------------------------------------------ detail */
 /* A column heading, opened. Same panel a skill uses, because it answers the same shape of
@@ -3160,12 +2600,6 @@ const mark=()=>$('results').querySelectorAll('.res').forEach((e,i)=>e.classList.
    be there when the graph last settled — the name stayed lit over empty space. Every
    frame that moves anything re-checks the hovered node against the real cursor. */
 let ptr={x:-1e4,y:-1e4};
-function validateHover(){
-  if(!hover) return;
-  const n = hover===ANCHOR.id ? {sx:CX,sy:CY,srad:21} : N[IDX[hover]];
-  if(!n||n.sx===undefined) { hover=null; return; }
-  if(Math.hypot(n.sx-ptr.x,n.sy-ptr.y) > Math.max(n.srad||0,7*zoom)+6){ hover=null; apply(); }
-}
 
 function bind(el,id){
   // the first click on any node is what stops the drift and settles the map
@@ -3542,7 +2976,7 @@ addEventListener('keydown',e=>{
     : `<span class="warn">no date source \u2014 nothing tagged new</span>`;
   const unver = N.filter(n=>EVIDENCE[n.id]==='named').length;
   $('stamp').innerHTML =
-    `built <b>${BUILT}</b>${stale?` <span class="warn">(${built}d ago)</span>`:''}${scan}<br>`
+    `built <b>${BUILT}</b>${stale?` <span class="warn">(${built}d ago)</span>`:''}${scan} \u00b7 `
     + `${clock} \u00b7 `
     + (unver ? `<span class="warn">${unver} unverified</span>` : 'every skill read from the library')
     + (GONE.length?` \u00b7 <span class="warn">${GONE.length} gone from the library</span>`:'');
@@ -3869,11 +3303,7 @@ function synProject(){
 }
 /* What is lit. apply() has already decided; this only reads the answer, so the key, the
    search box and a click on a node all go on meaning the same thing. */
-let LITSET=null, FADED=null;
-function synDim(gi){
-  if(!LITSET) return 1;
-  return 1;                                     // dimming is per node, below
-}
+let LITSET=null;
 function nodeAlpha(n){
   if(!LITSET) return 1;
   if(n.id===sel) return 1.3;

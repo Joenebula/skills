@@ -141,8 +141,11 @@ let out = shell.head + map.body + shell.tail;
 
 /* ---- put the shell's Copilot vocabulary back to this library's ------------------------ */
 const POST=[];
-const swap = (a,b,required=true) => {
-  if (!out.includes(a)) { if (required) throw new Error('MISSING: '+a.slice(0,70)); return; }
+/* Every needle must hit. Two swaps used to be allowed to miss, and both were translating the
+   rotating-ring layout that no longer exists — so the allowance only ever hid dead code. A
+   miss stops the build, because the alternative is a half-translated map that exits 0. */
+const swap = (a,b) => {
+  if (!out.includes(a)) throw new Error('MISSING: '+a.slice(0,70));
   POST.push([a,b]); out = out.split(a).join(b);
 };
 
@@ -173,16 +176,10 @@ swap(`const RINGS=[
   {key:'builtin', label:'Claude Code',            frac:.975, band:[.930,1.00], col:'--r5'}
 ];`);
 
-// the drift speeds were keyed by the Copilot rings
-swap("const SPIN={org:.100, repo:-.062, scoped:.041, ondemand:-.028, ext:.019};",
-     "const SPIN={core:.100, phasemap:-.062, unmapped:.041, builtin:.019};", false);
-// the root lights what loads unconditionally — here that is the always-on ring
-swap("    ? N.filter(n=>n.ring==='org').map(n=>n.id)",
-     "    ? N.filter(n=>n.ring==='core').map(n=>n.id)");
-swap(`  const ids = id===ANCHOR.id
-    ? N.filter(n=>n.ring==='org').map(n=>n.id)`,
-`  const ids = id===ANCHOR.id
-    ? N.filter(n=>n.ring==='core').map(n=>n.id)`, false);
+/* Three needles came out here. One renamed the ring drift speeds, two pointed the root's
+   highlight at the always-on ring instead of the demo's organisation ring. All three were
+   translating the rotating-ring layout, and the synapse replaced it — the code they patched
+   no longer exists to patch. */
 
 // the key
 swap(`      <span class="byring tog" data-r="org"><i style="background:var(--r1)"></i>organisation</span>
@@ -233,9 +230,9 @@ swap(`  .ringkey i{width:8px;height:8px;border-radius:50%;flex:none}`,
    sentence — "15 files seen, 14 loaded", "34 nodes are names taken from the build plan".
    It counts them itself now, in the shell, from the same set the chips beside it count. */
 
-// the runbook heading
-swap('return `# ${COMPANY} · Copilot Enterprise — ${rows.length} open items\\n\\n`+\n    "> **Synthetic demo.** Generated data, invented company, invented files. Not a real audit,\\n> and not safe to run against a real repository.\\n\\n"+',
-     'return `# Skills map — ${rows.length} open items\\n\\n`+');
+/* The runbook heading used to be rewritten here, off the demo's invented company and its
+   synthetic-data warning. That brief was replaced by briefHow/briefOne/briefAll, which say
+   it in their own words, so the old one and its heading both went. */
 
 /* ---- location: these are files on your disk, not URLs ---------------------------------- */
 const LOC = `/* ---- where a thing actually lives ----------------------------------------------------
