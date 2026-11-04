@@ -1479,7 +1479,7 @@ const EV_NOTE={
  seen:'A directory containing a <code>SKILL.md</code> was found. This one is real.',
  loaded:'Claude Code lists this among the skills available in a session. It is real, and it has no file of its own to open.',
  named:'<b>This is a claim, not a finding.</b> The name comes from <code>BUILD-PLAN.md</code> or a <code>CLAUDE.md</code>, and no matching file was found in your library. Either it was never built, or it lives somewhere the build cannot read.'};
-const EV_BASIS="your library at commit b163ca3, 2026-11-04, read file by file + the skills Claude Code lists this session";
+const EV_BASIS="your library at commit 113b4a2, 2026-11-04, read file by file + the skills Claude Code lists this session";
 /* ---- measured overlap ------------------------------------------------------------------
    Produced by scripts/overlap.mjs from the 64 SKILL.md descriptions this repo
    actually holds, not from reading names. Weighted by inverse document frequency so a word
@@ -4288,6 +4288,7 @@ function spawnPulse(k,phase){
 let pulses=[];
 function paint(fdt){                            // supersedes the SVG painter
   const T=TREE;
+  const fid0=focusId();                         // what is lit: clicked, or under the pointer
   synProject();
   sctx.setTransform(CDPR,0,0,CDPR,0,0);
   sctx.globalCompositeOperation='source-over'; sctx.globalAlpha=1;
@@ -4327,6 +4328,31 @@ function paint(fdt){                            // supersedes the SVG painter
       sctx.lineWidth=BW[band]*SYNSC; sctx.stroke(P[col*3+band]);
     }
   }
+  /* ---- the relationships, drawn ---------------------------------------------------------
+     The panel has been listing "Trigger overlap — 4" while the map drew nothing between the
+     four and the skill they overlap with. A list is not a map. Each relation is an arc from
+     the tip in focus to the tip it overlaps, in the same pink the panel's buttons use, bowed
+     outward from the centre so it goes round the tree rather than through it — a chord
+     across the middle reads as another branch, which is the one thing it must not look like.
+
+     Drawn before the tips so the dots sit on top of their own lines, and only ever for what
+     is in focus: 78 skills with every overlap drawn at once is a ball of wool. */
+  if(RELSET && RELSET.size && T.ofId[fid0]!==undefined){
+    const i0=T.leaf[T.ofId[fid0]], x0=T.sx[i0], y0=T.sy[i0];
+    sctx.strokeStyle=cv('--overlap'); sctx.lineWidth=Math.max(.9,1.15*SYNSC);
+    sctx.lineCap='round';
+    for(const id of RELSET){
+      const k=T.ofId[id]; if(k===undefined) continue;
+      const i=T.leaf[k], x1=T.sx[i], y1=T.sy[i];
+      const mx=(x0+x1)/2, my=(y0+y1)/2;
+      let ox=mx-SYNX, oy=my-SYNY; const ol=Math.hypot(ox,oy)||1; ox/=ol; oy/=ol;
+      const d=Math.hypot(x1-x0,y1-y0)*.22;
+      sctx.globalAlpha=.42;
+      sctx.beginPath(); sctx.moveTo(x0,y0);
+      sctx.quadraticCurveTo(mx+ox*d,my+oy*d,x1,y1); sctx.stroke();
+    }
+    sctx.lineCap='butt';
+  }
   // tips — one per skill, and the one under the pointer
   let best=-1,bd=20*20;
   for(let k=0;k<T.leaf.length;k++){
@@ -4362,8 +4388,7 @@ function paint(fdt){                            // supersedes the SVG painter
       sctx.drawImage(core[g],T.sx[i]-c,T.sy[i]-c,c*2,c*2);
     }
   }
-  const fid=focusId();
-  const selK=fid!=null&&T.ofId[fid]!==undefined?T.ofId[fid]:-1;
+  const selK=fid0!=null&&T.ofId[fid0]!==undefined?T.ofId[fid0]:-1;
   /* The lit tip used to be a white halo and nothing else, which washed the colour out of the
      one node you were actually asking about — the whole map is colour-coded by group and the
      node under your pointer was the only one not telling you its group. It is its own colour
@@ -4416,6 +4441,55 @@ function paint(fdt){                            // supersedes the SVG painter
   sctx.globalAlpha=.42; sctx.fillStyle=cv('--ink3');
   sctx.font="11px "+cv('--mono');
   sctx.fillText('the agreement',SYNX,SYNY+51*SYNSC);
+  /* ---- the names of what is lit ----------------------------------------------------------
+     The one in focus and everything it relates to, named on the map. The floating card names
+     one tip and only while the pointer is on it, which is no use for reading a relationship:
+     the four skills a thing overlaps with were four unlabelled dots you had to hover one at
+     a time. Names are set in screen pixels like every other label here, haloed in the void
+     colour so they stay readable over a branch, and placed on whichever side of the tip has
+     the room. */
+  if(RELSET && fid0!=null && T.ofId[fid0]!==undefined){
+    /* Two names on top of each other are worse than one name missing — the same rule the
+       flat views used. A skill and the thing it overlaps with are often neighbours on the
+       tree, so their labels land on each other by default: frontend-design sat straight
+       across bootstrap5-migration. Each name tries its own side first, then the other, then
+       steps away vertically, and takes the first position that is clear of the names already
+       placed and of CLAUDE.md. The focus goes first, so it keeps the spot it wants. */
+    const boxes=[{x0:SYNX-54,y0:SYNY+24*SYNSC,x1:SYNX+54,y1:SYNY+56*SYNSC}];   // the centre
+    const RIGHT=SAFE_R*(innerWidth/1000);
+    const hits=(b)=>boxes.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0);
+    const label=(k,size,col,alpha)=>{
+      const i=T.leaf[k], x=T.sx[i], y=T.sy[i], t=T.leafN[k].id;
+      sctx.font='600 '+size+'px '+getComputedStyle(document.body).fontFamily;
+      const w=sctx.measureText(t).width, h=size*1.3;
+      let best=null;
+      for(const dy of [0,-15,15,-30,30,-45,45,-60,60])
+        for(const side of [1,-1]){
+          if(side>0 && x+11+w>RIGHT) continue;          // would run under the panel
+          if(side<0 && x-11-w<4) continue;              // or off the left edge
+          const tx=x+side*11, cy=y+4+dy;
+          const b={x0:side>0?tx:tx-w, y0:cy-h*.8, x1:side>0?tx+w:tx, y1:cy+h*.3, tx, cy, side};
+          if(!hits(b)){ best=b; break; }
+        }
+      if(!best) return;                                 // nowhere clear: leave it unnamed
+      boxes.push(best);
+      sctx.textAlign=best.side>0?'left':'right';
+      sctx.globalAlpha=alpha*.85;
+      sctx.lineWidth=3.4; sctx.lineJoin='round'; sctx.strokeStyle=cv('--void');
+      sctx.strokeText(t,best.tx,best.cy);
+      sctx.globalAlpha=alpha; sctx.fillStyle=col; sctx.fillText(t,best.tx,best.cy);
+      // a name that had to step away from its dot says which dot it belongs to
+      if(Math.abs(best.cy-(y+4))>6){
+        sctx.globalAlpha=alpha*.5; sctx.strokeStyle=col; sctx.lineWidth=1;
+        sctx.beginPath(); sctx.moveTo(x+best.side*5,y);
+        sctx.lineTo(best.tx-best.side*2,best.cy-4); sctx.stroke();
+      }
+    };
+    label(T.ofId[fid0],13,cv('--ink'),1);
+    for(const id of RELSET){ const k=T.ofId[id];
+      if(k!==undefined) label(k,11.5,cv('--overlap'),.92); }
+    sctx.textAlign='center';
+  }
   /* The name of whatever is under the pointer, carrying the node's own colour as a dot. The
      card used to be the same grey whichever branch you were on, so nothing but position tied
      it to the thing it was naming — and position is weak here, because a tip at the end of a
