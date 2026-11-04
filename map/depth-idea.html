@@ -1,0 +1,165 @@
+<title>Depth — a design idea</title>
+<style>
+ :root{--void:#04060C;--ink:#E8EDF8;--ink2:#9AA6C4;--ink3:#5C6788;
+   --font:'Roboto','Helvetica Neue',system-ui,sans-serif;--s2:8px;--s3:12px;--s4:16px;--s6:24px}
+ *{box-sizing:border-box} html,body{height:100%}
+ body{margin:0;background:var(--void);color:var(--ink);font-family:var(--font);overflow:hidden}
+ canvas{position:fixed;inset:0;width:100vw;height:100vh;display:block;cursor:grab}
+ canvas.drag{cursor:grabbing}
+ .panel{position:fixed;top:var(--s6);left:var(--s6);max-width:360px;z-index:2;
+   background:rgba(8,12,24,.82);backdrop-filter:blur(14px);border-radius:13px;padding:var(--s6);
+   box-shadow:0 0 0 1px rgba(140,170,235,.16),0 16px 46px rgba(0,0,0,.6)}
+ h1{font-size:17px;margin:0 0 var(--s3);font-weight:700;letter-spacing:-.01em}
+ p{color:var(--ink2);font-size:13.5px;line-height:1.6;margin:0 0 var(--s3)}
+ p:last-of-type{margin-bottom:0}
+ b{color:var(--ink)} code{font-family:'Roboto Mono',monospace;font-size:12px;color:#5EC8F0}
+ .row{display:flex;gap:var(--s2);margin-top:var(--s4);flex-wrap:wrap}
+ button{appearance:none;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;
+   padding:var(--s2) var(--s3);border-radius:7px;background:rgba(140,170,235,.10);color:var(--ink3)}
+ button.on{background:rgba(94,200,240,.20);color:#5EC8F0}
+ .legend{position:fixed;right:var(--s6);top:var(--s6);z-index:2;display:flex;flex-direction:column;
+   gap:6px;font-size:11.5px;color:var(--ink3)}
+ .legend span{display:flex;align-items:center;gap:var(--s2)}
+ .legend i{width:8px;height:8px;border-radius:50%;flex:none}
+ .hint{position:fixed;bottom:var(--s6);left:50%;transform:translateX(-50%);font-size:12px;
+   color:var(--ink3);font-family:'Roboto Mono',monospace;z-index:2}
+</style>
+<canvas id="c"></canvas>
+<div class="panel">
+  <h1>Depth, without a 3D engine</h1>
+  <p>The same 78 skills. The difference from the flat one is not a renderer — it is four cues,
+     and every one of them is arithmetic on a <code>z</code> you already had to invent anyway.</p>
+  <p><b>Occlusion.</b> Limbs are sorted by depth and painted far-to-near, so a near branch
+     genuinely covers a far one. <b>Perspective.</b> Everything scales by <code>f/(f+z)</code>,
+     so near limbs are wider and further apart. <b>Atmosphere.</b> Distance drains opacity and
+     pulls colour toward the ground. <b>Focus.</b> The far third is drawn blurred.</p>
+  <p>The tree also grows into a <b>sphere</b> rather than a disc — children leave their parent
+     inside a cone in 3D, which is what stops the even fan that made the first one read as a
+     diagram rather than a thing.</p>
+  <div class="row">
+    <button id="b-depth" class="on">Depth</button>
+    <button id="b-flat">Flat, for comparison</button>
+    <button id="b-spin" class="on">Spin</button>
+  </div>
+</div>
+<div class="legend" id="leg"></div>
+<div class="hint">drag to turn it</div>
+<script>
+const GROUPS=[{"key":"always","name":"Always on","col":"#F2A03C","skills":[{"id":"debugging","w":1},{"id":"engineering-standards","w":2},{"id":"refactoring","w":1},{"id":"reviewing-code","w":1}]},{"key":"A","name":"Skeleton","col":"#5EE0E8","skills":[{"id":"infrastructure","w":1},{"id":"project-setup","w":2}]},{"key":"B","name":"Database","col":"#6BB6F5","skills":[{"id":"data-modelling","w":1},{"id":"privacy-and-compliance","w":1}]},{"key":"C","name":"Admin","col":"#A78BFA","skills":[{"id":"accessibility","w":1},{"id":"auth-and-accounts","w":1},{"id":"cms","w":1},{"id":"data-grids","w":1},{"id":"design-system","w":3},{"id":"forms-and-input","w":1},{"id":"responsive-design","w":1}]},{"key":"D","name":"Public site","col":"#EC8CE0","skills":[{"id":"api-design","w":1},{"id":"performance","w":1},{"id":"seo","w":1}]},{"key":"E","name":"Feeds","col":"#F58A8A","skills":[{"id":"background-jobs","w":1},{"id":"integrations","w":1},{"id":"observability","w":1}]},{"key":"F","name":"Advertising","col":"#F5C24E","skills":[{"id":"analytics-dashboards","w":1}]},{"key":"H","name":"Hardening","col":"#6EE7A8","skills":[{"id":"ecommerce-security-audit","w":3},{"id":"preflight","w":1},{"id":"regression-testing","w":2},{"id":"releasing","w":1},{"id":"security","w":1},{"id":"security-route-auditor","w":1}]},{"key":"S2","name":"Accounts","col":"#7C9BF0","skills":[{"id":"email-and-notifications","w":1},{"id":"internationalization","w":1}]},{"key":"design","name":"Front-end design","col":"#FF7AB6","skills":[{"id":"artifact-capabilities","w":1},{"id":"artifact-design","w":1},{"id":"artifact-diagramming","w":1},{"id":"bootstrap5-migration","w":1},{"id":"create-canvas","w":1},{"id":"dataviz","w":1},{"id":"frontend-design","w":1},{"id":"impeccable","w":2},{"id":"mydesignskill","w":1},{"id":"public-service-website","w":1},{"id":"vibehq-update-design-system","w":1}]},{"key":"quality","name":"Code review","col":"#6FE0D0","skills":[{"id":"code-review","w":1},{"id":"mhr-appeal-verification","w":1},{"id":"security-review","w":1},{"id":"simplify","w":1}]},{"key":"audit","name":"Auditors","col":"#A8E06B","skills":[{"id":"accessibility-auditor","w":1},{"id":"design-system-auditor","w":1},{"id":"feature-completeness-auditor","w":1},{"id":"regression-auditor","w":1}]},{"key":"style","name":"How I work","col":"#C9A6FF","skills":[{"id":"ask-dont-guess","w":1},{"id":"critical-thinking-partner","w":1},{"id":"deep-research","w":1},{"id":"humanizer","w":1},{"id":"keep-going","w":4}]},{"key":"docs","name":"Documents","col":"#C2A98B","skills":[{"id":"docs","w":1},{"id":"docx","w":1},{"id":"google-workspace","w":1},{"id":"pdf","w":1},{"id":"pptx","w":1},{"id":"report-from-notes","w":1},{"id":"xlsx","w":1}]},{"key":"setup","name":"The setup","col":"#5FD3E8","skills":[{"id":"built-in-browser","w":1},{"id":"chrome-browser","w":1},{"id":"claude-api","w":1},{"id":"computer-use","w":1},{"id":"fewer-permission-prompts","w":1},{"id":"import-memory","w":1},{"id":"init","w":1},{"id":"keybindings-help","w":1},{"id":"knowledge-system-setup","w":1},{"id":"loop","w":1},{"id":"morning","w":1},{"id":"plugin-authoring","w":1},{"id":"run","w":1},{"id":"session-start-hook","w":1},{"id":"skill-creator","w":1},{"id":"update-config","w":1}]},{"key":"never","name":"Excluded","col":"#5E6B8C","skills":[{"id":"webaudio-plugin-builder","w":2}]}];
+const c=document.getElementById('c'), x=c.getContext('2d');
+let W=0,H=0,DPR=Math.min(2,devicePixelRatio||1);
+function fit(){ W=innerWidth;H=innerHeight; c.width=W*DPR;c.height=H*DPR; x.setTransform(DPR,0,0,DPR,0,0); }
+addEventListener('resize',()=>{fit();draw();}); fit();
+
+/* a seeded rng, so the tree is the same tree every time it is drawn */
+let _s=20261104; const rnd=()=>((_s=(_s*1103515245+12345)&0x7fffffff)/0x7fffffff);
+const V=(a,b,c)=>({x:a,y:b,z:c});
+const add=(p,q,k=1)=>V(p.x+q.x*k,p.y+q.y*k,p.z+q.z*k);
+const norm=p=>{const m=Math.hypot(p.x,p.y,p.z)||1;return V(p.x/m,p.y/m,p.z/m);};
+/* a direction inside a cone around d, which is how a branch leaves its parent */
+function spread(d,ang){
+  const t=V(Math.abs(d.x)<.9?1:0,Math.abs(d.x)<.9?0:1,0);
+  const u=norm(V(d.y*t.z-d.z*t.y, d.z*t.x-d.x*t.z, d.x*t.y-d.y*t.x));
+  const v=norm(V(d.y*u.z-d.z*u.y, d.z*u.x-d.x*u.z, d.x*u.y-d.y*u.x));
+  const a=rnd()*Math.PI*2, r=Math.tan(ang)*(.45+rnd()*.55);
+  return norm(add(add(d,u,Math.cos(a)*r),v,Math.sin(a)*r));
+}
+/* grow it once, in three dimensions */
+const limbs=[], leaves=[];
+(function grow(){
+  const n=GROUPS.length;
+  GROUPS.forEach((g,i)=>{
+    // trunks on a sphere, not a circle: the golden angle up a spiral of latitudes
+    const t=(i+.5)/n, phi=Math.acos(1-2*t), th=Math.PI*(1+Math.sqrt(5))*i;
+    const dir=V(Math.sin(phi)*Math.cos(th), Math.sin(phi)*Math.sin(th), Math.cos(phi));
+    const root=V(0,0,0), tip=add(root,dir,190);
+    limbs.push({a:root,b:tip,c:g.col,w:5.4,d:0,wob:[0,0,0,0].map(()=>rnd()*.5-.25)});
+    branch(g.skills,tip,dir,1,g.col);
+    g.lab=tip;
+  });
+  function branch(list,p,dir,depth,col){
+    const len=Math.max(62,210/depth);
+    if(list.length===1){
+      const d2=spread(dir,.36), q=add(p,d2,len);
+      limbs.push({a:p,b:q,c:col,w:Math.max(.7,3.6/(depth+1)),d:depth,wob:[0,0,0,0].map(()=>rnd()*.9-.45)});
+      leaves.push({p:q,c:col,r:2.4+list[0].w*.5,id:list[0].id});
+      return;
+    }
+    const half=Math.ceil(list.length/2);
+    [list.slice(0,half),list.slice(half)].forEach(part=>{
+      const d2=spread(dir,.42), q=add(p,d2,len);
+      limbs.push({a:p,b:q,c:col,w:Math.max(.8,4.6/(depth+1)),d:depth,wob:[0,0,0,0].map(()=>rnd()*.7-.35)});
+      branch(part,q,d2,depth+1,col);
+    });
+  }
+})();
+
+let ry=0.4, rx=-0.25, spin=true, depth=true, drag=null;
+const F=1150;                                   // focal length: how strong the perspective is
+function project(p){
+  const cy=Math.cos(ry),sy=Math.sin(ry), cx2=Math.cos(rx),sx=Math.sin(rx);
+  let X=p.x*cy - p.z*sy, Z=p.x*sy + p.z*cy;
+  let Y=p.y*cx2 - Z*sx;  Z = p.y*sx + Z*cx2;
+  const k=depth ? F/(F+Z+420) : 1;
+  const SC=depth?0.72:0.60;
+  return {x:W/2+X*k*SC, y:H/2+Y*k*SC, z:Z, k};
+}
+const hex=(h,a)=>{const n=parseInt(h.slice(1),16);
+  return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a.toFixed(3)+')';};
+
+function draw(){
+  x.clearRect(0,0,W,H);
+  const segs=limbs.map(l=>{const A=project(l.a),B=project(l.b);
+    return {A,B,z:(A.z+B.z)/2,c:l.c,w:l.w*(depth?(A.k+B.k)/2:1),wob:l.wob,k:depth?(A.k+B.k)/2:1};});
+  const pts=leaves.map(L=>{const P=project(L.p);
+    return {P,z:P.z,c:L.c,r:L.r*(depth?P.k:1)};});
+  const all=[...segs.map(s=>({t:'s',...s})),...pts.map(p=>({t:'p',...p}))];
+  if(depth) all.sort((a,b)=>b.z-a.z);          // painter's algorithm: far first
+  const zs=all.map(o=>o.z), z0=Math.min(...zs), z1=Math.max(...zs);
+  for(const o of all){
+    const near = depth ? 1-(o.z-z0)/((z1-z0)||1) : 1;     // 0 far, 1 near
+    const blur = depth ? Math.max(0,(0.42-near))*14 : 0;  // the far third goes soft
+    x.save();
+    if(blur>0.3){ x.filter='blur('+blur.toFixed(1)+'px)'; }
+    const op = depth ? 0.14+near*0.78 : 0.62;
+    if(o.t==='s'){
+      x.strokeStyle=hex(o.c,op); x.lineWidth=Math.max(.35,o.w); x.lineCap='round';
+      x.lineJoin='round';
+      /* A branch that goes straight from fork to fork reads as a diagram. Real ones wander,
+         so each limb is drawn as four short segments pushed sideways by its own fixed
+         wobble — the same every frame, because it belongs to the limb rather than to the
+         moment it was drawn. Nothing here is data; it is how a line is drawn. */
+      x.beginPath(); x.moveTo(o.A.x,o.A.y);
+      const dx=o.B.x-o.A.x, dy=o.B.y-o.A.y;
+      for(let i=1;i<=4;i++){
+        const t=i/4, w=o.wob[i-1]*(1-Math.abs(t*2-1))*22*(o.k||1);
+        x.lineTo(o.A.x+dx*t - dy*w/ (Math.hypot(dx,dy)||1),
+                 o.A.y+dy*t + dx*w/ (Math.hypot(dx,dy)||1));
+      }
+      x.stroke();
+    } else {
+      x.fillStyle=hex(o.c,Math.min(1,op+.18));
+      x.beginPath(); x.arc(o.P.x,o.P.y,Math.max(.6,o.r),0,7); x.fill();
+    }
+    x.restore();
+  }
+  x.fillStyle='#F2A03C'; const C=project(V(0,0,0));
+  x.beginPath(); x.arc(C.x,C.y,8*(depth?C.k:1),0,7); x.fill();
+
+}
+function tick(){ if(spin){ ry+=0.0016; draw(); } requestAnimationFrame(tick); }
+document.getElementById('leg').innerHTML=GROUPS.map(g=>
+  '<span><i style="background:'+g.col+'"></i>'+g.name+' <b style="color:#5C6788;font-weight:400">'
+  +g.skills.length+'</b></span>').join('');
+draw(); tick();
+
+c.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,ry,rx};c.classList.add('drag');spin=false;
+  document.getElementById('b-spin').classList.remove('on');};
+addEventListener('pointermove',e=>{ if(!drag)return;
+  ry=drag.ry+(e.clientX-drag.x)*.006; rx=drag.rx+(e.clientY-drag.y)*.006; draw(); });
+addEventListener('pointerup',()=>{drag=null;c.classList.remove('drag');});
+const B=id=>document.getElementById(id);
+B('b-depth').onclick=()=>{depth=true;B('b-depth').classList.add('on');B('b-flat').classList.remove('on');draw();};
+B('b-flat').onclick=()=>{depth=false;B('b-flat').classList.add('on');B('b-depth').classList.remove('on');draw();};
+B('b-spin').onclick=()=>{spin=!spin;B('b-spin').classList.toggle('on',spin);};
+</script>
