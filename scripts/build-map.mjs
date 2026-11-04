@@ -69,6 +69,18 @@ const map   = {body};
    skill's own frontmatter, the built-ins' groups from BUILTIN_GROUP (they have no file), and
    the notes and hand-noticed links from NOTES and LINKS, attached in the data block itself. */
 const BUILD_PLAN = ['always','A','B','C','D','E','F','G','H','S2','never'];
+/* The account library lives on one machine and this build runs anywhere, so its skills cannot
+   be read from disk here. They are not invisible, though: Claude Code lists them to a session
+   by name and description, which is the same evidence the built-ins have always been accepted
+   on — real, and with no file of its own to open. This is that listing, captured into the
+   repo so every build has it rather than only a session that happened to be looking.
+
+   It is a capture, not a scan, and it says so: `captured` is the date somebody asked for it.
+   The honest grade is 'loaded', not 'seen'. */
+const ACCOUNT_FILE = path.join(ROOT,'map/account-skills.json');
+const ACCOUNT = fs.existsSync(ACCOUNT_FILE)
+  ? JSON.parse(fs.readFileSync(ACCOUNT_FILE,'utf8')) : {skills:[],captured:null};
+const ACCOUNT_IDS = new Set(ACCOUNT.skills.map(s=>s.id));
 function libraryNodes(){
   const rows=[];
   const add=(id,group,src,bytes)=>{
@@ -94,6 +106,9 @@ function libraryNodes(){
     const f=path.join(adir,a);
     add(a.replace(/\.md$/,''),(fmOf(f)||{}).group||'audit','agent',fs.statSync(f).size);
   }
+  // skills Claude Code lists but this build cannot open — the account library
+  const have=new Set(rows.map(r=>r.id));
+  for (const a of ACCOUNT.skills) if (!have.has(a.id)) add(a.id,a.group||'setup','account',0);
   const bg=/const BUILTIN_GROUP=\{([\s\S]*?)\n\};/.exec(map.body);
   if (bg) for (const m of bg[1].matchAll(/"([a-z0-9-]+)"\s*:\s*"([A-Za-z0-9]+)"/g))
     add(m[1],m[2],'built-in',0);
@@ -117,6 +132,7 @@ function libraryNodes(){
   console.log(`  nodes     ${rows.length} generated from the library `
     + `(${rows.filter(r=>r.src==='workspace').length} skills, `
     + `${rows.filter(r=>r.src==='agent').length} agents, `
+    + `${rows.filter(r=>r.src==='account').length} in the account library, `
     + `${rows.filter(r=>r.src==='built-in').length} built in)`);
 }
 
@@ -372,7 +388,8 @@ const LOADED = ['dataviz','artifact-design','artifact-diagramming','artifact-cap
 
 const idsIn = [...map.body.matchAll(/^ S\('([a-z0-9-]+)'/gm)].map(m=>m[1]);
 const EV = {};
-for (const id of idsIn) EV[id] = seen.has(id) ? 'seen' : LOADED.includes(id) ? 'loaded' : 'named';
+for (const id of idsIn) EV[id] = seen.has(id) ? 'seen'
+  : (LOADED.includes(id) || ACCOUNT_IDS.has(id)) ? 'loaded' : 'named';
 const tally = idsIn.reduce((a,i)=>((a[EV[i]]=(a[EV[i]]||0)+1),a),{});
 
 const EVIDENCE_BLOCK =
@@ -550,6 +567,9 @@ const MANIFEST = {};
 }
 
 const LIVE = {};
+for (const a of ACCOUNT.skills)
+  LIVE[a.id] = { src:'account', desc:a.description||'', declared:a.id,
+                 added:null, addedFrom:null, since:null, updated:ACCOUNT.captured||null };
 for (const {root,src,flat} of LIB){
   if (!fs.existsSync(root)) continue;
   for (const entry of fs.readdirSync(root)){
