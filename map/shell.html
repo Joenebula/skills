@@ -3735,9 +3735,312 @@ $('stowbtn').onclick=()=>{
   obs.observe($('findings'),{attributes:true,attributeFilter:['hidden']});
   syncStowBtn(); }
 
-resize();
-// The ring layout is converged off-screen so it is static the moment it is revealed.
-// The orbiting layout needs none of this — the spiral already places every node.
+/* ============================================================================ the synapse
+   One view now, and this is it. The four layouts — radial, board, clusters, flow — each
+   answered a different question by moving the same nodes about; this answers the one that
+   survived: what is in the library, and how much of it. A limb per group, a tip per skill,
+   turning in three dimensions.
 
-alpha=0; paint(); apply();
+   It supersedes the layout engine above rather than being spliced into it: every function it
+   redefines is declared again here, which in one script scope means the later declaration is
+   the one that runs. The old bodies are dead and go in the next commit — doing both at once
+   would mean a change that cannot be read.
+
+   The drawing is adapted from the Synapse piece: depth-banded Path2D strokes, pre-rendered
+   glow sprites, pulses travelling from the centre out to the tips. What is new is that a tip
+   is a SKILL — a group's list is halved at each fork until one is left — so hovering names
+   something real, clicking opens its panel, and the shape cannot be padded out. */
+
+const cvs=document.createElement('canvas');
+cvs.id='syn'; cvs.setAttribute('role','img');
+cvs.setAttribute('aria-label','Every skill in the library, drawn as branching clusters');
+svg.parentNode.insertBefore(cvs,svg);
+svg.style.display='none';                       // the SVG layers are not drawn any more
+$('bgviz') && ($('bgviz').style.display='none');
+$('trailcv') && ($('trailcv').style.display='none');
+{ const st=document.createElement('style');
+  st.textContent='#syn{position:fixed;inset:0;width:100vw;height:100vh;z-index:2;display:block;'
+   +'cursor:grab;touch-action:none}#syn.drag{cursor:grabbing}';
+  document.head.appendChild(st); }
+const sctx=cvs.getContext('2d');
+let CW=0,CH=0,CDPR=Math.min(2,devicePixelRatio||1);
+
+/* glow sprites, one per group plus the inner colour and white — drawing a radial gradient
+   per tip per frame is the slow way to do this, and there are 78 tips and 70 pulses */
+const SYNCOL=[], core=[], halo=[];
+{ const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);
+    return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';};
+  const order=GROUP_ORDER.filter(k=>N.some(n=>groupOf(n)===k));
+  for(const k of order) SYNCOL.push(SECTOR[k]||cv('--ink2'));
+  SYNCOL.push('#3B48F0','#FFFFFF');
+  for(const col of SYNCOL){
+    const c=document.createElement('canvas'); c.width=c.height=32; const g=c.getContext('2d');
+    let gr=g.createRadialGradient(16,16,0,16,16,16);
+    gr.addColorStop(0,col); gr.addColorStop(.72,col); gr.addColorStop(1,rgba(col,0));
+    g.fillStyle=gr; g.fillRect(0,0,32,32); core.push(c);
+    const h=document.createElement('canvas'); h.width=h.height=64; const hg=h.getContext('2d');
+    gr=hg.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,rgba(col,.55)); gr.addColorStop(.25,rgba(col,.16)); gr.addColorStop(1,rgba(col,0));
+    hg.fillStyle=gr; hg.fillRect(0,0,64,64); halo.push(h);
+  }
+  var SYNORDER=order, INNER=order.length, WHITE=order.length+1;
+}
+
+/* a seeded rng, so the tree is the same tree every visit */
+const srnd=(a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;})(20261104);
+
+const TREE={x:[],y:[],z:[],par:[],segA:[],segB:[],segG:[],segD:[],leaf:[],leafG:[],leafR:[],leafN:[]};
+{ const T=TREE;
+  const pt=(x,y,z,p)=>{T.x.push(x);T.y.push(y);T.z.push(z);T.par.push(p);return T.x.length-1;};
+  const nrm=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];};
+  const jit=(d,a)=>nrm([d[0]+(srnd()*2-1)*a,d[1]+(srnd()*2-1)*a,d[2]+(srnd()*2-1)*a]);
+  const root=pt(0,0,0,-1);
+  const by={}; N.forEach(n=>(by[groupOf(n)]??=[]).push(n));
+  function grow(pi,dir,len,dep,gi,list){
+    let p=pi,d=dir;
+    for(let i=0;i<3;i++){                       // three jittered sub-segments: a limb wanders
+      d=jit(d,.26);
+      const q=pt(T.x[p]+d[0]*len/3,T.y[p]+d[1]*len/3,T.z[p]+d[2]*len/3,p);
+      T.segA.push(p);T.segB.push(q);T.segG.push(gi);T.segD.push(dep); p=q;
+    }
+    if(list.length===1){
+      T.leaf.push(p); T.leafG.push(gi);
+      T.leafR.push(1.3+Math.min(3.2,(list[0].w||1)*.55)); T.leafN.push(list[0]);
+      return;
+    }
+    const n=list.length>5&&dep<2?3:2, per=Math.ceil(list.length/n);
+    for(let k=0;k<n;k++){ const part=list.slice(k*per,(k+1)*per);
+      if(part.length) grow(p,jit(d,.72),len*(.74+srnd()*.12),dep+1,gi,part); }
+  }
+  SYNORDER.forEach((key,gi)=>{
+    const list=(by[key]||[]).slice().sort((a,b)=>a.id.localeCompare(b.id));
+    if(!list.length) return;
+    // trunks on a sphere: the golden angle up a spiral of latitudes, so no two leave together
+    const t=(gi+.5)/SYNORDER.length, phi=Math.acos(1-2*t), th=Math.PI*(1+Math.sqrt(5))*gi;
+    grow(root,nrm([Math.sin(phi)*Math.cos(th),Math.sin(phi)*Math.sin(th),Math.cos(phi)]),74,0,gi,list);
+  });
+  const sn=SYNCOL.map(()=>0), ln=SYNCOL.map(()=>0);
+  for(let j=0;j<T.segA.length;j++) sn[T.segD[j]<=1?INNER:T.segG[j]]++;
+  for(const g of T.leafG) ln[g]++;
+  T.kc=sn.map(c=>c?Math.max(.3,Math.min(1,Math.sqrt(900/c))):1);
+  T.kl=ln.map(c=>c?Math.max(.35,Math.min(1,Math.sqrt(120/c))):1);
+  T.sx=new Float32Array(T.x.length); T.sy=new Float32Array(T.x.length);
+  T.ss=new Float32Array(T.x.length); T.sz=new Float32Array(T.x.length);
+  // which leaf is which skill, so a selection made anywhere can light the right tip
+  T.ofId={}; T.leafN.forEach((n,k)=>T.ofId[n.id]=k);
+}
+
+let yaw=.5, pitch=-.18, vy=0, odrag=null, spin=true;
+let SYNX=500, SYNY=370, SYNSC=1;
+const ptrS={x:-1e4,y:-1e4};
+let hotLeaf=-1;
+
+function resize(){                              // supersedes the layout version
+  CW=innerWidth; CH=innerHeight;
+  cvs.width=Math.round(CW*CDPR); cvs.height=Math.round(CH*CDPR);
+  W=1000; H=Math.round(1000*innerHeight/innerWidth); CY=H/2;
+  gutters();
+  /* The cluster is centred in what the furniture leaves, not in the window: the controls take
+     the right-hand side and the strip of tags the bottom. SAFE_* are in map units, so they
+     come back to pixels the same way everything else does. */
+  const u=innerWidth/1000;                      // map units to pixels
+  const availW=(SAFE_R-SAFE_L)*u, availH=(H-SAFE_B)*u;
+  SYNX=(SAFE_L+SAFE_R)/2*u;                     // centred in the strip, not in the window
+  SYNY=availH/2;
+  /* The tree reaches about 200 units from the centre — 74 for the trunk and three forks at
+     roughly three quarters of the one before. It should fill about four fifths of the shorter
+     side, so the unit is that distance over that reach. It was over 760, a number with no
+     argument behind it, and drew the whole library at a third of the room it had. */
+  SYNSC=Math.min(availW,availH)*0.80/2/200;
+  FITTED=[SAFE_L,SAFE_R,SAFE_B].join();
+}
+const F=900;
+function synProject(){
+  const cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  const T=TREE,n=T.x.length;
+  for(let i=0;i<n;i++){
+    const x=T.x[i],y=T.y[i],z=T.z[i];
+    const x1=x*cyw-z*syw, z1=x*syw+z*cyw;
+    const y1=y*cp-z1*sp, z2=y*sp+z1*cp;
+    const s=F/(F+z2*SYNSC)*SYNSC;
+    T.sx[i]=SYNX+x1*s; T.sy[i]=SYNY+y1*s; T.ss[i]=s; T.sz[i]=z2;
+  }
+}
+/* What is lit. apply() has already decided; this only reads the answer, so the key, the
+   search box and a click on a node all go on meaning the same thing. */
+let LITSET=null, FADED=null;
+function synDim(gi){
+  if(!LITSET) return 1;
+  return 1;                                     // dimming is per node, below
+}
+function nodeAlpha(n){
+  if(!LITSET) return 1;
+  if(n.id===sel) return 1.3;
+  return LITSET.has(n.id) ? 1 : .09;
+}
+function spawnPulse(){
+  const T=TREE; let k=Math.floor(Math.random()*T.leaf.length);
+  if(LITSET) for(let t=0;t<16 && !LITSET.has(T.leafN[k].id);t++) k=Math.floor(Math.random()*T.leaf.length);
+  const ch=[]; let i=T.leaf[k];
+  while(i>=0){ch.push(i);i=T.par[i];} ch.reverse();
+  return {ch,t:Math.random()*ch.length*.6,v:14+Math.random()*16,g:T.leafG[k],n:T.leafN[k]};
+}
+let pulses=[];
+function paint(){                               // supersedes the SVG painter
+  const T=TREE;
+  synProject();
+  sctx.setTransform(CDPR,0,0,CDPR,0,0);
+  sctx.globalCompositeOperation='source-over'; sctx.globalAlpha=1;
+  sctx.clearRect(0,0,CW,CH);
+  // the scaffolding rings, faint, so the turn reads as a turn
+  sctx.save(); sctx.strokeStyle='#FFFFFF'; sctx.lineWidth=.6; sctx.setLineDash([1.5,6]);
+  const cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  for(const r of [[0,380,.12],[1.15,330,.09],[-.6,250,.07]]){
+    sctx.globalAlpha=r[2]; sctx.beginPath();
+    for(let i=0;i<=120;i++){
+      const a=i/120*Math.PI*2, z=Math.sin(a)*r[1], X=Math.cos(a)*r[1];
+      const Y=-z*Math.sin(r[0]), Z=z*Math.cos(r[0]);
+      const x1=X*cyw-Z*syw, z1=X*syw+Z*cyw;
+      const y1=Y*cp-z1*sp, z2=Y*sp+z1*cp;
+      const s=F/(F+z2*SYNSC)*SYNSC;
+      const px=SYNX+x1*s, py=SYNY+y1*s;
+      i?sctx.lineTo(px,py):sctx.moveTo(px,py);
+    }
+    sctx.stroke();
+  }
+  sctx.setLineDash([]); sctx.restore();
+  sctx.globalCompositeOperation='lighter';
+  // branches, batched by colour and depth band so the whole thing is a few dozen strokes
+  const P=[]; for(let k=0;k<SYNCOL.length*3;k++) P.push(new Path2D());
+  const zr=90;
+  for(let j=0;j<T.segA.length;j++){
+    const a=T.segA[j],b=T.segB[j], z=(T.sz[a]+T.sz[b])*.5;
+    const band=z>zr?0:(z<-zr?2:1);
+    const col=T.segD[j]<=1?INNER:T.segG[j];
+    const p=P[col*3+band]; p.moveTo(T.sx[a],T.sy[a]); p.lineTo(T.sx[b],T.sy[b]);
+  }
+  const BA=[.15,.32,.6], BW=[.5,.8,1.2];
+  for(let col=0;col<=INNER;col++){
+    sctx.strokeStyle=SYNCOL[col];
+    for(let band=0;band<3;band++){
+      sctx.globalAlpha=Math.min(1,BA[band]*T.kc[col]);
+      sctx.lineWidth=BW[band]*SYNSC; sctx.stroke(P[col*3+band]);
+    }
+  }
+  // tips — one per skill, and the one under the pointer
+  let best=-1,bd=20*20;
+  for(let k=0;k<T.leaf.length;k++){
+    const i=T.leaf[k], g=T.leafG[k], n=T.leafN[k];
+    const r=T.leafR[k]*T.ss[i];
+    const a=Math.max(.16,Math.min(1,.62-T.sz[i]/(zr*3)))*nodeAlpha(n)*T.kl[g];
+    const x=T.sx[i],y=T.sy[i];
+    const d2=(x-ptrS.x)**2+(y-ptrS.y)**2;
+    if(d2<bd){bd=d2;best=k;}
+    sctx.globalAlpha=Math.min(1,a*.5);
+    const hh=r*7; sctx.drawImage(halo[g],x-hh,y-hh,hh*2,hh*2);
+    sctx.globalAlpha=Math.min(1,a);
+    const c=r*1.2; sctx.drawImage(core[g],x-c,y-c,c*2,c*2);
+  }
+  hotLeaf=best;
+  const selK=sel!=null&&T.ofId[sel]!==undefined?T.ofId[sel]:-1;
+  for(const k of [selK,best]){
+    if(k<0) continue;
+    const i=T.leaf[k], r=T.leafR[k]*T.ss[i]*2.6;
+    sctx.globalAlpha=.95;
+    sctx.drawImage(halo[WHITE],T.sx[i]-r*3,T.sy[i]-r*3,r*6,r*6);
+  }
+  // pulses out to the tips
+  const dt=.016;
+  while(pulses.length<70) pulses.push(spawnPulse());
+  for(const p of pulses){
+    p.t+=p.v*dt;
+    if(p.t>=p.ch.length-1){ Object.assign(p,spawnPulse()); p.t=0; continue; }
+    const dm=nodeAlpha(p.n);
+    for(let tr=0;tr<4;tr++){
+      const tt=p.t-tr*.55; if(tt<0) break;
+      const f=Math.floor(tt),u2=tt-f;
+      const a=p.ch[f],b=p.ch[Math.min(f+1,p.ch.length-1)];
+      const x=T.sx[a]+(T.sx[b]-T.sx[a])*u2, y=T.sy[a]+(T.sy[b]-T.sy[a])*u2;
+      const r=(2.4-tr*.45)*T.ss[a];
+      sctx.globalAlpha=Math.min(1,(.9-tr*.2)*dm);
+      sctx.drawImage(halo[p.g],x-r*4,y-r*4,r*8,r*8);
+      sctx.drawImage(core[WHITE],x-r*.7,y-r*.7,r*1.4,r*1.4);
+    }
+  }
+  // the agreement, at the centre, named
+  const b=1+Math.sin(performance.now()/1000*1.6)*.12;
+  sctx.globalAlpha=.9; let h=46*SYNSC*b;
+  sctx.drawImage(halo[INNER],SYNX-h,SYNY-h,h*2,h*2);
+  h=22*SYNSC*b; sctx.drawImage(halo[WHITE],SYNX-h,SYNY-h,h*2,h*2);
+  sctx.globalAlpha=1; const cc=4.5*SYNSC;
+  sctx.drawImage(core[WHITE],SYNX-cc,SYNY-cc,cc*2,cc*2);
+  sctx.globalCompositeOperation='source-over';
+  sctx.globalAlpha=.78; sctx.fillStyle=cv('--ink');
+  sctx.font="600 13px "+getComputedStyle(document.body).fontFamily;
+  sctx.textAlign='center'; sctx.fillText('CLAUDE.md',SYNX,SYNY+36*SYNSC);
+  sctx.globalAlpha=.42; sctx.fillStyle=cv('--ink3');
+  sctx.font="11px "+cv('--mono');
+  sctx.fillText('the agreement',SYNX,SYNY+51*SYNSC);
+  // and the name of whatever is under the pointer
+  const tip=$('tip');
+  if(best>=0 && !odrag){
+    const n=T.leafN[best], g=SYNORDER[T.leafG[best]];
+    tip.innerHTML='<b>'+esc(n.id)+'</b><br>'+esc((GROUP_NAME[g]||[g])[0])+' · '+esc(n.src);
+    const i=T.leaf[best];
+    tip.style.left=''; tip.style.right=(innerWidth-T.sx[i]+14)+'px';
+    tip.style.top=Math.max(8,T.sy[i]-28)+'px';
+    tip.classList.add('on');
+  } else if(!$('tip').matches(':hover')) tip.classList.remove('on');
+}
+function tick(){
+  if(spin && !odrag) yaw+=(.09+vy)*.016;
+  vy*=.86;
+  paint();
+  raf=requestAnimationFrame(tick);
+}
+function kick(){ if(!raf) raf=requestAnimationFrame(tick); }
+function reheat(v){ kick(); }
+function apply(){
+  /* Who is lit. The union of what you selected, what you hovered, what you searched for and
+     what you picked in the key — the same rule the old map used, minus everything it did to
+     SVG elements, because a canvas has no elements to put classes on. */
+  const focus=sel||hover;
+  const picked=pickedIds();
+  const hitSet=(query&&hits)?hits:null;
+  if(!focus && !picked && !hitSet){ LITSET=null; }
+  else {
+    const out=new Set();
+    if(focus){ out.add(focus); (neigh[focus]||[]).forEach(r=>out.add(r)); out.add(ANCHOR.id); }
+    if(picked) picked.forEach(i=>out.add(i));
+    if(hitSet) hitSet.forEach(i=>out.add(i));
+    LITSET=out;
+  }
+  $('hint').classList.toggle('gone',!!sel||!!query);
+  kick();
+}
+/* clicking a tip opens the same panel every other way of getting there opens */
+cvs.addEventListener('pointermove',e=>{
+  ptrS.x=e.clientX; ptrS.y=e.clientY;
+  if(!odrag) return;
+  const dx=e.clientX-odrag.x, dy=e.clientY-odrag.y; odrag={x:e.clientX,y:e.clientY};
+  yaw+=dx*.006; vy=Math.max(-3,Math.min(3,dx*.2));
+  pitch=Math.max(-1.1,Math.min(1.1,pitch+dy*.005));
+  odrag.moved+=Math.abs(dx)+Math.abs(dy);
+});
+cvs.addEventListener('pointerdown',e=>{
+  odrag={x:e.clientX,y:e.clientY,moved:0}; cvs.classList.add('drag');
+  cvs.setPointerCapture(e.pointerId);
+});
+addEventListener('pointerup',()=>{
+  if(!odrag) return;
+  const moved=odrag.moved; odrag=null; cvs.classList.remove('drag');
+  if(moved<5){ if(hotLeaf>=0) select(TREE.leafN[hotLeaf].id); else if(sel) select(null); }
+});
+cvs.addEventListener('pointerleave',()=>{ ptrS.x=-1e4; });
+/* the view menu described four layouts and there is one */
+$('viewmenu') && ($('viewmenu').style.display='none');
+$('hint').textContent='drag to turn · hover a tip to name it · click one to open it · esc to clear';
+
+resize(); apply(); kick();
 </script>

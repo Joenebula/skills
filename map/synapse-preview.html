@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synapse — your skills</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+  :root {
+    --bg: #050507;
+    --fg: #F4F4F6;
+    --fg-soft: #E6E6EC;
+    --muted: #A3A3AE;
+    --c1: #FF4436; --c2: #FFE45E; --c3: #FF9AD5;
+    --c4: #5468FF; --c5: #55E6FF; --c6: #3DF59A;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); }
+  body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  /* The poster is drawn at 1000 x 1414 and scaled to fit the window */
+  .stage { width: 1000px; height: 1414px; transform-origin: center center; flex: none; }
+  .poster {
+    position: relative; width: 1000px; height: 1414px; overflow: hidden;
+    background: var(--bg); color: var(--fg);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    cursor: grab; touch-action: none; user-select: none;
+  }
+  .poster.dragging { cursor: grabbing; }
+  .poster canvas { position: absolute; left: 0; top: 0; width: 1000px; height: 1414px; display: block; }
+  .grain { position: absolute; inset: 0; opacity: 0.07; pointer-events: none; mix-blend-mode: screen; }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .header { position: absolute; left: 40px; top: 36px; right: 40px; display: flex; justify-content: space-between; align-items: baseline; }
+  .brand { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .dot { color: var(--c6); }
+  .issue { font-size: 13px; letter-spacing: 0.08em; color: var(--muted); }
+
+  .panel { position: absolute; left: 40px; top: 700px; width: 344px; display: flex; flex-direction: column; gap: 22px; }
+  .legend { display: flex; }
+  .legend button {
+    flex: 1 1 0; height: 44px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer;
+    display: flex; flex-direction: column; align-items: stretch; gap: 8px; transition: opacity .25s;
+  }
+  .legend button .bar { display: block; height: 10px; }
+  .legend button .num { font-size: 11px; color: var(--muted); text-align: left; }
+  .legend button:focus-visible { outline: 2px solid var(--fg); outline-offset: 4px; }
+  .legend.has-focus button[aria-pressed="false"] { opacity: 0.35; }
+
+  h1 { margin: 0; font-size: 46px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; }
+  .sub { margin: 6px 0 0; font-size: 19px; line-height: 1.3; color: var(--fg-soft); }
+  .numerals { display: flex; flex-direction: column; font-size: 78px; font-weight: 300; line-height: 1.08; letter-spacing: -0.03em; }
+  .hint { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); }
+
+  .vertical { position: absolute; right: 30px; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: 0.12em; color: var(--muted); white-space: pre; }
+  .badge { position: absolute; right: 26px; top: 1080px; width: 40px; height: 40px; border-radius: 50%; background: var(--c2); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .footer { position: absolute; left: 40px; bottom: 40px; display: flex; gap: 36px; }
+  .footer p { margin: 0; width: 170px; font-size: 12px; line-height: 1.45; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="poster" id="poster">
+    <canvas id="art" role="img" aria-label="Six colour-coded branching clusters growing from one centre point, rotating in 3D, with light pulses travelling along the branches"></canvas>
+
+    <svg class="grain" aria-hidden="true" width="1000" height="1414">
+      <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter>
+      <rect width="100%" height="100%" filter="url(#grain)"/>
+    </svg>
+
+    <div class="header">
+      <div class="brand">joenebula/skills<span class="dot">.</span></div>
+      <div class="issue mono">Nº 01 — 2026-11-04</div>
+    </div>
+
+    <div class="panel">
+      <div class="legend" id="legend"></div>
+      <div>
+        <h1>Synapse<span class="dot">.</span></h1>
+        <p class="sub">every skill in the library,<br>in three dimensions</p>
+      </div>
+      <div class="numerals"><span>78</span><span>16</span></div>
+      <div class="hint mono">DRAG TO ORBIT · HOVER A TIP TO NAME IT · TAP A COLOUR TO ISOLATE</div>
+    </div>
+
+    <div class="vertical mono" style="top: 300px">Depth — 3D    ·    Groups — 16    ·    Skills — 78</div>
+    <div class="badge mono">3D</div>
+
+    <div class="footer">
+      <p>One limb per group. Every tip is one skill, read from the library at build time.</p>
+      <p>Grown live in the browser. The shape is seeded, so it is the same tree each visit.</p>
+    </div>
+    
+  </div>
+</div>
+
+<div class="tip" id="tip"></div>
+<style>
+  .tip{position:absolute;z-index:5;pointer-events:none;opacity:0;transform:translate(-50%,-100%);
+    transition:opacity .12s;background:rgba(5,5,7,.92);border-radius:10px;padding:12px 16px;
+    box-shadow:0 0 0 1px rgba(244,244,246,.16),0 16px 40px rgba(0,0,0,.7);white-space:nowrap}
+  .tip.on{opacity:1}
+  .tip .n{font-size:15px;font-weight:600;letter-spacing:-.01em;display:block}
+  .tip .m{font-size:11px;letter-spacing:.08em;margin-top:4px;display:block;
+    font-family:'JetBrains Mono',monospace}
+  .legend{flex-wrap:wrap;gap:4px}
+  .legend button{flex:0 0 auto;width:38px;height:40px}
+  .legend button .num{font-size:9px}
+</style>
+<script>
+(() => {
+const GROUPS=[{"key":"always","name":"Always on","col":"#F2A03C","skills":[{"id":"debugging","w":1,"src":"workspace","ev":"seen","desc":"Invoke when investigating any bug, failure, or \"it doesn't work\" report — reproduce it first, read the real evidence, isolate by changing one variable"},{"id":"engineering-standards","w":2,"src":"workspace","ev":"seen","desc":"Invoke BEFORE building or changing any feature, action, module, API endpoint, or shared mechanism — AND whenever a count, metric, or displayed number "},{"id":"refactoring","w":1,"src":"workspace","ev":"seen","desc":"Invoke when restructuring code or delivering a large change — keep behaviour identical, move in small reversible steps, lean on tests, and flag risky "},{"id":"reviewing-code","w":1,"src":"workspace","ev":"seen","desc":"Invoke when reviewing a diff, a pull request, or your own change before calling it done — what to look for in priority order, how to refute before you"}]},{"key":"A","name":"Skeleton","col":"#5EE0E8","skills":[{"id":"infrastructure","w":1,"src":"workspace","ev":"seen","desc":"Invoke when setting up environments, config, backups, or scaling — separate dev/stage/prod, configure per environment, back up before you need it, and"},{"id":"project-setup","w":2,"src":"workspace","ev":"seen","desc":"Use when standing up or onboarding to a GitHub + Supabase + Vercel + Next.js web app — gives you the bootstrap order, where every API key goes, and ho"}]},{"key":"B","name":"Database","col":"#6BB6F5","skills":[{"id":"data-modelling","w":1,"src":"workspace","ev":"seen","desc":"Invoke BEFORE creating or changing any table, column, relation, enum, or migration — model the entities first, change the schema additively and revers"},{"id":"privacy-and-compliance","w":1,"src":"workspace","ev":"seen","desc":"Invoke when collecting, storing, processing, or sharing personal data — consent, lawful basis, retention, subject-access/erasure, cookies, and age gat"}]},{"key":"C","name":"Admin","col":"#A78BFA","skills":[{"id":"accessibility","w":1,"src":"workspace","ev":"seen","desc":"Invoke BEFORE calling any UI done — labels, contrast, keyboard, focus, semantics, and motion. Accessibility is a release gate (zero critical issues), "},{"id":"auth-and-accounts","w":1,"src":"workspace","ev":"seen","desc":"Use when building sign-up, sign-in, sessions, password/magic-link flows, account settings, or role administration — the complete account lifecycle, se"},{"id":"cms","w":1,"src":"workspace","ev":"seen","desc":"Use when building content management or modelling editable content — content types, a page/block model, media library, navigation, SEO fields, and pub"},{"id":"data-grids","w":1,"src":"workspace","ev":"seen","desc":"Use when building any list, table, or management view of many records — search, filter, sort, paginate/virtualize, bulk actions, and export. Decide se"},{"id":"design-system","w":3,"src":"workspace","ev":"seen","desc":"Use BEFORE building or changing ANY UI (page, screen, component, form, modal, or stylesheet) — build every UI from a documented design system (tokens "},{"id":"forms-and-input","w":1,"src":"workspace","ev":"seen","desc":"Invoke when building any form, input, or data-entry flow — validation, clear errors, required/optional, multi-step, autosave and unsaved-changes guard"},{"id":"responsive-design","w":1,"src":"workspace","ev":"seen","desc":"Invoke BEFORE calling any UI done — design mobile-first, verify it across the device matrix, and never let content overflow or controls shrink below a"}]},{"key":"D","name":"Public site","col":"#EC8CE0","skills":[{"id":"api-design","w":1,"src":"workspace","ev":"seen","desc":"Invoke BEFORE adding or changing an endpoint, route, or service contract — the shape, validation, error format, pagination, idempotency, and versionin"},{"id":"performance","w":1,"src":"workspace","ev":"seen","desc":"Invoke when a page, query, list, or asset feels slow or will grow — measure first, then fix the biggest cost. Paginate, avoid N+1, cache deliberately,"},{"id":"seo","w":1,"src":"workspace","ev":"seen","desc":"Invoke when building public pages or content that should be found — titles/metadata, sitemap, robots, structured data, canonical URLs, and social card"}]},{"key":"E","name":"Feeds","col":"#F58A8A","skills":[{"id":"background-jobs","w":1,"src":"workspace","ev":"seen","desc":"Invoke when work should happen off the request — scheduled tasks, queues, async processing, retries, and lifecycle automation. Make every job idempote"},{"id":"integrations","w":1,"src":"workspace","ev":"seen","desc":"Use when connecting a third-party service — CRM, email, webhooks, or two-way sync. Decide who owns each field, make every sync idempotent, verify inbo"},{"id":"observability","w":1,"src":"workspace","ev":"seen","desc":"Invoke when adding error handling, logging, monitoring, or a failure path — log with structure and context, degrade gracefully, alert on what matters,"}]},{"key":"F","name":"Advertising","col":"#F5C24E","skills":[{"id":"analytics-dashboards","w":1,"src":"workspace","ev":"seen","desc":"Use when building metrics, reports, KPIs, or a dashboard — define the metric precisely first, compute it from the authoritative source, and show it ho"}]},{"key":"H","name":"Hardening","col":"#6EE7A8","skills":[{"id":"ecommerce-security-audit","w":3,"src":"workspace","ev":"seen","desc":"Use this skill whenever the user wants to check, audit, harden, review, or fix the security of a website or web app — especially AI-built or \"vibe-cod"},{"id":"preflight","w":1,"src":"workspace","ev":"seen","desc":"Invoke immediately BEFORE any deploy, merge, or \"it's done\" claim — the orchestrated pre-ship pass: scope the diff, fan out the read-only auditor agen"},{"id":"regression-testing","w":2,"src":"workspace","ev":"seen","desc":"Invoke BEFORE calling any change \"done\" and BEFORE any deploy — the layered pre-go-live verification model, the mandatory preflight gate, and the read"},{"id":"releasing","w":1,"src":"workspace","ev":"seen","desc":"Use BEFORE and DURING any deploy or release — verify → regression-gate → ship → confirm; authorized + controlled deploys only, never mask a verificati"},{"id":"security","w":1,"src":"workspace","ev":"seen","desc":"Invoke when handling auth, permissions, secrets, user input, file uploads, third-party calls, or anything outward-facing — the trust model, where to g"},{"id":"security-route-auditor","w":1,"src":"agent","ev":"seen","desc":"Audits a new or changed server route/endpoint that reads or writes — verifying the server-side auth/capability gate (401/403 before any write), correc"}]},{"key":"S2","name":"Accounts","col":"#7C9BF0","skills":[{"id":"email-and-notifications","w":1,"src":"workspace","ev":"seen","desc":"Use when sending transactional email, building in-app notifications, or authoring message templates — send off the request path, exactly once per even"},{"id":"internationalization","w":1,"src":"workspace","ev":"seen","desc":"Invoke BEFORE hard-coding user-facing text, dates, money, or layout assumptions — externalise strings, format by locale, support multiple currencies, "}]},{"key":"design","name":"Front-end design","col":"#FF7AB6","skills":[{"id":"artifact-capabilities","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"artifact-design","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"artifact-diagramming","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"bootstrap5-migration","w":1,"src":"account","ev":"loaded","desc":"Migrate, modernise, refactor, clean up or rebuild an existing multi-page website onto Bootstrap 5 - especially static HTML/CSS/JS sites, brand sites, "},{"id":"create-canvas","w":1,"src":"account","ev":"loaded","desc":"Build a freeform canvas to explore, compare, and iterate on anything."},{"id":"dataviz","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"frontend-design","w":1,"src":"account","ev":"loaded","desc":"Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, o"},{"id":"impeccable","w":2,"src":"workspace","ev":"seen","desc":"Use when the user wants to design, redesign, shape, critique, audit, polish, clarify, distill, harden, optimize, adapt, animate, colorize, extract, or"},{"id":"mydesignskill","w":1,"src":"account","ev":"loaded","desc":"House design rules and a curated visual reference library for building polished marketing and product web pages - heroes, eyebrow labels, stat rows, f"},{"id":"public-service-website","w":1,"src":"account","ev":"loaded","desc":"Public service, civic, council, charity or campaigning websites - UX research, information architecture, user journeys, wireframes, UI design, design "},{"id":"vibehq-update-design-system","w":1,"src":"workspace","ev":"seen","desc":"Vibe HQ only. Bring every copy of the design system up to date with the code on develop: the trace file, missing stories, the Storybook build and the "}]},{"key":"quality","name":"Code review","col":"#6FE0D0","skills":[{"id":"code-review","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"mhr-appeal-verification","w":1,"src":"account","ev":"loaded","desc":"Verify every fact, date, figure and legal conclusion against the source documents before asserting it. For the MHR redundancy appeal, Acas conciliatio"},{"id":"security-review","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"simplify","w":1,"src":"built-in","ev":"loaded","desc":""}]},{"key":"audit","name":"Auditors","col":"#A8E06B","skills":[{"id":"accessibility-auditor","w":1,"src":"agent","ev":"seen","desc":"Audits any UI change against the WCAG AA release gate — semantics, programmatic labels, keyboard operability, focus visibility, contrast via the token"},{"id":"design-system-auditor","w":1,"src":"agent","ev":"seen","desc":"Audits any UI or stylesheet change against the documented design system. Invoke BEFORE building UI (to learn the documented components and tokens to u"},{"id":"feature-completeness-auditor","w":1,"src":"agent","ev":"seen","desc":"Audits a new or changed feature for the \"looks done but isn't wired\" class of gaps — affordances that appear finished but trace to nothing real (dead "},{"id":"regression-auditor","w":1,"src":"agent","ev":"seen","desc":"Audits a pending change to a live surface, mapping its diff to the exact must-pass regression checks (named static checks, smoke/reconciliation script"}]},{"key":"style","name":"How I work","col":"#C9A6FF","skills":[{"id":"ask-dont-guess","w":1,"src":"workspace","ev":"seen","desc":"Always-on guardrail — when intent, scope, data, or approach is unclear, or an action is destructive/irreversible, STOP and ask; recommend before actin"},{"id":"critical-thinking-partner","w":1,"src":"account","ev":"loaded","desc":"Apply a rigorous, honest, non-sycophantic working style to any analysis, design, planning, decision, review, writing or problem-solving task. Use when"},{"id":"deep-research","w":1,"src":"account","ev":"loaded","desc":"Research a topic across multiple sources, compare options, analyse trends or history, understand markets, or review literature - then synthesise it in"},{"id":"humanizer","w":1,"src":"account","ev":"loaded","desc":"Humanize content."},{"id":"keep-going","w":4,"src":"workspace","ev":"seen","desc":"Work continuously through an agreed queue of build tasks without stopping to ask \"what's next?\" — resuming cleanly across sessions from a queue file o"}]},{"key":"docs","name":"Documents","col":"#C2A98B","skills":[{"id":"docs","w":1,"src":"account","ev":"loaded","desc":"Editable docs people share and comment on - the default for any document: a report, proposal, resume, letter, contract, policy, template, essay, handb"},{"id":"docx","w":1,"src":"account","ev":"loaded","desc":"Create, read, edit or manipulate Word documents (.docx) and Word templates (.dotx) - tables of contents, headings, page numbers, letterheads, tracked "},{"id":"google-workspace","w":1,"src":"account","ev":"loaded","desc":"Create or change a Google Doc, Sheet or Slides file in Google Drive - formatting, copying, renaming, suggested edits and tabs, with helper scripts for"},{"id":"pdf","w":1,"src":"account","ev":"loaded","desc":"Read or extract text and tables from PDFs, merge, split, rotate, watermark, create, fill forms, encrypt or decrypt, extract images, and OCR scanned PD"},{"id":"pptx","w":1,"src":"account","ev":"loaded","desc":"Create, read, edit or manipulate PowerPoint files (.pptx) and templates (.potx) - slide decks, layouts, speaker notes and comments."},{"id":"report-from-notes","w":1,"src":"workspace","ev":"seen","desc":"Turn messy build-run notes into one readable HTML page — what still needs the reader, what was handed to someone else, what was built but never actual"},{"id":"xlsx","w":1,"src":"account","ev":"loaded","desc":"Open, read, edit or create spreadsheets (.xlsx, .xlsm, .xltx, .csv, .tsv) - formulas, formatting, charts, and cleaning messy tabular data into proper "}]},{"key":"setup","name":"The setup","col":"#5FD3E8","skills":[{"id":"built-in-browser","w":1,"src":"account","ev":"loaded","desc":"The browser pane inside the Claude desktop app - persistent sign-ins, tabs, reading pages as text, site approvals, and what the pane cannot open."},{"id":"chrome-browser","w":1,"src":"account","ev":"loaded","desc":"Claude in Chrome - the browser extension that acts in the user's real Chrome with their own sign-ins. Covers site permissions, recordings, console log"},{"id":"claude-api","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"computer-use","w":1,"src":"account","ev":"loaded","desc":"Take screenshots of the user's desktop and control it with clicks, typing and scrolling, for doing something in an app on their own computer."},{"id":"fewer-permission-prompts","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"import-memory","w":1,"src":"account","ev":"loaded","desc":"Import a memory export from another AI assistant into Claude's memory - conversationally, additively, and with the content treated as data."},{"id":"init","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"keybindings-help","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"knowledge-system-setup","w":1,"src":"account","ev":"loaded","desc":"Set up or manage a self-learning knowledge system in a project - a per-topic memory the assistant reads and applies each session, plus a shared rulebo"},{"id":"loop","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"morning","w":1,"src":"account","ev":"loaded","desc":"Render the user's morning brief as a styled HTML artifact, or set it up as a recurring weekday task."},{"id":"plugin-authoring","w":1,"src":"account","ev":"loaded","desc":"Make a mod: a change to Claude's own interface or behaviour - a live pane or panel, a band above the prompt, a status line, a toast, a slash command, "},{"id":"run","w":1,"src":"built-in","ev":"loaded","desc":""},{"id":"session-start-hook","w":1,"src":"account","ev":"loaded","desc":"Create and develop startup hooks for Claude Code on the web - a SessionStart hook to ensure a project can run tests and linters during web sessions."},{"id":"skill-creator","w":1,"src":"account","ev":"loaded","desc":"Create new skills, modify and improve existing ones, and measure skill performance - run evals, benchmark with variance analysis, and optimise a skill"},{"id":"update-config","w":1,"src":"built-in","ev":"loaded","desc":""}]},{"key":"never","name":"Excluded","col":"#5E6B8C","skills":[{"id":"webaudio-plugin-builder","w":2,"src":"workspace","ev":"seen","desc":"Build browser-based audio instruments and plugins — synths, samplers, drum machines, slicers, effect racks, sequencers, loopers, modular patch bays — "}]}];
+const COLS=[...GROUPS.map(g=>g.col),'#3B48F0','#FFFFFF'];
+const INNER=GROUPS.length, WHITE=GROUPS.length+1;
+const SETTINGS={speed:0.6,pulses:true,seed:11,glow:1,centre:[640,560]};
+const W=1000,H=1414,F=900;
+
+const stage=document.getElementById('stage');
+const fit=()=>{const s=Math.min(innerWidth/W,innerHeight/H);
+  stage.style.transform='scale('+s+')';
+  stage.style.margin=((H*s-H)/2)+'px '+((W*s-W)/2)+'px';};
+addEventListener('resize',fit); fit();
+
+/* the legend is one swatch per group now, not six colours — sixteen of them, so they are
+   small squares in a wrap rather than six wide bars */
+let focus=-1;
+const legend=document.getElementById('legend');
+GROUPS.forEach((g,i)=>{
+  const b=document.createElement('button'); b.type='button';
+  b.setAttribute('aria-label','Isolate '+g.name); b.setAttribute('aria-pressed','false');
+  b.title=g.name+' — '+g.skills.length;
+  b.innerHTML='<span class="bar" style="background:'+g.col+'"></span>'
+             +'<span class="num mono">'+g.skills.length+'</span>';
+  b.onclick=()=>{ focus=focus===i?-1:i;
+    legend.classList.toggle('has-focus',focus>=0);
+    [...legend.children].forEach((el,k)=>el.setAttribute('aria-pressed',k===focus?'true':'false'));
+    SC.pulses=null; };
+  legend.appendChild(b);
+});
+const dim=c=>focus<0?1:(c===focus?1.25:(c===INNER?0.35:0.07));
+
+const poster=document.getElementById('poster');
+let yaw=0.5,pitch=-0.18,vy=0,drag=null;
+poster.addEventListener('pointerdown',e=>{ if(e.target.closest('button'))return;
+  drag={x:e.clientX,y:e.clientY}; poster.classList.add('dragging'); poster.setPointerCapture(e.pointerId);});
+poster.addEventListener('pointermove',e=>{
+  const r=poster.getBoundingClientRect();
+  ptr.x=(e.clientX-r.left)/r.width*W; ptr.y=(e.clientY-r.top)/r.height*H;
+  if(!drag)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y; drag={x:e.clientX,y:e.clientY};
+  yaw+=dx*0.006; vy=Math.max(-3,Math.min(3,dx*0.2));
+  pitch=Math.max(-1.1,Math.min(1.1,pitch+dy*0.005));});
+const end=()=>{drag=null;poster.classList.remove('dragging');};
+poster.addEventListener('pointerup',end); poster.addEventListener('pointercancel',end);
+poster.addEventListener('pointerleave',()=>{ptr.x=-1e4;});
+
+const cv=document.getElementById('art'), dpr=Math.min(2,devicePixelRatio||1);
+cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+const ctx=cv.getContext('2d');
+const rgba=(hex,a)=>{const n=parseInt(hex.slice(1),16);
+  return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';};
+const core=[],halo=[];
+for(const col of COLS){
+  const c=document.createElement('canvas'); c.width=c.height=32; const g=c.getContext('2d');
+  let gr=g.createRadialGradient(16,16,0,16,16,16);
+  gr.addColorStop(0,col); gr.addColorStop(.72,col); gr.addColorStop(1,rgba(col,0));
+  g.fillStyle=gr; g.fillRect(0,0,32,32); core.push(c);
+  const hc=document.createElement('canvas'); hc.width=hc.height=64; const hg=hc.getContext('2d');
+  gr=hg.createRadialGradient(32,32,0,32,32,32);
+  gr.addColorStop(0,rgba(col,.55)); gr.addColorStop(.25,rgba(col,.16)); gr.addColorStop(1,rgba(col,0));
+  hg.fillStyle=gr; hg.fillRect(0,0,64,64); halo.push(hc);
+}
+
+const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+
+/* The tree ends where the library does. The original grew to a depth and stopped, so a tip
+   was a tip; here a tip is a SKILL, which is what lets hovering one name it. A group's list
+   is halved at each fork until one is left, so the number of leaves is the number of skills
+   and nothing is invented to fill the shape out. */
+function build(seed){
+  const R=rng(seed);
+  const S={x:[],y:[],z:[],par:[],segA:[],segB:[],segC:[],segD:[],leaf:[],leafC:[],leafR:[],leafS:[],zr:90};
+  const pt=(x,y,z,p)=>{S.x.push(x);S.y.push(y);S.z.push(z);S.par.push(p);return S.x.length-1;};
+  const norm=v=>{const l=Math.hypot(v[0],v[1],v[2])||1;return[v[0]/l,v[1]/l,v[2]/l];};
+  const jit=(d,a)=>norm([d[0]+(R()*2-1)*a,d[1]+(R()*2-1)*a,d[2]+(R()*2-1)*a]);
+  const seg=(a,b,c,d)=>{S.segA.push(a);S.segB.push(b);S.segC.push(c);S.segD.push(d);};
+  const root=pt(0,0,0,-1);
+  GROUPS.forEach((g,gi)=>{
+    const t=(gi+.5)/GROUPS.length, phi=Math.acos(1-2*t), th=Math.PI*(1+Math.sqrt(5))*gi;
+    const dir=norm([Math.sin(phi)*Math.cos(th),Math.sin(phi)*Math.sin(th),Math.cos(phi)]);
+    grow(root,dir,74,0,gi,g.skills);
+  });
+  function grow(pi,dir,len,dep,gi,list){
+    let p=pi,d=dir;
+    for(let i=0;i<3;i++){                                 // three jittered sub-segments
+      d=jit(d,.26);
+      const q=pt(S.x[p]+d[0]*len/3,S.y[p]+d[1]*len/3,S.z[p]+d[2]*len/3,p);
+      seg(p,q,gi,dep); p=q;
+    }
+    if(list.length===1){
+      S.leaf.push(p); S.leafC.push(gi);
+      S.leafR.push(1.3+Math.min(3.2,list[0].w*.55));
+      S.leafS.push(list[0]);
+      return;
+    }
+    const n=list.length>5&&dep<2?3:2, per=Math.ceil(list.length/n);
+    for(let k=0;k<n;k++){
+      const part=list.slice(k*per,(k+1)*per);
+      if(part.length) grow(p,jit(d,.72),len*(.74+R()*.12),dep+1,gi,part);
+    }
+  }
+  const sn=COLS.map(()=>0), ln=COLS.map(()=>0);
+  for(let j=0;j<S.segA.length;j++) sn[S.segD[j]<=1?INNER:S.segC[j]]++;
+  for(const c of S.leafC) ln[c]++;
+  S.kc=sn.map(c=>c?Math.max(.3,Math.min(1,Math.sqrt(900/c))):1);
+  S.kl=ln.map(c=>c?Math.max(.35,Math.min(1,Math.sqrt(120/c))):1);
+  return S;
+}
+const SC=build(SETTINGS.seed);
+
+const ptr={x:-1e4,y:-1e4}; let hot=-1;
+const tipEl=document.getElementById('tip');
+function project(x,y,z,cx,cy,sc,cyw,syw,cp,sp){
+  const x1=x*cyw-z*syw, z1=x*syw+z*cyw;
+  const y1=y*cp-z1*sp, z2=y*sp+z1*cp;
+  const s=F/(F+z2*sc)*sc;
+  return [cx+x1*s,cy+y1*s,s,z2];
+}
+function spawn(S){
+  let k=Math.floor(Math.random()*S.leaf.length);
+  if(focus>=0) for(let t=0;t<12&&S.leafC[k]!==focus;t++) k=Math.floor(Math.random()*S.leaf.length);
+  const ch=[]; let i=S.leaf[k];
+  while(i>=0){ch.push(i);i=S.par[i];} ch.reverse();
+  return {ch,t:Math.random()*ch.length*.6,v:14+Math.random()*16,c:S.leafC[k]};
+}
+function drawRings(cx,cy,yaw,pitch){
+  const cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  ctx.save(); ctx.globalCompositeOperation='source-over';
+  ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=.6; ctx.setLineDash([1.5,6]);
+  for(const r of [[0,380,.14],[1.15,330,.1],[-.6,250,.08]]){
+    ctx.globalAlpha=r[2]; ctx.beginPath();
+    for(let i=0;i<=140;i++){
+      const a=i/140*Math.PI*2, z=Math.sin(a)*r[1];
+      const p=project(Math.cos(a)*r[1],-z*Math.sin(r[0]),z*Math.cos(r[0]),cx,cy,1,cyw,syw,cp,sp);
+      i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);
+    }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.globalAlpha=.45; ctx.lineWidth=.8;
+  const o=project(0,0,0,cx,cy,1,cyw,syw,cp,sp);
+  for(const ax of [[40,0,0],[0,40,0],[0,0,40]]){
+    const p=project(ax[0],ax[1],ax[2],cx,cy,1,cyw,syw,cp,sp);
+    ctx.beginPath(); ctx.moveTo(o[0],o[1]); ctx.lineTo(p[0],p[1]); ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawScene(S,cx,cy,sc,yaw,pitch,dt){
+  const n=S.x.length;
+  if(!S.sx){S.sx=new Float32Array(n);S.sy=new Float32Array(n);S.ss=new Float32Array(n);S.sz=new Float32Array(n);}
+  const cyw=Math.cos(yaw),syw=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+  const {sx,sy,ss,sz,zr}=S;
+  for(let i=0;i<n;i++){
+    const x=S.x[i],y=S.y[i],z=S.z[i];
+    const x1=x*cyw-z*syw, z1=x*syw+z*cyw;
+    const y1=y*cp-z1*sp, z2=y*sp+z1*cp;
+    const s=F/(F+z2*sc)*sc;
+    sx[i]=cx+x1*s; sy[i]=cy+y1*s; ss[i]=s; sz[i]=z2;
+  }
+  const P=[]; for(let k=0;k<COLS.length*3;k++) P.push(new Path2D());
+  for(let j=0;j<S.segA.length;j++){
+    const a=S.segA[j],b=S.segB[j], z=(sz[a]+sz[b])*.5;
+    const band=z>zr?0:(z<-zr?2:1);
+    const col=S.segD[j]<=1?INNER:S.segC[j];
+    const p=P[col*3+band]; p.moveTo(sx[a],sy[a]); p.lineTo(sx[b],sy[b]);
+  }
+  const BA=[.15,.32,.6], BW=[.5,.8,1.2];
+  for(let col=0;col<=INNER;col++){
+    const dm=dim(col); ctx.strokeStyle=COLS[col];
+    for(let band=0;band<3;band++){
+      ctx.globalAlpha=Math.min(1,BA[band]*dm*S.kc[col]);
+      ctx.lineWidth=BW[band]*sc; ctx.stroke(P[col*3+band]);
+    }
+  }
+  // tips, and the one nearest the pointer
+  let best=-1,bd=18*18;
+  for(let k=0;k<S.leaf.length;k++){
+    const i=S.leaf[k], col=S.leafC[k], r=S.leafR[k]*ss[i];
+    const a=Math.max(.16,Math.min(1,.62-sz[i]/(zr*3)))*dim(col)*S.kl[col];
+    const x=sx[i],y=sy[i];
+    const d2=(x-ptr.x)**2+(y-ptr.y)**2;
+    if(d2<bd && (focus<0||col===focus)){bd=d2;best=k;}
+    if(SETTINGS.glow>0){ ctx.globalAlpha=Math.min(1,a*.5*SETTINGS.glow);
+      const hh=r*7; ctx.drawImage(halo[col],x-hh,y-hh,hh*2,hh*2); }
+    ctx.globalAlpha=Math.min(1,a);
+    const c=r*1.2; ctx.drawImage(core[col],x-c,y-c,c*2,c*2);
+  }
+  hot=best;
+  if(best>=0){
+    const i=S.leaf[best];
+    ctx.globalAlpha=.95; const r=S.leafR[best]*ss[i]*2.6;
+    ctx.drawImage(halo[WHITE],sx[i]-r*3,sy[i]-r*3,r*6,r*6);
+  }
+  if(SETTINGS.pulses){
+    if(!S.pulses) S.pulses=[];
+    while(S.pulses.length<70) S.pulses.push(spawn(S));
+    for(const p of S.pulses){
+      p.t+=p.v*dt;
+      if(p.t>=p.ch.length-1){Object.assign(p,spawn(S));p.t=0;continue;}
+      const dm=dim(p.c);
+      for(let tr=0;tr<4;tr++){
+        const tt=p.t-tr*.55; if(tt<0)break;
+        const f=Math.floor(tt),u=tt-f;
+        const a=p.ch[f],b=p.ch[Math.min(f+1,p.ch.length-1)];
+        const x=sx[a]+(sx[b]-sx[a])*u, y=sy[a]+(sy[b]-sy[a])*u;
+        const r=(2.4-tr*.45)*ss[a];
+        ctx.globalAlpha=Math.min(1,(.9-tr*.2)*dm);
+        ctx.drawImage(halo[p.c],x-r*4,y-r*4,r*8,r*8);
+        ctx.drawImage(core[WHITE],x-r*.7,y-r*.7,r*1.4,r*1.4);
+      }
+    }
+  }
+}
+function drawCore(x,y,sc,t){
+  const b=1+Math.sin(t*1.6)*.12, dm=focus<0?1:.6;
+  ctx.globalAlpha=.9*dm;
+  let h=46*sc*b; ctx.drawImage(halo[INNER],x-h,y-h,h*2,h*2);
+  h=22*sc*b; ctx.drawImage(halo[WHITE],x-h,y-h,h*2,h*2);
+  ctx.globalAlpha=dm; const c=4.5*sc;
+  ctx.drawImage(core[WHITE],x-c,y-c,c*2,c*2);
+  ctx.globalCompositeOperation='source-over';
+  ctx.globalAlpha=.35*dm; ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=.6;
+  ctx.beginPath(); ctx.arc(x,y,14*sc*b,0,Math.PI*2); ctx.stroke();
+  // the agreement is the thing at the centre, so it is named there rather than guessed at
+  ctx.globalAlpha=.78*dm; ctx.fillStyle='#F4F4F6';
+  ctx.font="600 13px 'Space Grotesk',system-ui,sans-serif"; ctx.textAlign='center';
+  ctx.fillText('CLAUDE.md',x,y+34*sc);
+  ctx.globalAlpha=.4*dm; ctx.fillStyle='#A3A3AE';
+  ctx.font="11px 'JetBrains Mono',monospace";
+  ctx.fillText('the agreement',x,y+49*sc);
+  ctx.globalCompositeOperation='lighter';
+}
+let last=0;
+function frame(now){
+  const t=now/1000, dt=last?Math.min(.05,t-last):.016; last=t;
+  if(!drag) yaw+=(SETTINGS.speed*.15+vy)*dt;
+  vy*=Math.pow(.06,dt);
+  const p=pitch+Math.sin(t*.35)*.06;
+  const [mx,my]=SETTINGS.centre;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+  ctx.clearRect(0,0,W,H);
+  drawRings(mx,my,yaw,p);
+  ctx.globalCompositeOperation='lighter';
+  drawScene(SC,mx,my,1,yaw,p,dt);
+  drawCore(mx,my,1,t);
+  // the hover label, in HTML so it is selectable text rather than pixels
+  if(hot>=0){
+    const i=SC.leaf[hot], s=SC.leafS[hot], g=GROUPS[SC.leafC[hot]];
+    tipEl.className='tip on';
+    tipEl.style.left=SC.sx[i]+'px'; tipEl.style.top=(SC.sy[i]-14)+'px';
+    tipEl.innerHTML='<span class="n" style="color:'+g.col+'">'+s.id+'</span>'
+      +'<span class="m" style="color:#A3A3AE">'+g.name.toUpperCase()+' · '+s.src+'</span>';
+  } else tipEl.className='tip';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
