@@ -174,7 +174,7 @@ Build in this order even under deadline — primitives-from-tokens is cheaper th
 
 ### The kit: make step 5 fail the build
 
-`kit/` holds the checks for step 5. Copy the folder into the project (for example `scripts/ds-kit/`). Copy `kit/ds-config.example.json` to `design-system.config.json` at the project root and fill it in. The kit holds no project names; the config holds all of them. The part-ID prefix (`system`) and the CSS prefix (`classPrefixes`) are separate fields.
+`kit/` holds the checks for step 5. Copy the folder into the project (for example `scripts/ds-kit/`). Copy `kit/ds-config.example.json` to `design-system.config.json` at the project root and fill it in. The kit holds no project names; the config holds all of them. The part-ID prefix (`system`) and the CSS prefix (`classPrefixes`) are separate fields. If the project already keeps a list of unused tokens, set `keptTokens` to that file's path: one list, not two.
 
 | Command | What it fails on |
 |---|---|

@@ -104,7 +104,20 @@ clean('moving lines does not break the baseline (keyed by place, not line)', (d)
 fault('unused token', (d) => edit(d, 'tokens/tokens.css', (t) => t.replace(':root {', ':root {\n  --ds-unused: 2px;')), 'tokens.mjs', ['unused token --ds-unused'], ['--check']);
 fault('unknown token', (d) => add(d, BTN, '.ds-x { gap: var(--ds-nope); }'), 'tokens.mjs', ['unknown token --ds-nope', BTN], ['--check']);
 fault('stale keptTokens entry (the token is used now)', (d) => add(d, BTN, '.ds-x { gap: var(--ds-space-8); }'), 'tokens.mjs', ['keptTokens lists --ds-space-8, which is used now'], ['--check']);
-fault('kit version differs from config', (d) => edit(d, 'design-system.config.json', (t) => t.replace('"kitVersion": "1.0.0"', '"kitVersion": "0.9.0"')), 'tokens.mjs', ['kit version: config says 0.9.0'], ['--check']);
+// 1.0.1: a var() in a comment is not a use; keptTokens can be a file.
+clean('a var() inside a comment is not a use (CSS and code)', (d) => {
+  add(d, BTN, '/* every value is a var(--ds-*) token, e.g. var(--ds-nope) */');
+  add(d, TSX, '// var(--ds-nope-too) in a line comment\n/* var(--ds-nope-three) */');
+}, 'tokens.mjs', ['--check']);
+fault('…but the same var() outside a comment is still unknown', (d) => add(d, TSX, 'export const x = "var(--ds-nope-too)";'), 'tokens.mjs', ['unknown token --ds-nope-too'], ['--check']);
+const keptFile = (d, kept) => {
+  writeFileSync(join(d, 'docs/kept.json'), JSON.stringify({ _about: 'notes are skipped', kept }));
+  edit(d, 'design-system.config.json', (t) => t.replace(/"keptTokens": \{[^}]*\}/, '"keptTokens": "docs/kept.json"'));
+};
+clean('keptTokens as a file path (the project keeps its one list)', (d) => keptFile(d, { '--ds-space-8': 'Reserved' }), 'tokens.mjs', ['--check']);
+fault('keptTokens file: an unused token not in it fails, naming the file', (d) => keptFile(d, {}), 'tokens.mjs', ['unused token --ds-space-8', 'list it in docs/kept.json'], ['--check']);
+fault('keptTokens file: a stale entry fails, naming the file', (d) => keptFile(d, { '--ds-space-8': 'Reserved', '--ds-gone': 'old' }), 'tokens.mjs', ['docs/kept.json lists --ds-gone, which is not defined'], ['--check']);
+fault('kit version differs from config',(d) => edit(d, 'design-system.config.json', (t) => t.replace('"kitVersion": "1.0.1"', '"kitVersion": "0.9.0"')), 'tokens.mjs', ['kit version: config says 0.9.0'], ['--check']);
 
 console.log(results.join('\n'));
 console.log('\nNot exercised by Phase 1 (read by nothing yet): two groups sharing the short name Button, the nested part Card/Header, the "renamed" entry, groups, themes. Phase 2 tests these.');

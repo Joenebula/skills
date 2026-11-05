@@ -1,5 +1,5 @@
 {
- "kitVersion": "1.0.0",
+ "kitVersion": "1.0.1",
  "note": "Raw values on the day the token ratchet started. It only goes down: node token-ratchet.mjs --prune.",
  "entries": {
   "components/legacy/Old.css |  | .ds-old | margin | 13px": 1

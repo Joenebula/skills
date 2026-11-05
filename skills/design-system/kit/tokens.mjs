@@ -17,8 +17,21 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { declarations } from './lib/css.mjs';
-import { loadConfig, findFiles, KIT_VERSION } from './lib/config.mjs';
+import { declarations, stripComments } from './lib/css.mjs';
+import { loadConfig, findFiles, readJson, KIT_VERSION } from './lib/config.mjs';
+
+/**
+ * keptTokens is a map { "--token": "reason" }, or a path to a JSON file that
+ * holds that map (at its top level, or under "kept"). A path lets a project
+ * keep the one list it already has (1.0.1).
+ */
+export function keptTokens(cfg) {
+  const k = cfg.keptTokens ?? {};
+  if (typeof k !== 'string') return { kept: k, where: 'keptTokens' };
+  const doc = readJson(cfg.root, k, null);
+  if (!doc) throw new Error(`keptTokens points to ${k}, which does not exist`);
+  return { kept: doc.kept ?? doc, where: k };
+}
 
 export function tokenList(cfg) {
   const files = findFiles(cfg.root, cfg.tokenFiles, cfg.ignore);
@@ -39,7 +52,10 @@ export function tokenUses(cfg) {
   const files = findFiles(cfg.root, [...cfg.sources.css, ...(cfg.sources.code ?? []), ...cfg.tokenFiles], cfg.ignore);
   const uses = new Map();
   for (const file of files) {
-    const text = readFileSync(join(cfg.root, file), 'utf8');
+    // A var(--x) inside a comment is not a use (1.0.1: a comment said
+    // "var(--vh-*)" and was read as an unknown token).
+    let text = stripComments(readFileSync(join(cfg.root, file), 'utf8'));
+    if (!file.endsWith('.css')) text = text.replace(/(^|[^:])\/\/.*$/gm, '$1');
     for (const m of text.matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)/g)) {
       if (!uses.has(m[1])) uses.set(m[1], new Set());
       uses.get(m[1]).add(file);
@@ -52,17 +68,18 @@ export function checkTokens(cfg) {
   const { tokens } = tokenList(cfg);
   const uses = tokenUses(cfg);
   const names = new Set(tokens.map((t) => t.name));
-  const kept = cfg.keptTokens ?? {};
+  const { kept, where } = keptTokens(cfg);
   const problems = [];
 
   for (const t of tokens) {
     if (!uses.has(t.name) && !(t.name in kept))
-      problems.push(`unused token ${t.name}: remove it, or list it in keptTokens with a reason`);
+      problems.push(`unused token ${t.name}: remove it, or list it in ${where} with a reason`);
   }
   for (const name of Object.keys(kept)) {
-    if (!names.has(name)) problems.push(`keptTokens lists ${name}, which is not defined: remove the entry`);
-    else if (uses.has(name)) problems.push(`keptTokens lists ${name}, which is used now: remove the entry`);
-    if (!String(kept[name] ?? '').trim()) problems.push(`keptTokens ${name} has no reason`);
+    if (name.startsWith('_') || name.startsWith('$')) continue; // notes, not tokens
+    if (!names.has(name)) problems.push(`${where} lists ${name}, which is not defined: remove the entry`);
+    else if (uses.has(name)) problems.push(`${where} lists ${name}, which is used now: remove the entry`);
+    if (!String(kept[name] ?? '').trim()) problems.push(`${where}: ${name} has no reason`);
   }
   const isToken = (p) => cfg.tokenPrefixes.some((x) => p.startsWith(x));
   for (const [name, files] of uses) {

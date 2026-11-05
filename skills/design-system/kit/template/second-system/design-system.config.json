@@ -1,6 +1,6 @@
 {
   "system": "two",
-  "kitVersion": "1.0.0",
+  "kitVersion": "1.0.1",
   "tokenFiles": ["tokens/**/*.css"],
   "tokenPrefixes": ["--two-"],
   "sources": { "css": ["**/*.css"], "code": [] },
