@@ -1,0 +1,15 @@
+/* The blank template's tokens. */
+:root {
+  --ds-space-2: 8px;
+  --ds-space-8: 32px;
+  --ds-colour-ink: #1a1a1a;
+  --ds-colour-paper: #ffffff;
+  --ds-radius-1: 4px;
+  --ds-tap-min: 44px;
+  --ds-text-body: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --ds-motion-fast: 120ms;
+}
+/* A token set only on touch screens: still a token (R-3). */
+@media (pointer: coarse) {
+  :root { --ds-tap-min: 48px; }
+}

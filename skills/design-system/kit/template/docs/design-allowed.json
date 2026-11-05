@@ -1,0 +1,6 @@
+{
+  "allowed": [
+    { "property": "border-width", "value": "1px", "reason": "A hairline is 1px on every screen; a token adds nothing." },
+    { "property": "@media", "value": "640px", "reason": "Breakpoint: a token cannot be used inside @media." }
+  ]
+}

@@ -1,0 +1,2 @@
+:root { --two-gap: 12px; }
+.two-row { gap: var(--two-gap); }

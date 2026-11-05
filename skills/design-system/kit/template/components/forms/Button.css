@@ -1,0 +1,6 @@
+/* Same short name as actions/Button, other group: tpl/forms/Button. */
+.ds-field-button {
+  padding: var(--ds-space-2);
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  width: 100%;
+}

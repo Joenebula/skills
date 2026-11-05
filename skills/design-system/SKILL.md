@@ -172,6 +172,19 @@ Then build in this order. Each layer depends only on the layer below it.
 
 Build in this order even under deadline — primitives-from-tokens is cheaper than a restyle later.
 
+### The kit: make step 5 fail the build
+
+`kit/` holds the checks for step 5. Copy the folder into the project (for example `scripts/ds-kit/`). Copy `kit/ds-config.example.json` to `design-system.config.json` at the project root and fill it in. The kit holds no project names; the config holds all of them. The part-ID prefix (`system`) and the CSS prefix (`classPrefixes`) are separate fields.
+
+| Command | What it fails on |
+|---|---|
+| `node scripts/ds-kit/tokens.mjs --check` | An unused token not in `keptTokens`. A `var(--x)` with a token prefix that nothing defines. A stale `keptTokens` entry. A kit copy that differs from `kitVersion`. |
+| `node scripts/ds-kit/token-ratchet.mjs` | A **raw value** (a number typed where a token should be) that is not on the **allowed list** and not in the **baseline**. A baseline entry that was fixed but not pruned. |
+
+The **baseline** is every raw value on the day the ratchet starts, written once with `--init`. It is keyed by file + `@media` + selector + property + value, with a count — never by line. It only goes down: `--prune` lowers it, and nothing raises it. The **allowed list** holds values a token cannot replace (a 1px hairline, a breakpoint), each with a reason. Run `--summary` once and read it before you trust the baseline.
+
+Prove a kit change with `node kit/test-template.mjs`: the blank template must pass, and every planted fault must fail by name. Bump `kit/kit-version.json` on any change.
+
 ---
 
 ## VERIFY

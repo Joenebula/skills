@@ -1,0 +1,19 @@
+{
+  "system": "tpl",
+  "approval": "solo",
+  "designTool": "none",
+  "kitVersion": "1.0.0",
+  "tokenFiles": ["tokens/**/*.css"],
+  "tokenPrefixes": ["--ds-"],
+  "classPrefixes": ["ds-"],
+  "sources": { "css": ["**/*.css"], "code": ["**/*.tsx"] },
+  "ignore": ["second-system/**"],
+  "generated": { "generated/theme.css": "tokens/theme.json, then npm run build:theme" },
+  "baseline": "docs/design-baseline.json",
+  "allowed": "docs/design-allowed.json",
+  "allowClampBounds": true,
+  "keptTokens": { "--ds-space-8": "Reserved for the page gutter, landing in the next release" },
+  "groups": ["actions", "forms", "layout", "legacy"],
+  "themes": ["light"],
+  "renamed": { "tpl/actions/Btn": "tpl/actions/Button" }
+}

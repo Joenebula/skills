@@ -1,0 +1,14 @@
+.ds-button {
+  padding: var(--ds-space-2);
+  color: var(--ds-colour-ink);
+  background: var(--ds-colour-paper);
+  border-radius: var(--ds-radius-1);
+  min-height: var(--ds-tap-min);
+  border-style: solid;
+  border-width: 1px;
+  font-size: var(--ds-text-body);
+  transition: opacity var(--ds-motion-fast) ease;
+}
+@media (min-width: 640px) {
+  .ds-button { padding: var(--ds-space-2) calc(var(--ds-space-2) * 2); }
+}
