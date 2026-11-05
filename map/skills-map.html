@@ -1418,7 +1418,7 @@ const LIVE={"mydesignskill":{"src":"account","desc":"House design rules and a cu
 const TOUCHED={"responsive-design":"2026-11-04","vibehq-update-design-system":"2026-10-31","accessibility":"2026-10-27","design-system":"2026-10-27","regression-testing":"2026-10-27","report-from-notes":"2026-09-12","data-modelling":"2026-08-28","engineering-standards":"2026-08-28","infrastructure":"2026-08-28","preflight":"2026-08-28","security":"2026-08-28","keep-going":"2026-08-28","impeccable":"2026-08-09","project-setup":"2026-07-26","accessibility-auditor":"2026-07-25","ask-dont-guess":"2026-07-09"};
 const NEWTAG=new Set(["vibehq-update-design-system"]);
 const NEW_DAYS=30;
-const BUILT="2026-11-04";
+const BUILT="2026-11-05";
 const SCAN_AT=null;
 const CLOCK="git";
 /* The repo's history starts here. Skills present at that first commit are older than the
@@ -4275,6 +4275,8 @@ const PULSE_N=3;
    crawled the branch in 4.7 seconds instead of 1.7. A step is a drawing decision; how fast a
    dot crosses the map is a reading decision, and the two should not be the same number. */
 const PULSE_V=105, PULSE_TRAIL=9;      // world units a second, and between the trail dots
+const PULSE_REL_N=2, PULSE_REL_DIM=.5;  // a relation gets fewer dots, at half the brightness
+let pulseKey='';                        // which branches are running, so it rebuilds on change
 function spawnPulse(k,phase){
   const T=TREE;
   const ch=[]; let i=T.leaf[k];
@@ -4328,31 +4330,10 @@ function paint(fdt){                            // supersedes the SVG painter
       sctx.lineWidth=BW[band]*SYNSC; sctx.stroke(P[col*3+band]);
     }
   }
-  /* ---- the relationships, drawn ---------------------------------------------------------
-     The panel has been listing "Trigger overlap — 4" while the map drew nothing between the
-     four and the skill they overlap with. A list is not a map. Each relation is an arc from
-     the tip in focus to the tip it overlaps, in the same pink the panel's buttons use, bowed
-     outward from the centre so it goes round the tree rather than through it — a chord
-     across the middle reads as another branch, which is the one thing it must not look like.
-
-     Drawn before the tips so the dots sit on top of their own lines, and only ever for what
-     is in focus: 78 skills with every overlap drawn at once is a ball of wool. */
-  if(RELSET && RELSET.size && T.ofId[fid0]!==undefined){
-    const i0=T.leaf[T.ofId[fid0]], x0=T.sx[i0], y0=T.sy[i0];
-    sctx.strokeStyle=cv('--overlap'); sctx.lineWidth=Math.max(.9,1.15*SYNSC);
-    sctx.lineCap='round';
-    for(const id of RELSET){
-      const k=T.ofId[id]; if(k===undefined) continue;
-      const i=T.leaf[k], x1=T.sx[i], y1=T.sy[i];
-      const mx=(x0+x1)/2, my=(y0+y1)/2;
-      let ox=mx-SYNX, oy=my-SYNY; const ol=Math.hypot(ox,oy)||1; ox/=ol; oy/=ol;
-      const d=Math.hypot(x1-x0,y1-y0)*.22;
-      sctx.globalAlpha=.42;
-      sctx.beginPath(); sctx.moveTo(x0,y0);
-      sctx.quadraticCurveTo(mx+ox*d,my+oy*d,x1,y1); sctx.stroke();
-    }
-    sctx.lineCap='butt';
-  }
+  /* The relationships used to be drawn here as an arc from the tip in focus to each tip it
+     overlaps. It was a line the tree does not have — a seventh limb joining two twigs — and
+     it read as structure rather than as a relation. The relation is shown by the pulses
+     instead: see the block further down. */
   // tips — one per skill, and the one under the pointer
   let best=-1,bd=20*20;
   for(let k=0;k<T.leaf.length;k++){
@@ -4403,19 +4384,35 @@ function paint(fdt){                            // supersedes the SVG painter
     sctx.globalAlpha=1;
     sctx.drawImage(core[WHITE],T.sx[i]-r*.62,T.sy[i]-r*.62,r*1.24,r*1.24);
   }
-  /* pulses: only ever down the selected skill's own branch, and only while one is selected.
+  /* ---- what the pulses say ----------------------------------------------------------------
+     A pulse is the agreement reaching a skill: it leaves CLAUDE.md and travels the branch out
+     to one tip. So the relation between two skills is shown by running one down each of their
+     branches at once — the one you are on at full strength, the ones it overlaps with at half.
+     Pick a skill with four overlaps and five branches light up, one bright and four faded, all
+     of them fed from the same centre. No line is drawn between any two of them, because no
+     such line exists in the tree.
+
      ofId has no entry for the centre, so selecting CLAUDE.md itself leaves the map still. */
   const dt=fdt||.016;                      // seconds since the last frame, same as the turn
-  if(selK<0) pulses.length=0;              // selK is the lit tip, hovered or clicked
-  else {
-    if(pulses.length && pulses[0].k!==selK) pulses.length=0;   // the selection moved
-    while(pulses.length<PULSE_N) pulses.push(spawnPulse(selK,pulses.length));
+  { const tracks=[];
+    if(selK>=0){
+      tracks.push({k:selK,n:PULSE_N,dim:1});
+      if(RELSET) for(const id of RELSET){ const k=T.ofId[id];
+        if(k!==undefined) tracks.push({k,n:PULSE_REL_N,dim:PULSE_REL_DIM}); }
+    }
+    // rebuilt only when the set itself changes, not every frame
+    const key=tracks.map(t=>t.k).join(',');
+    if(key!==pulseKey){
+      pulseKey=key; pulses.length=0;
+      for(const t of tracks) for(let i=0;i<t.n;i++){
+        const q=spawnPulse(t.k,i); q.dim=t.dim; pulses.push(q); }
+    }
   }
   for(const p of pulses){
     p.t+=p.v*dt;
-    if(p.t>=p.ch.length-1){ Object.assign(p,spawnPulse(p.k,0)); continue; }
+    if(p.t>=p.ch.length-1){ const d=p.dim; Object.assign(p,spawnPulse(p.k,0)); p.dim=d; continue; }
     if(p.t<0) continue;                                        // still waiting its turn
-    const dm=nodeAlpha(p.n);
+    const dm=p.dim;
     for(let tr=0;tr<4;tr++){
       const tt=p.t-tr*(PULSE_TRAIL/p.seg); if(tt<0) break;
       const f=Math.floor(tt),u2=tt-f;
