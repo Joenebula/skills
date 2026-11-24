@@ -58,6 +58,7 @@ Domain guides are conditional — each fires only when the project contains its 
 |---|---|
 | **[auth-and-accounts](auth-and-accounts/SKILL.md)** | sign-up/sign-in, sessions, reset, account settings, role administration — the complete lifecycle, enumeration-safe errors, and the negative paths (signed-out stays out) as first-class must-pass journeys. |
 | **[email-and-notifications](email-and-notifications/SKILL.md)** | transactional email, in-app notifications, message templates — async and exactly-once, verified domain, honoured preferences, merge fields that resolve, and never a real send from dev. |
+| **[cold-email-outreach](cold-email-outreach/SKILL.md)** | cold sales email to a business that has not asked to hear from you — PECR check first, one specific thing in the first line, an interest question not a meeting, at most two follow-ups that each add something, plain text, never sent without the user's OK. Not for transactional mail. (Joe: "Yes, make it", 2026-11-24.) |
 | **[cms](cms/SKILL.md)** | editable content — content types, a page/block model, media library, navigation, SEO fields, publishing. Content, not catalogue. |
 | **[analytics-dashboards](analytics-dashboards/SKILL.md)** | metrics/KPIs/dashboards — define the metric first, compute from source, show it honestly. |
 | **[data-grids](data-grids/SKILL.md)** | any list of many records — search/filter/sort/paginate/bulk/export; server- vs client-side by size. |
